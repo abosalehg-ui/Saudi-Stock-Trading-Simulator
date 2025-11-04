@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكي تداول الأسهم السعودية</title>
+    <title>تداول - محاكي سوق الأسهم السعودي</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
@@ -14,1507 +14,1012 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            color: #fff;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
             min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
         }
 
         .header {
             background: rgba(0, 0, 0, 0.3);
             padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .logo {
-            font-size: 24px;
-            font-weight: bold;
-            color: #4CAF50;
-        }
-
-        .portfolio-summary {
-            display: flex;
-            gap: 30px;
-            flex-wrap: wrap;
-        }
-
-        .stat {
             text-align: center;
+            border-bottom: 2px solid #0f3460;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
         }
 
-        .stat-label {
-            font-size: 12px;
-            opacity: 0.7;
+        .header h1 {
+            color: #00d9ff;
+            font-size: 2.5em;
             margin-bottom: 5px;
+            text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
         }
 
-        .stat-value {
-            font-size: 20px;
-            font-weight: bold;
+        .header p {
+            color: #a0a0a0;
+            font-size: 0.9em;
         }
 
-        .profit { color: #4CAF50; }
-        .loss { color: #f44336; }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .panel {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 15px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-        }
-
-        .panel-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .filters {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-        }
-
-        .filter-btn, .action-btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
+        .lang-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: #0f3460;
             color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
             cursor: pointer;
             transition: all 0.3s;
         }
 
-        .filter-btn:hover, .action-btn:hover {
-            background: rgba(255, 255, 255, 0.2);
+        .lang-toggle:hover {
+            background: #00d9ff;
+            color: #000;
         }
 
-        .filter-btn.active {
-            background: #4CAF50;
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: rgba(15, 52, 96, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            backdrop-filter: blur(10px);
+        }
+
+        .card h3 {
+            color: #00d9ff;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .balance {
+            font-size: 2em;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .profit-positive {
+            color: #00ff88;
+        }
+
+        .profit-negative {
+            color: #ff4444;
+        }
+
+        .time-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .time-controls button {
+            padding: 8px 16px;
+            background: #0f3460;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .time-controls button:hover {
+            background: #00d9ff;
+            color: #000;
+        }
+
+        .time-controls button.active {
+            background: #00ff88;
+            color: #000;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
         }
 
         .stocks-list {
-            max-height: 500px;
+            background: rgba(15, 52, 96, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            max-height: 600px;
             overflow-y: auto;
         }
 
         .stock-item {
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr 1fr;
-            gap: 10px;
-            padding: 12px;
-            margin-bottom: 8px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            margin-bottom: 10px;
             border-radius: 8px;
+            border-left: 4px solid #0f3460;
             cursor: pointer;
             transition: all 0.3s;
-            align-items: center;
         }
 
         .stock-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateX(-5px);
+            background: rgba(0, 217, 255, 0.1);
+            border-left-color: #00d9ff;
+        }
+
+        .stock-item.selected {
+            background: rgba(0, 217, 255, 0.2);
+            border-left-color: #00d9ff;
+        }
+
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
         }
 
         .stock-name {
             font-weight: bold;
+            color: #fff;
         }
 
-        .stock-symbol {
-            font-size: 11px;
-            opacity: 0.7;
+        .stock-sector {
+            font-size: 0.85em;
+            color: #a0a0a0;
         }
 
         .stock-price {
-            text-align: center;
-            font-size: 16px;
+            font-size: 1.3em;
             font-weight: bold;
         }
 
         .stock-change {
-            text-align: center;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
+            font-size: 0.9em;
         }
 
-        .news-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
+        .chart-container {
+            background: rgba(15, 52, 96, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+        }
+
+        .trading-panel {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            margin-top: 20px;
             border-radius: 8px;
-            margin-bottom: 10px;
-            border-right: 3px solid #2196F3;
-        }
-
-        .news-title {
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .news-meta {
-            font-size: 11px;
-            opacity: 0.6;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .close-btn {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: #fff;
-            font-size: 24px;
-            cursor: pointer;
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }
 
         .order-form {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 15px;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
-            gap: 5px;
         }
 
-        label {
-            font-size: 14px;
-            opacity: 0.9;
+        .form-group label {
+            color: #a0a0a0;
+            margin-bottom: 5px;
+            font-size: 0.9em;
         }
 
-        input, select {
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: rgba(255, 255, 255, 0.1);
+        .form-group input, .form-group select {
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #0f3460;
+            border-radius: 5px;
             color: #fff;
-            font-size: 16px;
+            font-size: 1em;
         }
 
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #00d9ff;
         }
 
-        .order-summary {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 15px;
-            border-radius: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .btn-group {
+        .trade-buttons {
+            grid-column: 1 / -1;
             display: flex;
             gap: 10px;
         }
 
-        .btn-primary {
+        .btn {
             flex: 1;
             padding: 12px;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 5px;
+            font-size: 1em;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
         }
 
         .btn-buy {
-            background: #4CAF50;
-            color: #fff;
+            background: #00ff88;
+            color: #000;
         }
 
         .btn-buy:hover {
-            background: #45a049;
+            background: #00cc6a;
         }
 
         .btn-sell {
-            background: #f44336;
+            background: #ff4444;
             color: #fff;
         }
 
         .btn-sell:hover {
-            background: #da190b;
+            background: #cc0000;
         }
 
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin: 20px 0;
-        }
-
-        .holdings-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .holding-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 12px;
-            border-radius: 8px;
-            display: grid;
-            grid-template-columns: 2fr 1fr 1fr;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .challenges {
+        .portfolio {
             margin-top: 20px;
         }
 
-        .challenge-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-right: 3px solid #FF9800;
-        }
-
-        .challenge-title {
-            font-weight: bold;
-            margin-bottom: 8px;
-        }
-
-        .progress-bar {
-            background: rgba(255, 255, 255, 0.1);
-            height: 8px;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .progress-fill {
-            background: #4CAF50;
-            height: 100%;
-            transition: width 0.3s;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .tab-btn.active {
-            background: #4CAF50;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .order-item {
-            background: rgba(255, 255, 255, 0.05);
+        .portfolio-item {
+            background: rgba(0, 0, 0, 0.3);
             padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .cancel-order-btn {
-            padding: 6px 12px;
-            background: #f44336;
-            border: none;
-            border-radius: 4px;
-            color: #fff;
-            cursor: pointer;
+        .challenges {
+            background: rgba(15, 52, 96, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #0f3460;
+            margin-top: 20px;
         }
 
-        @media (max-width: 768px) {
+        .challenge-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-right: 4px solid #a0a0a0;
+        }
+
+        .challenge-item.completed {
+            border-right-color: #00ff88;
+        }
+
+        .challenge-item.active {
+            border-right-color: #00d9ff;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 217, 255, 0.9);
+            color: #000;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                top: -50px;
+                opacity: 0;
+            }
+            to {
+                top: 20px;
+                opacity: 1;
+            }
+        }
+
+        .footer {
+            text-align: center;
+            padding: 30px;
+            margin-top: 40px;
+            border-top: 1px solid #0f3460;
+            color: #a0a0a0;
+            font-size: 0.9em;
+        }
+
+        .footer a {
+            color: #00d9ff;
+            text-decoration: none;
+        }
+
+        @media (max-width: 1024px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
             .main-content {
                 grid-template-columns: 1fr;
             }
 
-            .stock-item {
+            .order-form {
                 grid-template-columns: 1fr;
             }
-
-            .portfolio-summary {
-                gap: 15px;
-            }
         }
 
-        .time-display {
-            text-align: center;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .scrollbar::-webkit-scrollbar {
+        ::-webkit-scrollbar {
             width: 8px;
         }
 
-        .scrollbar::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0f3460;
             border-radius: 4px;
         }
 
-        .scrollbar::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00d9ff;
         }
-
-        .impact-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            margin-right: 5px;
-        }
-
-        .impact-high { background: #f44336; }
-        .impact-medium { background: #FF9800; }
-        .impact-low { background: #2196F3; }
     </style>
 </head>
 <body>
+    <button class="lang-toggle" onclick="toggleLanguage()">English</button>
+
+    <div class="header">
+        <h1>تداول</h1>
+        <p>محاكاة سوق الأسهم السعودي</p>
+    </div>
+
     <div class="container">
-        <div class="header">
-            <div class="logo">📈 محاكي تداول الأسهم السعودية</div>
-            <div class="portfolio-summary">
-                <div class="stat">
-                    <div class="stat-label">رأس المال</div>
-                    <div class="stat-value" id="cashDisplay">50,000</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">قيمة المحفظة</div>
-                    <div class="stat-value" id="portfolioValue">50,000</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">الأرباح/الخسائر</div>
-                    <div class="stat-value" id="plDisplay">0</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-label">العائد %</div>
-                    <div class="stat-value" id="returnDisplay">0%</div>
-                </div>
+        <div class="dashboard">
+            <div class="card">
+                <h3>رأس المال</h3>
+                <div class="balance" id="cashBalance">50,000 ر.س</div>
+            </div>
+            <div class="card">
+                <h3>قيمة المحفظة</h3>
+                <div class="balance" id="portfolioValue">50,000 ر.س</div>
+            </div>
+            <div class="card">
+                <h3>الربح/الخسارة</h3>
+                <div class="balance" id="profitLoss">0 ر.س (0%)</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>التحكم بالوقت</h3>
+            <div class="time-controls">
+                <button onclick="setTimeSpeed(1)" class="active" id="speed1">عادي (1x)</button>
+                <button onclick="setTimeSpeed(5)" id="speed5">سريع (5x)</button>
+                <button onclick="setTimeSpeed(10)" id="speed10">سريع جداً (10x)</button>
+                <span style="margin-right: auto; color: #00d9ff;" id="gameTime">اليوم 1، الساعة 09:00</span>
             </div>
         </div>
 
         <div class="main-content">
-            <div class="panel">
-                <div class="panel-header">📊 السوق المباشر</div>
-                
-                <div class="time-display">
-                    <div style="font-size: 14px; opacity: 0.7;">وقت التداول</div>
-                    <div id="marketTime" style="font-size: 20px; font-weight: bold;">10:00 صباحاً</div>
-                    <div id="marketDay" style="font-size: 12px; opacity: 0.6;">اليوم 1</div>
-                </div>
-
-                <div class="filters">
-                    <button class="filter-btn active" onclick="filterStocks('all')">الكل</button>
-                    <button class="filter-btn" onclick="filterStocks('banks')">البنوك</button>
-                    <button class="filter-btn" onclick="filterStocks('petrochemical')">البتروكيماويات</button>
-                    <button class="filter-btn" onclick="filterStocks('telecom')">الاتصالات</button>
-                    <button class="filter-btn" onclick="filterStocks('retail')">التجزئة</button>
-                    <button class="filter-btn" onclick="filterStocks('insurance')">التأمين</button>
-                    <input type="text" id="searchInput" placeholder="ابحث عن سهم..." style="flex: 1; min-width: 200px;" oninput="searchStocks()">
-                </div>
-
-                <div class="stocks-list scrollbar" id="stocksList"></div>
+            <div class="stocks-list">
+                <h3 style="color: #00d9ff; margin-bottom: 15px;">الأسهم المتاحة</h3>
+                <div id="stocksList"></div>
             </div>
 
             <div>
-                <div class="panel">
-                    <div class="panel-header">📰 الأخبار والأحداث</div>
-                    <div id="newsList" class="scrollbar" style="max-height: 300px; overflow-y: auto;"></div>
+                <div class="chart-container">
+                    <h3 style="color: #00d9ff; margin-bottom: 15px;">الرسم البياني</h3>
+                    <canvas id="priceChart"></canvas>
+                    
+                    <div class="trading-panel">
+                        <h4 style="color: #fff; margin-bottom: 15px;">تنفيذ أمر</h4>
+                        <div class="order-form">
+                            <div class="form-group">
+                                <label>نوع الأمر</label>
+                                <select id="orderType">
+                                    <option value="market">سوق (Market)</option>
+                                    <option value="limit">محدد (Limit)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>عدد الأسهم</label>
+                                <input type="number" id="quantity" min="1" value="10">
+                            </div>
+                            <div class="form-group" id="limitPriceGroup" style="display: none;">
+                                <label>السعر المحدد</label>
+                                <input type="number" id="limitPrice" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label>الإجمالي التقريبي</label>
+                                <input type="text" id="totalCost" readonly>
+                            </div>
+                            <div class="trade-buttons">
+                                <button class="btn btn-buy" onclick="executeTrade('buy')">شراء</button>
+                                <button class="btn btn-sell" onclick="executeTrade('sell')">بيع</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="panel" style="margin-top: 20px;">
-                    <div class="panel-header">🎯 التحديات</div>
-                    <div id="challengesList"></div>
-                </div>
-
-                <div class="panel" style="margin-top: 20px;">
-                    <div class="panel-header">💼 محفظتي</div>
-                    <div id="holdingsList"></div>
+                <div class="portfolio">
+                    <div class="card">
+                        <h3>محفظتي</h3>
+                        <div id="portfolioList"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="panel">
-            <div class="tabs">
-                <button class="tab-btn active" onclick="switchTab('orders')">الأوامر المعلقة</button>
-                <button class="tab-btn" onclick="switchTab('history')">سجل الصفقات</button>
-            </div>
-            <div id="ordersTab" class="tab-content active">
-                <div id="pendingOrdersList"></div>
-            </div>
-            <div id="historyTab" class="tab-content">
-                <div id="tradeHistoryList" style="max-height: 300px; overflow-y: auto;"></div>
-            </div>
+        <div class="challenges">
+            <h3 style="color: #00d9ff; margin-bottom: 15px;">التحديات</h3>
+            <div id="challengesList"></div>
         </div>
     </div>
 
-    <div class="modal" id="tradeModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="modalTitle">تداول السهم</h2>
-                <button class="close-btn" onclick="closeModal()">×</button>
-            </div>
-
-            <div class="chart-container">
-                <canvas id="stockChart"></canvas>
-            </div>
-
-            <form class="order-form" onsubmit="submitOrder(event)">
-                <div class="form-group">
-                    <label>نوع الأمر</label>
-                    <select id="orderType" onchange="updateOrderForm()">
-                        <option value="market">أمر سوق (تنفيذ فوري)</option>
-                        <option value="limit">أمر محدد (بسعر معين)</option>
-                    </select>
-                </div>
-
-                <div class="form-group" id="limitPriceGroup" style="display: none;">
-                    <label>السعر المحدد</label>
-                    <input type="number" id="limitPrice" step="0.01" placeholder="أدخل السعر">
-                </div>
-
-                <div class="form-group">
-                    <label>الكمية</label>
-                    <input type="number" id="quantity" min="1" placeholder="عدد الأسهم" required oninput="updateOrderSummary()">
-                </div>
-
-                <div class="order-summary">
-                    <div class="summary-row">
-                        <span>السعر الحالي:</span>
-                        <span id="currentPrice">0</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>القيمة الإجمالية:</span>
-                        <span id="totalValue">0</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>العمولة (0.155%):</span>
-                        <span id="commission">0</span>
-                    </div>
-                    <div class="summary-row" style="font-weight: bold; font-size: 18px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px; margin-top: 10px;">
-                        <span>الإجمالي:</span>
-                        <span id="finalTotal">0</span>
-                    </div>
-                </div>
-
-                <div class="btn-group">
-                    <button type="submit" class="btn-primary btn-buy" data-action="buy">شراء</button>
-                    <button type="submit" class="btn-primary btn-sell" data-action="sell">بيع</button>
-                </div>
-            </form>
-        </div>
+    <div class="footer">
+        <p>تطوير: عبدالكريم العبود | <a href="mailto:abo.saleh.g@gmail.com">abo.saleh.g@gmail.com</a></p>
+        <p>© 2024 ImageMetrics Tool - All Rights Reserved</p>
     </div>
 
     <script>
-        // البيانات الأساسية
-        const SECTORS = {
-            banks: 'البنوك',
-            petrochemical: 'البتروكيماويات',
-            telecom: 'الاتصالات',
-            retail: 'التجزئة',
-            insurance: 'التأمين',
-            cement: 'الأسمنت',
-            energy: 'الطاقة',
-            realestate: 'العقار',
-            transport: 'النقل',
-            media: 'الإعلام',
-            hotels: 'الفنادق',
-            agriculture: 'الزراعة',
-            industrial: 'الصناعة',
-            building: 'التشييد'
-        };
-
-        // قائمة الشركات السعودية (عينة من 100 شركة - يمكن توسيعها)
+        // Market Data
         const STOCKS = [
-            // البنوك
-            {symbol: '1180', name: 'الراجحي', sector: 'banks', basePrice: 85.5, mu: 0.0002, sigma: 0.015},
-            {symbol: '1120', name: 'الأهلي', sector: 'banks', basePrice: 32.4, mu: 0.0001, sigma: 0.012},
-            {symbol: '1010', name: 'الرياض', sector: 'banks', basePrice: 28.3, mu: 0.0001, sigma: 0.013},
-            {symbol: '1050', name: 'الجزيرة', sector: 'banks', basePrice: 16.8, mu: 0.0001, sigma: 0.014},
-            {symbol: '1080', name: 'العربي', sector: 'banks', basePrice: 34.2, mu: 0.0001, sigma: 0.012},
-            {symbol: '1060', name: 'الإنماء', sector: 'banks', basePrice: 22.5, mu: 0.0002, sigma: 0.013},
-            {symbol: '1140', name: 'البلاد', sector: 'banks', basePrice: 25.7, mu: 0.0001, sigma: 0.015},
-            {symbol: '1150', name: 'ساب', sector: 'banks', basePrice: 31.9, mu: 0.0001, sigma: 0.011},
-            {symbol: '1030', name: 'الاستثمار', sector: 'banks', basePrice: 18.4, mu: 0.0001, sigma: 0.013},
-            {symbol: '1020', name: 'سامبا', sector: 'banks', basePrice: 29.6, mu: 0.0001, sigma: 0.012},
-            
-            // البتروكيماويات
-            {symbol: '2010', name: 'سابك', sector: 'petrochemical', basePrice: 98.2, mu: 0.0003, sigma: 0.018},
-            {symbol: '2020', name: 'سابك للمغذيات', sector: 'petrochemical', basePrice: 124.5, mu: 0.0002, sigma: 0.02},
-            {symbol: '2170', name: 'اللجين', sector: 'petrochemical', basePrice: 42.8, mu: 0.0002, sigma: 0.019},
-            {symbol: '2220', name: 'معادن', sector: 'petrochemical', basePrice: 47.3, mu: 0.0003, sigma: 0.021},
-            {symbol: '2090', name: 'الجبيل', sector: 'petrochemical', basePrice: 24.6, mu: 0.0001, sigma: 0.017},
-            {symbol: '2030', name: 'سافكو', sector: 'petrochemical', basePrice: 112.8, mu: 0.0002, sigma: 0.018},
-            {symbol: '2350', name: 'كيمانول', sector: 'petrochemical', basePrice: 15.4, mu: 0.0001, sigma: 0.016},
-            {symbol: '2060', name: 'التصنيع', sector: 'petrochemical', basePrice: 34.2, mu: 0.0002, sigma: 0.017},
-            {symbol: '2290', name: 'ينساب', sector: 'petrochemical', basePrice: 58.7, mu: 0.0002, sigma: 0.019},
-            {symbol: '2380', name: 'بتروكيم', sector: 'petrochemical', basePrice: 22.1, mu: 0.0001, sigma: 0.016},
-            
-            // الاتصالات
-            {symbol: '7010', name: 'اتصالات', sector: 'telecom', basePrice: 44.8, mu: 0.0002, sigma: 0.014},
-            {symbol: '7020', name: 'موبايلي', sector: 'telecom', basePrice: 29.4, mu: 0.0001, sigma: 0.016},
-            {symbol: '7030', name: 'زين', sector: 'telecom', basePrice: 16.2, mu: 0.0001, sigma: 0.015},
-            {symbol: '7040', name: 'عذيب', sector: 'telecom', basePrice: 87.3, mu: 0.0002, sigma: 0.013},
-            
-            // التجزئة
-            {symbol: '4001', name: 'أسواق المزرعة', sector: 'retail', basePrice: 32.7, mu: 0.0002, sigma: 0.016},
-            {symbol: '4008', name: 'ساكو', sector: 'retail', basePrice: 56.9, mu: 0.0003, sigma: 0.018},
-            {symbol: '4050', name: 'ساسكو', sector: 'retail', basePrice: 48.3, mu: 0.0002, sigma: 0.017},
-            {symbol: '4190', name: 'جرير', sector: 'retail', basePrice: 142.6, mu: 0.0003, sigma: 0.015},
-            {symbol: '4191', name: 'أبو معطي', sector: 'retail', basePrice: 34.8, mu: 0.0001, sigma: 0.016},
-            {symbol: '4240', name: 'النهدي', sector: 'retail', basePrice: 87.5, mu: 0.0004, sigma: 0.019},
-            {symbol: '4280', name: 'المواساة', sector: 'retail', basePrice: 156.2, mu: 0.0003, sigma: 0.017},
-            {symbol: '4031', name: 'الدوائية', sector: 'retail', basePrice: 64.3, mu: 0.0002, sigma: 0.015},
-            
-            // التأمين
-            {symbol: '8010', name: 'التعاونية', sector: 'insurance', basePrice: 42.1, mu: 0.0001, sigma: 0.016},
-            {symbol: '8012', name: 'جزيرة تكافل', sector: 'insurance', basePrice: 28.4, mu: 0.0001, sigma: 0.015},
-            {symbol: '8020', name: 'ملاذ للتأمين', sector: 'insurance', basePrice: 18.7, mu: 0.0001, sigma: 0.017},
-            {symbol: '8030', name: 'ميدغلف', sector: 'insurance', basePrice: 34.9, mu: 0.0001, sigma: 0.014},
-            {symbol: '8040', name: 'أليانز', sector: 'insurance', basePrice: 52.3, mu: 0.0002, sigma: 0.015},
-            {symbol: '8050', name: 'سلامة', sector: 'insurance', basePrice: 26.8, mu: 0.0001, sigma: 0.016},
-            {symbol: '8060', name: 'ولاء', sector: 'insurance', basePrice: 45.2, mu: 0.0002, sigma: 0.014},
-            {symbol: '8070', name: 'الدرع العربي', sector: 'insurance', basePrice: 38.6, mu: 0.0001, sigma: 0.015},
-            
-            // الأسمنت
-            {symbol: '3010', name: 'أسمنت السعودية', sector: 'cement', basePrice: 54.8, mu: 0.0001, sigma: 0.014},
-            {symbol: '3020', name: 'أسمنت اليمامة', sector: 'cement', basePrice: 47.2, mu: 0.0001, sigma: 0.013},
-            {symbol: '3030', name: 'أسمنت الشرقية', sector: 'cement', basePrice: 62.5, mu: 0.0001, sigma: 0.015},
-            {symbol: '3040', name: 'أسمنت القصيم', sector: 'cement', basePrice: 58.3, mu: 0.0001, sigma: 0.014},
-            {symbol: '3050', name: 'أسمنت ينبع', sector: 'cement', basePrice: 43.7, mu: 0.0001, sigma: 0.013},
-            {symbol: '3060', name: 'أسمنت الجنوب', sector: 'cement', basePrice: 51.4, mu: 0.0001, sigma: 0.014},
-            {symbol: '3090', name: 'أسمنت تبوك', sector: 'cement', basePrice: 18.9, mu: 0.0001, sigma: 0.016},
-            {symbol: '3091', name: 'أسمنت الجوف', sector: 'cement', basePrice: 14.2, mu: 0.0001, sigma: 0.015},
-            
-            // الطاقة
-            {symbol: '2222', name: 'أرامكو', sector: 'energy', basePrice: 28.45, mu: 0.0002, sigma: 0.012},
-            {symbol: '4030', name: 'الكهرباء', sector: 'energy', basePrice: 23.8, mu: 0.0001, sigma: 0.011},
-            {symbol: '2082', name: 'أكوا باور', sector: 'energy', basePrice: 156.2, mu: 0.0003, sigma: 0.019},
-            {symbol: '5110', name: 'الكابلات', sector: 'energy', basePrice: 34.6, mu: 0.0001, sigma: 0.014},
-            
-            // العقار
-            {symbol: '4300', name: 'دار الأركان', sector: 'realestate', basePrice: 12.4, mu: 0.0002, sigma: 0.018},
-            {symbol: '4320', name: 'الأندلس', sector: 'realestate', basePrice: 28.7, mu: 0.0001, sigma: 0.016},
-            {symbol: '4100', name: 'مكة', sector: 'realestate', basePrice: 47.3, mu: 0.0002, sigma: 0.017},
-            {symbol: '4150', name: 'التعمير', sector: 'realestate', basePrice: 18.9, mu: 0.0001, sigma: 0.015},
-            {symbol: '4220', name: 'إعمار', sector: 'realestate', basePrice: 13.6, mu: 0.0001, sigma: 0.019},
-            {symbol: '4090', name: 'طيبة', sector: 'realestate', basePrice: 31.2, mu: 0.0001, sigma: 0.016},
-            {symbol: '4250', name: 'جبل عمر', sector: 'realestate', basePrice: 24.8, mu: 0.0002, sigma: 0.017},
-            
-            // النقل
-            {symbol: '4110', name: 'بدجت السعودية', sector: 'transport', basePrice: 67.4, mu: 0.0002, sigma: 0.015},
-            {symbol: '4260', name: 'بوبا العربية', sector: 'transport', basePrice: 134.8, mu: 0.0003, sigma: 0.016},
-            {symbol: '2190', name: 'سيسكو', sector: 'transport', basePrice: 42.3, mu: 0.0001, sigma: 0.014},
-            {symbol: '4261', name: 'ذيب', sector: 'transport', basePrice: 58.9, mu: 0.0002, sigma: 0.017},
-            
-            // الإعلام
-            {symbol: '4210', name: 'أبحر', sector: 'media', basePrice: 26.4, mu: 0.0001, sigma: 0.015},
-            {symbol: '4070', name: 'الأبحاث', sector: 'media', basePrice: 189.2, mu: 0.0002, sigma: 0.014},
-            {symbol: '4200', name: 'الدريس', sector: 'media', basePrice: 92.7, mu: 0.0003, sigma: 0.016},
-            
-            // الفنادق والسياحة
-            {symbol: '4170', name: 'شمس', sector: 'hotels', basePrice: 74.3, mu: 0.0002, sigma: 0.017},
-            {symbol: '4164', name: 'الشرقية', sector: 'hotels', basePrice: 38.5, mu: 0.0001, sigma: 0.016},
-            {symbol: '4143', name: 'الحكير', sector: 'hotels', basePrice: 54.8, mu: 0.0002, sigma: 0.018},
-            
-            // الزراعة والأغذية
-            {symbol: '2280', name: 'المراعي', sector: 'agriculture', basePrice: 58.4, mu: 0.0003, sigma: 0.015},
-            {symbol: '6010', name: 'نادك', sector: 'agriculture', basePrice: 32.8, mu: 0.0001, sigma: 0.016},
-            {symbol: '6020', name: 'جاكو', sector: 'agriculture', basePrice: 48.2, mu: 0.0002, sigma: 0.017},
-            {symbol: '6040', name: 'تبوك الزراعية', sector: 'agriculture', basePrice: 24.6, mu: 0.0001, sigma: 0.015},
-            {symbol: '6050', name: 'الأسماك', sector: 'agriculture', basePrice: 67.3, mu: 0.0002, sigma: 0.018},
-            {symbol: '2270', name: 'سدافكو', sector: 'agriculture', basePrice: 45.7, mu: 0.0002, sigma: 0.016},
-            {symbol: '6060', name: 'الشرقية للتنمية', sector: 'agriculture', basePrice: 19.8, mu: 0.0001, sigma: 0.014},
-            
-            // الصناعة
-            {symbol: '2040', name: 'الخزف', sector: 'industrial', basePrice: 28.4, mu: 0.0001, sigma: 0.015},
-            {symbol: '2050', name: 'مجموعة صافولا', sector: 'industrial', basePrice: 34.2, mu: 0.0002, sigma: 0.014},
-            {symbol: '2080', name: 'غازكو', sector: 'industrial', basePrice: 18.7, mu: 0.0001, sigma: 0.013},
-            {symbol: '2150', name: 'زجاج', sector: 'industrial', basePrice: 43.6, mu: 0.0001, sigma: 0.016},
-            {symbol: '2160', name: 'أميانتيت', sector: 'industrial', basePrice: 56.9, mu: 0.0002, sigma: 0.015},
-            {symbol: '2180', name: 'فيبكو', sector: 'industrial', basePrice: 24.3, mu: 0.0001, sigma: 0.014},
-            {symbol: '2310', name: 'سبكيم', sector: 'industrial', basePrice: 87.4, mu: 0.0003, sigma: 0.018},
-            {symbol: '2320', name: 'البحري', sector: 'industrial', basePrice: 21.6, mu: 0.0001, sigma: 0.016},
-            {symbol: '2330', name: 'المتطورة', sector: 'industrial', basePrice: 94.2, mu: 0.0003, sigma: 0.019},
-            {symbol: '1211', name: 'معادن', sector: 'industrial', basePrice: 42.8, mu: 0.0002, sigma: 0.017},
-            
-            // التشييد والبناء
-            {symbol: '3008', name: 'الكثيري', sector: 'building', basePrice: 38.9, mu: 0.0001, sigma: 0.015},
-            {symbol: '4130', name: 'الباحة', sector: 'building', basePrice: 27.4, mu: 0.0001, sigma: 0.014},
-            {symbol: '4160', name: 'ثمار', sector: 'building', basePrice: 16.8, mu: 0.0001, sigma: 0.016},
-            {symbol: '4330', name: 'ريدان', sector: 'building', basePrice: 12.3, mu: 0.0002, sigma: 0.019},
-            {symbol: '4342', name: 'أنابيب', sector: 'building', basePrice: 34.7, mu: 0.0001, sigma: 0.014}
+            {
+                symbol: '2222',
+                nameAr: 'أرامكو السعودية',
+                nameEn: 'Saudi Aramco',
+                sector: 'طاقة',
+                sectorEn: 'Energy',
+                price: 28.50,
+                mu: 0.0001,
+                sigma: 0.015,
+                correlation: 0.3
+            },
+            {
+                symbol: '1120',
+                nameAr: 'مصرف الراجحي',
+                nameEn: 'Al Rajhi Bank',
+                sector: 'مصارف',
+                sectorEn: 'Banking',
+                price: 85.00,
+                mu: 0.0002,
+                sigma: 0.02,
+                correlation: 0.5
+            },
+            {
+                symbol: '7010',
+                nameAr: 'الاتصالات السعودية',
+                nameEn: 'Saudi Telecom (STC)',
+                sector: 'اتصالات',
+                sectorEn: 'Telecom',
+                price: 42.80,
+                mu: 0.00015,
+                sigma: 0.018,
+                correlation: 0.4
+            },
+            {
+                symbol: '2050',
+                nameAr: 'سابك',
+                nameEn: 'SABIC',
+                sector: 'صناعة',
+                sectorEn: 'Industrials',
+                price: 95.50,
+                mu: 0.00012,
+                sigma: 0.022,
+                correlation: 0.6
+            },
+            {
+                symbol: '4001',
+                nameAr: 'أسواق ع. العثيم',
+                nameEn: 'Othaim Markets',
+                sector: 'تجزئة',
+                sectorEn: 'Retail',
+                price: 58.20,
+                mu: 0.00018,
+                sigma: 0.025,
+                correlation: 0.2
+            }
         ];
 
-        // حالة اللعبة
+        // Game State
         let gameState = {
             cash: 50000,
-            holdings: {},
+            portfolio: {},
             pendingOrders: [],
             tradeHistory: [],
-            day: 1,
-            hour: 10,
-            startCapital: 50000,
+            priceHistory: {},
+            selectedStock: STOCKS[0].symbol,
+            timeSpeed: 1,
+            gameDay: 1,
+            gameHour: 9,
+            lastUpdate: Date.now(),
+            language: 'ar',
             challenges: [
-                {id: 1, title: 'حقق 10% ربح', target: 55000, reward: 0, completed: false},
-                {id: 2, title: 'حقق 20% ربح', target: 60000, reward: 100000, completed: false},
-                {id: 3, title: 'حقق 30% ربح', target: 65000, reward: 300000, completed: false}
+                { id: 1, nameAr: 'المبتدئ', nameEn: 'Beginner', targetProfit: 10, reward: 0, completed: false },
+                { id: 2, nameAr: 'المتداول', nameEn: 'Trader', targetProfit: 20, reward: 100000, completed: false },
+                { id: 3, nameAr: 'المحترف', nameEn: 'Professional', targetProfit: 30, reward: 300000, completed: false }
             ]
         };
 
-        // أسعار السوق الحالية
-        let marketPrices = {};
-        let priceHistory = {};
-        let newsItems = [];
-        let selectedStock = null;
-        let stockChart = null;
-        let gameInterval = null;
+        // Initialize price history
+        STOCKS.forEach(stock => {
+            gameState.priceHistory[stock.symbol] = [{ time: 0, price: stock.price }];
+        });
 
-        // مصفوفة الارتباط بين القطاعات
-        const sectorCorrelations = {
-            banks: {banks: 1, petrochemical: 0.3, telecom: 0.2, retail: 0.1},
-            petrochemical: {banks: 0.3, petrochemical: 1, energy: 0.6, industrial: 0.4},
-            telecom: {banks: 0.2, telecom: 1, media: 0.5},
-            retail: {retail: 1, realestate: 0.3}
-        };
+        let priceChart = null;
 
-        // تهيئة اللعبة
-        function initGame() {
-            loadGameState();
-            initializePrices();
-            renderStocks();
-            renderPortfolio();
-            renderChallenges();
-            renderPendingOrders();
-            updatePortfolioDisplay();
-            generateInitialNews();
-            startGameLoop();
-        }
-
-        // تهيئة الأسعار
-        function initializePrices() {
-            STOCKS.forEach(stock => {
-                marketPrices[stock.symbol] = stock.basePrice;
-                priceHistory[stock.symbol] = [{price: stock.basePrice, time: 0}];
-            });
-        }
-
-        // حلقة اللعبة الرئيسية
-        function startGameLoop() {
-            if (gameInterval) clearInterval(gameInterval);
-            gameInterval = setInterval(() => {
-                updateMarketPrices();
-                checkPendingOrders();
-                updatePortfolioDisplay();
-                gameState.hour += 1;
-                if (gameState.hour >= 17) {
-                    gameState.hour = 10;
-                    gameState.day += 1;
-                    generateDailyNews();
+        // Load saved state
+        async function loadGameState() {
+            try {
+                const saved = await window.storage.get('tadawul_game_state');
+                if (saved && saved.value) {
+                    const loaded = JSON.parse(saved.value);
+                    gameState = { ...gameState, ...loaded };
+                    // Update current prices
+                    STOCKS.forEach(stock => {
+                        if (gameState.priceHistory[stock.symbol]) {
+                            const history = gameState.priceHistory[stock.symbol];
+                            stock.price = history[history.length - 1].price;
+                        }
+                    });
                 }
-                updateTimeDisplay();
-                renderStocks();
-                saveGameState();
-            }, 1000); // 1 ثانية = ساعة في اللعبة (يوم كامل = 7 ثواني)
+            } catch (error) {
+                console.log('No saved state found, starting fresh');
+            }
         }
 
-        // تحديث أسعار السوق باستخدام GBM
-        function updateMarketPrices() {
-            const dt = 1/252; // يوم تداول واحد
-            const sectorShocks = {};
-            
-            // توليد صدمات قطاعية
-            Object.keys(SECTORS).forEach(sector => {
-                sectorShocks[sector] = Math.random() < 0.05 ? (Math.random() - 0.5) * 0.1 : 0;
-            });
+        // Save game state
+        async function saveGameState() {
+            try {
+                await window.storage.set('tadawul_game_state', JSON.stringify(gameState));
+            } catch (error) {
+                console.error('Failed to save game state:', error);
+            }
+        }
+
+        // GBM Price Update
+        function updatePrices() {
+            const dt = 1 / 252; // One trading day
+            const marketShock = Math.random() < 0.05 ? (Math.random() - 0.5) * 0.1 : 0;
 
             STOCKS.forEach(stock => {
-                const S = marketPrices[stock.symbol];
-                const mu = stock.mu;
-                const sigma = stock.sigma;
+                const drift = (stock.mu - 0.5 * stock.sigma ** 2) * dt;
+                const randomShock = stock.sigma * Math.sqrt(dt) * (Math.random() * 2 - 1);
+                const correlatedShock = stock.correlation * marketShock;
                 
-                // حركة براونية
-                const Z = boxMullerRandom();
-                const drift = mu * dt;
-                const diffusion = sigma * Math.sqrt(dt) * Z;
-                
-                // صدمة قطاعية
-                const sectorShock = sectorShocks[stock.sector] || 0;
-                
-                // صدمة أخبار عشوائية
-                const newsShock = Math.random() < 0.01 ? (Math.random() - 0.5) * 0.15 : 0;
-                
-                // حساب السعر الجديد
-                const priceChange = drift + diffusion + sectorShock + newsShock;
-                let newPrice = S * Math.exp(priceChange);
-                
-                // حد أدنى وأعلى للتغير اليومي (10%)
-                newPrice = Math.max(S * 0.9, Math.min(S * 1.1, newPrice));
-                newPrice = Math.round(newPrice * 100) / 100;
-                
-                marketPrices[stock.symbol] = newPrice;
-                priceHistory[stock.symbol].push({
-                    price: newPrice,
-                    time: gameState.day * 7 + (gameState.hour - 10)
+                const priceChange = stock.price * (drift + randomShock + correlatedShock);
+                stock.price = Math.max(stock.price + priceChange, 0.01);
+
+                const timePoint = gameState.gameDay * 24 + gameState.gameHour;
+                gameState.priceHistory[stock.symbol].push({
+                    time: timePoint,
+                    price: stock.price
                 });
-                
-                // الاحتفاظ بآخر 100 نقطة فقط
-                if (priceHistory[stock.symbol].length > 100) {
-                    priceHistory[stock.symbol].shift();
+
+                // Keep only last 100 points
+                if (gameState.priceHistory[stock.symbol].length > 100) {
+                    gameState.priceHistory[stock.symbol].shift();
                 }
             });
+
+            checkPendingOrders();
+            updateUI();
         }
 
-        // توليد رقم عشوائي طبيعي (Box-Muller)
-        function boxMullerRandom() {
-            const u1 = Math.random();
-            const u2 = Math.random();
-            return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-        }
-
-        // فحص الأوامر المعلقة
+        // Check and execute pending limit orders
         function checkPendingOrders() {
             gameState.pendingOrders = gameState.pendingOrders.filter(order => {
-                const currentPrice = marketPrices[order.symbol];
-                let shouldExecute = false;
+                const stock = STOCKS.find(s => s.symbol === order.symbol);
+                if (!stock) return true;
 
-                if (order.type === 'limit') {
-                    if (order.side === 'buy' && currentPrice <= order.price) {
-                        shouldExecute = true;
-                    } else if (order.side === 'sell' && currentPrice >= order.price) {
-                        shouldExecute = true;
-                    }
-                }
+                const shouldExecute = 
+                    (order.side === 'buy' && stock.price <= order.price) ||
+                    (order.side === 'sell' && stock.price >= order.price);
 
                 if (shouldExecute) {
-                    executeOrder(order.side, order.symbol, order.quantity, currentPrice);
+                    executeOrder(order.side, stock, order.quantity, stock.price);
+                    showNotification(`تم تنفيذ أمر ${order.side === 'buy' ? 'شراء' : 'بيع'} محدد: ${order.quantity} سهم من ${stock.nameAr}`);
                     return false;
                 }
                 return true;
             });
-            renderPendingOrders();
         }
 
-        // تنفيذ أمر
-        function executeOrder(side, symbol, quantity, price) {
-            const slippage = (Math.random() - 0.5) * 0.002; // ±0.2%
-            const executionPrice = price * (1 + slippage);
-            const totalValue = executionPrice * quantity;
-            const commission = totalValue * 0.00155;
+        // Execute trade
+        function executeTrade(side) {
+            const stock = STOCKS.find(s => s.symbol === gameState.selectedStock);
+            if (!stock) return;
+
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const orderType = document.getElementById('orderType').value;
+
+            if (quantity <= 0 || isNaN(quantity)) {
+                showNotification('الرجاء إدخال كمية صحيحة', 'error');
+                return;
+            }
+
+            if (orderType === 'market') {
+                const slippage = (Math.random() - 0.5) * 0.004;
+                const executionPrice = stock.price * (1 + slippage);
+                executeOrder(side, stock, quantity, executionPrice);
+            } else {
+                const limitPrice = parseFloat(document.getElementById('limitPrice').value);
+                if (limitPrice <= 0 || isNaN(limitPrice)) {
+                    showNotification('الرجاء إدخال سعر محدد صحيح', 'error');
+                    return;
+                }
+                gameState.pendingOrders.push({
+                    symbol: stock.symbol,
+                    side: side,
+                    quantity: quantity,
+                    price: limitPrice
+                });
+                showNotification(`تم إضافة أمر محدد: ${side === 'buy' ? 'شراء' : 'بيع'} ${quantity} سهم عند ${limitPrice.toFixed(2)} ر.س`);
+            }
+
+            saveGameState();
+            updateUI();
+        }
+
+        // Execute order
+        function executeOrder(side, stock, quantity, price) {
+            const commission = 0.00155;
+            const cost = quantity * price;
+            const totalCost = cost * (1 + commission);
 
             if (side === 'buy') {
-                const totalCost = totalValue + commission;
-                if (gameState.cash >= totalCost) {
-                    gameState.cash -= totalCost;
-                    gameState.holdings[symbol] = (gameState.holdings[symbol] || 0) + quantity;
-                    
-                    gameState.tradeHistory.unshift({
-                        date: `اليوم ${gameState.day} - ${gameState.hour}:00`,
-                        symbol: symbol,
-                        side: 'شراء',
-                        quantity: quantity,
-                        price: executionPrice.toFixed(2),
-                        total: totalCost.toFixed(2)
-                    });
+                if (gameState.cash < totalCost) {
+                    showNotification('رصيد غير كافٍ!', 'error');
+                    return;
                 }
-            } else if (side === 'sell') {
-                if (gameState.holdings[symbol] >= quantity) {
-                    const totalRevenue = totalValue - commission;
-                    gameState.cash += totalRevenue;
-                    gameState.holdings[symbol] -= quantity;
-                    
-                    if (gameState.holdings[symbol] === 0) {
-                        delete gameState.holdings[symbol];
-                    }
-                    
-                    gameState.tradeHistory.unshift({
-                        date: `اليوم ${gameState.day} - ${gameState.hour}:00`,
-                        symbol: symbol,
-                        side: 'بيع',
-                        quantity: quantity,
-                        price: executionPrice.toFixed(2),
-                        total: totalRevenue.toFixed(2)
-                    });
+                gameState.cash -= totalCost;
+                gameState.portfolio[stock.symbol] = (gameState.portfolio[stock.symbol] || 0) + quantity;
+                showNotification(`تم شراء ${quantity} سهم من ${stock.nameAr} بسعر ${price.toFixed(2)} ر.س`);
+            } else {
+                const owned = gameState.portfolio[stock.symbol] || 0;
+                if (owned < quantity) {
+                    showNotification('لا تملك أسهم كافية للبيع!', 'error');
+                    return;
                 }
+                gameState.cash += cost * (1 - commission);
+                gameState.portfolio[stock.symbol] -= quantity;
+                if (gameState.portfolio[stock.symbol] === 0) {
+                    delete gameState.portfolio[stock.symbol];
+                }
+                showNotification(`تم بيع ${quantity} سهم من ${stock.nameAr} بسعر ${price.toFixed(2)} ر.س`);
             }
 
-            checkChallenges();
-            updatePortfolioDisplay();
-            renderPortfolio();
-            renderTradeHistory();
-        }
-
-        // عرض الأسهم
-        function renderStocks() {
-            const container = document.getElementById('stocksList');
-            const filterButtons = document.querySelectorAll('.filter-btn');
-            let activeFilter = 'all';
-            
-            filterButtons.forEach(btn => {
-                if (btn.classList.contains('active')) {
-                    activeFilter = btn.textContent.trim() === 'الكل' ? 'all' : 
-                                   btn.textContent.trim() === 'البنوك' ? 'banks' :
-                                   btn.textContent.trim() === 'البتروكيماويات' ? 'petrochemical' :
-                                   btn.textContent.trim() === 'الاتصالات' ? 'telecom' :
-                                   btn.textContent.trim() === 'التجزئة' ? 'retail' :
-                                   btn.textContent.trim() === 'التأمين' ? 'insurance' : 'all';
-                }
+            gameState.tradeHistory.push({
+                time: `اليوم ${gameState.gameDay}، ${gameState.gameHour}:00`,
+                symbol: stock.symbol,
+                side: side,
+                quantity: quantity,
+                price: price
             });
 
-            let filteredStocks = STOCKS;
-            if (activeFilter !== 'all') {
-                filteredStocks = STOCKS.filter(s => s.sector === activeFilter);
-            }
+            checkChallenges();
+        }
 
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            if (searchTerm) {
-                filteredStocks = filteredStocks.filter(s => 
-                    s.name.includes(searchTerm) || s.symbol.includes(searchTerm)
-                );
-            }
+        // Check challenges
+        function checkChallenges() {
+            const totalValue = getTotalValue();
+            const profitPercent = ((totalValue - 50000) / 50000) * 100;
 
-            container.innerHTML = filteredStocks.map(stock => {
-                const currentPrice = marketPrices[stock.symbol];
-                const change = ((currentPrice - stock.basePrice) / stock.basePrice * 100).toFixed(2);
-                const changeClass = change >= 0 ? 'profit' : 'loss';
-                const changeSymbol = change >= 0 ? '+' : '';
+            gameState.challenges.forEach(challenge => {
+                if (!challenge.completed && profitPercent >= challenge.targetProfit) {
+                    challenge.completed = true;
+                    if (challenge.reward > 0) {
+                        gameState.cash += challenge.reward;
+                        showNotification(`مبروك! أكملت تحدي "${challenge.nameAr}" وحصلت على ${challenge.reward.toLocaleString('ar-SA')} ر.س!`);
+                    } else {
+                        showNotification(`مبروك! أكملت تحدي "${challenge.nameAr}"!`);
+                    }
+                }
+            });
+        }
 
+        // Calculate total value
+        function getTotalValue() {
+            let portfolioValue = 0;
+            Object.keys(gameState.portfolio).forEach(symbol => {
+                const stock = STOCKS.find(s => s.symbol === symbol);
+                if (stock) {
+                    portfolioValue += gameState.portfolio[symbol] * stock.price;
+                }
+            });
+            return gameState.cash + portfolioValue;
+        }
+
+        // Update UI
+        function updateUI() {
+            // Update dashboard
+            document.getElementById('cashBalance').textContent = gameState.cash.toLocaleString('ar-SA') + ' ر.س';
+            
+            const totalValue = getTotalValue();
+            document.getElementById('portfolioValue').textContent = totalValue.toLocaleString('ar-SA') + ' ر.س';
+            
+            const profit = totalValue - 50000;
+            const profitPercent = (profit / 50000) * 100;
+            const profitEl = document.getElementById('profitLoss');
+            profitEl.textContent = `${profit.toLocaleString('ar-SA')} ر.س (${profitPercent.toFixed(2)}%)`;
+            profitEl.className = profit >= 0 ? 'balance profit-positive' : 'balance profit-negative';
+
+            // Update time
+            document.getElementById('gameTime').textContent = `اليوم ${gameState.gameDay}، الساعة ${String(gameState.gameHour).padStart(2, '0')}:00`;
+
+            // Update stocks list
+            const stocksList = document.getElementById('stocksList');
+            stocksList.innerHTML = STOCKS.map(stock => {
+                const history = gameState.priceHistory[stock.symbol];
+                const prevPrice = history.length > 1 ? history[history.length - 2].price : stock.price;
+                const change = ((stock.price - prevPrice) / prevPrice) * 100;
+                const changeClass = change >= 0 ? 'profit-positive' : 'profit-negative';
+                
                 return `
-                    <div class="stock-item" onclick="openTradeModal('${stock.symbol}')">
-                        <div>
-                            <div class="stock-name">${stock.name}</div>
-                            <div class="stock-symbol">${stock.symbol} - ${SECTORS[stock.sector]}</div>
-                        </div>
-                        <div class="stock-price">${currentPrice.toFixed(2)}</div>
-                        <div class="stock-change ${changeClass}" style="background: ${change >= 0 ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)'}">
-                            ${changeSymbol}${change}%
-                        </div>
-                        <div style="text-align: center;">
-                            <button class="action-btn" onclick="event.stopPropagation(); openTradeModal('${stock.symbol}')">تداول</button>
+                    <div class="stock-item ${stock.symbol === gameState.selectedStock ? 'selected' : ''}" 
+                         onclick="selectStock('${stock.symbol}')">
+                        <div class="stock-header">
+                            <div>
+                                <div class="stock-name">${stock.nameAr} (${stock.symbol})</div>
+                                <div class="stock-sector">${stock.sector}</div>
+                            </div>
+                            <div style="text-align: left;">
+                                <div class="stock-price">${stock.price.toFixed(2)} ر.س</div>
+                                <div class="stock-change ${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</div>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
-        }
 
-        // فلترة الأسهم
-        function filterStocks(sector) {
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            renderStocks();
-        }
-
-        // البحث عن الأسهم
-        function searchStocks() {
-            renderStocks();
-        }
-
-        // فتح نافذة التداول
-        function openTradeModal(symbol) {
-            selectedStock = STOCKS.find(s => s.symbol === symbol);
-            if (!selectedStock) return;
-
-            document.getElementById('modalTitle').textContent = `${selectedStock.name} (${selectedStock.symbol})`;
-            document.getElementById('tradeModal').classList.add('active');
-            document.getElementById('currentPrice').textContent = marketPrices[symbol].toFixed(2) + ' ريال';
-            
-            renderStockChart(symbol);
-            updateOrderForm();
-        }
-
-        // إغلاق نافذة التداول
-        function closeModal() {
-            document.getElementById('tradeModal').classList.remove('active');
-            selectedStock = null;
-        }
-
-        // رسم الرسم البياني
-        function renderStockChart(symbol) {
-            const ctx = document.getElementById('stockChart').getContext('2d');
-            const history = priceHistory[symbol] || [];
-
-            if (stockChart) {
-                stockChart.destroy();
+            // Update portfolio
+            const portfolioList = document.getElementById('portfolioList');
+            const portfolioItems = Object.keys(gameState.portfolio);
+            if (portfolioItems.length === 0) {
+                portfolioList.innerHTML = '<p style="color: #a0a0a0; text-align: center; padding: 20px;">لا توجد أسهم في المحفظة</p>';
+            } else {
+                portfolioList.innerHTML = portfolioItems.map(symbol => {
+                    const stock = STOCKS.find(s => s.symbol === symbol);
+                    if (!stock) return '';
+                    const quantity = gameState.portfolio[symbol];
+                    const value = quantity * stock.price;
+                    return `
+                        <div class="portfolio-item">
+                            <div>
+                                <div style="font-weight: bold; color: #fff;">${stock.nameAr}</div>
+                                <div style="color: #a0a0a0; font-size: 0.9em;">${quantity} سهم × ${stock.price.toFixed(2)} ر.س</div>
+                            </div>
+                            <div style="text-align: left; font-weight: bold; color: #00ff88;">
+                                ${value.toLocaleString('ar-SA')} ر.س
+                            </div>
+                        </div>
+                    `;
+                }).join('');
             }
 
-            stockChart = new Chart(ctx, {
+            // Update challenges
+            const challengesList = document.getElementById('challengesList');
+            challengesList.innerHTML = gameState.challenges.map(challenge => {
+                const statusClass = challenge.completed ? 'completed' : 'active';
+                const statusText = challenge.completed ? '✓ مكتمل' : 'نشط';
+                return `
+                    <div class="challenge-item ${statusClass}">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: bold; color: #fff; margin-bottom: 5px;">${challenge.nameAr}</div>
+                                <div style="color: #a0a0a0; font-size: 0.9em;">حقق ربح ${challenge.targetProfit}%</div>
+                                ${challenge.reward > 0 ? `<div style="color: #00d9ff; font-size: 0.9em;">المكافأة: ${challenge.reward.toLocaleString('ar-SA')} ر.س</div>` : ''}
+                            </div>
+                            <div style="font-weight: bold; color: ${challenge.completed ? '#00ff88' : '#00d9ff'};">
+                                ${statusText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Update chart
+            updateChart();
+
+            // Update total cost
+            updateTotalCost();
+        }
+
+        // Select stock
+        function selectStock(symbol) {
+            gameState.selectedStock = symbol;
+            updateUI();
+        }
+
+        // Update chart
+        function updateChart() {
+            const stock = STOCKS.find(s => s.symbol === gameState.selectedStock);
+            if (!stock) return;
+
+            const history = gameState.priceHistory[stock.symbol];
+            const ctx = document.getElementById('priceChart').getContext('2d');
+
+            if (priceChart) {
+                priceChart.destroy();
+            }
+
+            priceChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: history.map(h => ''),
+                    labels: history.map(h => {
+                        const day = Math.floor(h.time / 24);
+                        const hour = h.time % 24;
+                        return `يوم ${day + 1}, ${hour}:00`;
+                    }),
                     datasets: [{
-                        label: 'السعر',
+                        label: stock.nameAr,
                         data: history.map(h => h.price),
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        tension: 0.4,
+                        borderColor: '#00d9ff',
+                        backgroundColor: 'rgba(0, 217, 255, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
                         fill: true
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
                     plugins: {
-                        legend: {display: false}
+                        legend: {
+                            labels: {
+                                color: '#e0e0e0',
+                                font: {
+                                    size: 14
+                                }
+                            }
+                        }
                     },
                     scales: {
-                        y: {
-                            ticks: {color: '#fff'},
-                            grid: {color: 'rgba(255, 255, 255, 0.1)'}
-                        },
                         x: {
-                            display: false
+                            ticks: {
+                                color: '#a0a0a0',
+                                maxTicksLimit: 10
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
+                        },
+                        y: {
+                            ticks: {
+                                color: '#a0a0a0',
+                                callback: function(value) {
+                                    return value.toFixed(2) + ' ر.س';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.1)'
+                            }
                         }
                     }
                 }
             });
         }
 
-        // تحديث نموذج الأمر
-        function updateOrderForm() {
-            const orderType = document.getElementById('orderType').value;
-            const limitPriceGroup = document.getElementById('limitPriceGroup');
-            
-            if (orderType === 'limit') {
-                limitPriceGroup.style.display = 'block';
-            } else {
-                limitPriceGroup.style.display = 'none';
-            }
-            
-            updateOrderSummary();
-        }
-
-        // تحديث ملخص الأمر
-        function updateOrderSummary() {
-            if (!selectedStock) return;
+        // Update total cost calculation
+        function updateTotalCost() {
+            const stock = STOCKS.find(s => s.symbol === gameState.selectedStock);
+            if (!stock) return;
 
             const quantity = parseInt(document.getElementById('quantity').value) || 0;
             const orderType = document.getElementById('orderType').value;
-            let price = marketPrices[selectedStock.symbol];
             
+            let price = stock.price;
             if (orderType === 'limit') {
-                price = parseFloat(document.getElementById('limitPrice').value) || price;
+                const limitPrice = parseFloat(document.getElementById('limitPrice').value);
+                if (!isNaN(limitPrice) && limitPrice > 0) {
+                    price = limitPrice;
+                }
             }
 
-            const totalValue = price * quantity;
-            const commission = totalValue * 0.00155;
-            const finalTotal = totalValue + commission;
-
-            document.getElementById('currentPrice').textContent = marketPrices[selectedStock.symbol].toFixed(2) + ' ريال';
-            document.getElementById('totalValue').textContent = totalValue.toFixed(2) + ' ريال';
-            document.getElementById('commission').textContent = commission.toFixed(2) + ' ريال';
-            document.getElementById('finalTotal').textContent = finalTotal.toFixed(2) + ' ريال';
+            const commission = 0.00155;
+            const total = quantity * price * (1 + commission);
+            document.getElementById('totalCost').value = total.toLocaleString('ar-SA') + ' ر.س';
         }
 
-        // إرسال الأمر
-        function submitOrder(event) {
-            event.preventDefault();
-            if (!selectedStock) return;
-
-            const action = event.submitter.dataset.action;
-            const quantity = parseInt(document.getElementById('quantity').value);
-            const orderType = document.getElementById('orderType').value;
-            let price = marketPrices[selectedStock.symbol];
-
-            if (orderType === 'limit') {
-                price = parseFloat(document.getElementById('limitPrice').value);
-                if (!price || price <= 0) {
-                    alert('الرجاء إدخال سعر محدد صحيح');
-                    return;
-                }
-            }
-
-            if (!quantity || quantity <= 0) {
-                alert('الرجاء إدخال كمية صحيحة');
-                return;
-            }
-
-            if (action === 'buy') {
-                const totalCost = price * quantity * 1.00155;
-                if (gameState.cash < totalCost) {
-                    alert('رصيد غير كافٍ');
-                    return;
-                }
-
-                if (orderType === 'market') {
-                    executeOrder('buy', selectedStock.symbol, quantity, price);
-                } else {
-                    gameState.pendingOrders.push({
-                        type: 'limit',
-                        side: 'buy',
-                        symbol: selectedStock.symbol,
-                        quantity: quantity,
-                        price: price
-                    });
-                }
-            } else if (action === 'sell') {
-                const holdings = gameState.holdings[selectedStock.symbol] || 0;
-                if (holdings < quantity) {
-                    alert('لا تملك هذه الكمية من الأسهم');
-                    return;
-                }
-
-                if (orderType === 'market') {
-                    executeOrder('sell', selectedStock.symbol, quantity, price);
-                } else {
-                    gameState.pendingOrders.push({
-                        type: 'limit',
-                        side: 'sell',
-                        symbol: selectedStock.symbol,
-                        quantity: quantity,
-                        price: price
-                    });
-                }
-            }
-
-            closeModal();
-            document.getElementById('quantity').value = '';
-            document.getElementById('limitPrice').value = '';
-            saveGameState();
-        }
-
-        // عرض المحفظة
-        function renderPortfolio() {
-            const container = document.getElementById('holdingsList');
-            const holdings = Object.keys(gameState.holdings);
-
-            if (holdings.length === 0) {
-                container.innerHTML = '<div style="text-align: center; opacity: 0.6; padding: 20px;">لا توجد أسهم في المحفظة</div>';
-                return;
-            }
-
-            container.innerHTML = holdings.map(symbol => {
-                const stock = STOCKS.find(s => s.symbol === symbol);
-                const quantity = gameState.holdings[symbol];
-                const currentPrice = marketPrices[symbol];
-                const value = (currentPrice * quantity).toFixed(2);
-
-                return `
-                    <div class="holding-item">
-                        <div>
-                            <div style="font-weight: bold;">${stock.name}</div>
-                            <div style="font-size: 11px; opacity: 0.7;">${symbol}</div>
-                        </div>
-                        <div style="text-align: center;">
-                            <div>${quantity} سهم</div>
-                            <div style="font-size: 12px; opacity: 0.7;">${currentPrice.toFixed(2)} ريال</div>
-                        </div>
-                        <div style="text-align: left; font-weight: bold;">${value} ريال</div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // تحديث عرض المحفظة
-        function updatePortfolioDisplay() {
-            let portfolioValue = gameState.cash;
-            
-            Object.keys(gameState.holdings).forEach(symbol => {
-                const quantity = gameState.holdings[symbol];
-                const price = marketPrices[symbol];
-                portfolioValue += price * quantity;
+        // Set time speed
+        function setTimeSpeed(speed) {
+            gameState.timeSpeed = speed;
+            document.querySelectorAll('.time-controls button').forEach(btn => {
+                btn.classList.remove('active');
             });
-
-            const pl = portfolioValue - gameState.startCapital;
-            const returnPct = (pl / gameState.startCapital * 100).toFixed(2);
-
-            document.getElementById('cashDisplay').textContent = gameState.cash.toFixed(2) + ' ريال';
-            document.getElementById('portfolioValue').textContent = portfolioValue.toFixed(2) + ' ريال';
-            document.getElementById('plDisplay').textContent = pl.toFixed(2) + ' ريال';
-            document.getElementById('plDisplay').className = 'stat-value ' + (pl >= 0 ? 'profit' : 'loss');
-            document.getElementById('returnDisplay').textContent = (returnPct >= 0 ? '+' : '') + returnPct + '%';
-            document.getElementById('returnDisplay').className = 'stat-value ' + (pl >= 0 ? 'profit' : 'loss');
+            document.getElementById(`speed${speed}`).classList.add('active');
         }
 
-        // عرض التحديات
-        function renderChallenges() {
-            const container = document.getElementById('challengesList');
-            const portfolioValue = gameState.cash + Object.keys(gameState.holdings).reduce((sum, symbol) => {
-                return sum + (marketPrices[symbol] * gameState.holdings[symbol]);
-            }, 0);
-
-            container.innerHTML = gameState.challenges.map(challenge => {
-                const progress = Math.min(100, (portfolioValue / challenge.target) * 100);
-                const completed = challenge.completed;
-
-                return `
-                    <div class="challenge-item" style="opacity: ${completed ? 0.6 : 1}">
-                        <div class="challenge-title">${completed ? '✓ ' : ''}${challenge.title}</div>
-                        <div style="font-size: 12px; opacity: 0.8;">
-                            الهدف: ${challenge.target.toLocaleString()} ريال
-                            ${challenge.reward > 0 ? ` | المكافأة: ${challenge.reward.toLocaleString()} ريال` : ''}
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                        <div style="font-size: 11px; opacity: 0.7; margin-top: 5px;">
-                            ${progress.toFixed(1)}% مكتمل
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // فحص التحديات
-        function checkChallenges() {
-            const portfolioValue = gameState.cash + Object.keys(gameState.holdings).reduce((sum, symbol) => {
-                return sum + (marketPrices[symbol] * gameState.holdings[symbol]);
-            }, 0);
-
-            gameState.challenges.forEach(challenge => {
-                if (!challenge.completed && portfolioValue >= challenge.target) {
-                    challenge.completed = true;
-                    if (challenge.reward > 0) {
-                        gameState.cash += challenge.reward;
-                        gameState.startCapital += challenge.reward;
-                        alert(`🎉 تهانينا! أكملت التحدي: ${challenge.title}\nحصلت على ${challenge.reward.toLocaleString()} ريال!`);
-                    }
-                }
-            });
-
-            renderChallenges();
-        }
-
-        // توليد الأخبار الأولية
-        function generateInitialNews() {
-            const newsTemplates = [
-                {text: 'افتتاح السوق بأداء إيجابي متأثراً بارتفاع أسعار النفط', impact: 'medium', sector: 'energy'},
-                {text: 'قطاع البنوك يشهد تداولات نشطة بعد إعلان الأرباح الفصلية', impact: 'high', sector: 'banks'},
-                {text: 'توقعات بنمو قطاع التجزئة مع اقتراب موسم الأعياد', impact: 'low', sector: 'retail'}
-            ];
-
-            newsItems = newsTemplates.map((template, index) => ({
-                id: Date.now() + index,
-                title: template.text,
-                time: `اليوم ${gameState.day}`,
-                impact: template.impact,
-                sector: template.sector
-            }));
-
-            renderNews();
-        }
-
-        // توليد أخبار يومية
-        function generateDailyNews() {
-            const newsTemplates = [
-                {text: 'ارتفاع أسعار النفط يدعم قطاع الطاقة', impact: 'high', sector: 'energy'},
-                {text: 'البنوك المحلية تعلن عن أرباح قياسية', impact: 'high', sector: 'banks'},
-                {text: 'نمو قوي في قطاع الاتصالات', impact: 'medium', sector: 'telecom'},
-                {text: 'قطاع التجزئة يواجه تحديات منافسة', impact: 'medium', sector: 'retail'},
-                {text: 'شركات الأسمنت تستفيد من مشاريع البنية التحتية', impact: 'medium', sector: 'cement'},
-                {text: 'تراجع أسعار المواد الأولية يضغط على قطاع البتروكيماويات', impact: 'high', sector: 'petrochemical'},
-                {text: 'شركات التأمين تحقق نتائج إيجابية', impact: 'low', sector: 'insurance'},
-                {text: 'قطاع العقار يشهد انتعاشاً في الطلب', impact: 'medium', sector: 'realestate'},
-                {text: 'ارتفاع حركة السفر يدعم قطاع النقل', impact: 'low', sector: 'transport'},
-                {text: 'شركات الزراعة تواجه تحديات مناخية', impact: 'medium', sector: 'agriculture'},
-                {text: 'قطاع الصناعة يستفيد من الطلب المحلي', impact: 'low', sector: 'industrial'},
-                {text: 'مشاريع البناء الكبرى تدعم قطاع التشييد', impact: 'medium', sector: 'building'}
-            ];
-
-            if (Math.random() < 0.3) { // 30% احتمال خبر جديد يومياً
-                const template = newsTemplates[Math.floor(Math.random() * newsTemplates.length)];
-                const newNews = {
-                    id: Date.now(),
-                    title: template.text,
-                    time: `اليوم ${gameState.day}`,
-                    impact: template.impact,
-                    sector: template.sector
-                };
-
-                newsItems.unshift(newNews);
-                if (newsItems.length > 10) {
-                    newsItems.pop();
-                }
-
-                renderNews();
+        // Show notification
+        function showNotification(message, type = 'success') {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            if (type === 'error') {
+                notification.style.background = 'rgba(255, 68, 68, 0.9)';
+                notification.style.color = '#fff';
             }
+            document.body.appendChild(notification);
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
         }
 
-        // عرض الأخبار
-        function renderNews() {
-            const container = document.getElementById('newsList');
+        // Toggle language
+        function toggleLanguage() {
+            gameState.language = gameState.language === 'ar' ? 'en' : 'ar';
+            document.documentElement.setAttribute('lang', gameState.language);
+            document.documentElement.setAttribute('dir', gameState.language === 'ar' ? 'rtl' : 'ltr');
             
-            if (newsItems.length === 0) {
-                container.innerHTML = '<div style="text-align: center; opacity: 0.6; padding: 20px;">لا توجد أخبار</div>';
-                return;
+            if (gameState.language === 'en') {
+                document.querySelector('.header h1').textContent = 'Tadawul';
+                document.querySelector('.header p').textContent = 'Saudi Stock Market Simulator';
+                document.querySelector('.lang-toggle').textContent = 'عربي';
+                // Update other labels...
+            } else {
+                document.querySelector('.header h1').textContent = 'تداول';
+                document.querySelector('.header p').textContent = 'محاكاة سوق الأسهم السعودي';
+                document.querySelector('.lang-toggle').textContent = 'English';
             }
-
-            container.innerHTML = newsItems.map(news => {
-                const impactClass = `impact-${news.impact}`;
-                const impactText = news.impact === 'high' ? 'عالي' : news.impact === 'medium' ? 'متوسط' : 'منخفض';
-
-                return `
-                    <div class="news-item">
-                        <div class="news-title">
-                            <span class="impact-badge ${impactClass}">تأثير ${impactText}</span>
-                            ${news.title}
-                        </div>
-                        <div class="news-meta">
-                            <span>${news.time}</span>
-                            <span>${SECTORS[news.sector] || 'عام'}</span>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+            updateUI();
         }
 
-        // عرض الأوامر المعلقة
-        function renderPendingOrders() {
-            const container = document.getElementById('pendingOrdersList');
+        // Game loop
+        function gameLoop() {
+            const now = Date.now();
+            const elapsed = now - gameState.lastUpdate;
             
-            if (gameState.pendingOrders.length === 0) {
-                container.innerHTML = '<div style="text-align: center; opacity: 0.6; padding: 20px;">لا توجد أوامر معلقة</div>';
-                return;
-            }
-
-            container.innerHTML = gameState.pendingOrders.map((order, index) => {
-                const stock = STOCKS.find(s => s.symbol === order.symbol);
-                const sideText = order.side === 'buy' ? 'شراء' : 'بيع';
-                const sideClass = order.side === 'buy' ? 'profit' : 'loss';
-
-                return `
-                    <div class="order-item">
-                        <div>
-                            <div style="font-weight: bold;">${stock.name}</div>
-                            <div style="font-size: 12px; opacity: 0.7;">
-                                <span class="${sideClass}">${sideText}</span> ${order.quantity} سهم @ ${order.price.toFixed(2)} ريال
-                            </div>
-                        </div>
-                        <button class="cancel-order-btn" onclick="cancelOrder(${index})">إلغاء</button>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // إلغاء أمر معلق
-        function cancelOrder(index) {
-            gameState.pendingOrders.splice(index, 1);
-            renderPendingOrders();
-            saveGameState();
-        }
-
-        // عرض سجل الصفقات
-        function renderTradeHistory() {
-            const container = document.getElementById('tradeHistoryList');
+            // 60 seconds = 1 hour in game
+            const hourInterval = 60000 / gameState.timeSpeed;
             
-            if (gameState.tradeHistory.length === 0) {
-                container.innerHTML = '<div style="text-align: center; opacity: 0.6; padding: 20px;">لا توجد صفقات</div>';
-                return;
-            }
-
-            container.innerHTML = gameState.tradeHistory.slice(0, 50).map(trade => {
-                const stock = STOCKS.find(s => s.symbol === trade.symbol);
-                const sideClass = trade.side === 'شراء' ? 'profit' : 'loss';
-
-                return `
-                    <div class="order-item">
-                        <div>
-                            <div style="font-weight: bold;">${stock.name} (${trade.symbol})</div>
-                            <div style="font-size: 12px; opacity: 0.7;">
-                                ${trade.date} - <span class="${sideClass}">${trade.side}</span> ${trade.quantity} سهم @ ${trade.price} ريال
-                            </div>
-                        </div>
-                        <div style="text-align: left; font-weight: bold;">
-                            ${trade.total} ريال
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // تبديل التبويبات
-        function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            if (tab === 'orders') {
-                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-                document.getElementById('ordersTab').classList.add('active');
-                renderPendingOrders();
-            } else if (tab === 'history') {
-                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-                document.getElementById('historyTab').classList.add('active');
-                renderTradeHistory();
-            }
-        }
-
-        // تحديث عرض الوقت
-        function updateTimeDisplay() {
-            const timeMap = {
-                10: '10:00 صباحاً',
-                11: '11:00 صباحاً',
-                12: '12:00 ظهراً',
-                13: '01:00 مساءً',
-                14: '02:00 مساءً',
-                15: '03:00 مساءً',
-                16: '04:00 مساءً'
-            };
-
-            document.getElementById('marketTime').textContent = timeMap[gameState.hour] || 'إغلاق السوق';
-            document.getElementById('marketDay').textContent = `اليوم ${gameState.day}`;
-        }
-
-        // حفظ حالة اللعبة
-        function saveGameState() {
-            try {
-                localStorage.setItem('saudiStockGameState', JSON.stringify({
-                    cash: gameState.cash,
-                    holdings: gameState.holdings,
-                    pendingOrders: gameState.pendingOrders,
-                    tradeHistory: gameState.tradeHistory,
-                    day: gameState.day,
-                    hour: gameState.hour,
-                    startCapital: gameState.startCapital,
-                    challenges: gameState.challenges,
-                    marketPrices: marketPrices,
-                    priceHistory: priceHistory,
-                    newsItems: newsItems
-                }));
-            } catch (e) {
-                console.error('فشل حفظ البيانات:', e);
-            }
-        }
-
-        // تحميل حالة اللعبة
-        function loadGameState() {
-            try {
-                const saved = localStorage.getItem('saudiStockGameState');
-                if (saved) {
-                    const data = JSON.parse(saved);
-                    gameState.cash = data.cash || 50000;
-                    gameState.holdings = data.holdings || {};
-                    gameState.pendingOrders = data.pendingOrders || [];
-                    gameState.tradeHistory = data.tradeHistory || [];
-                    gameState.day = data.day || 1;
-                    gameState.hour = data.hour || 10;
-                    gameState.startCapital = data.startCapital || 50000;
-                    gameState.challenges = data.challenges || gameState.challenges;
-                    
-                    if (data.marketPrices) {
-                        marketPrices = data.marketPrices;
-                    }
-                    if (data.priceHistory) {
-                        priceHistory = data.priceHistory;
-                    }
-                    if (data.newsItems) {
-                        newsItems = data.newsItems;
-                    }
+            if (elapsed >= hourInterval) {
+                gameState.lastUpdate = now;
+                gameState.gameHour++;
+                
+                if (gameState.gameHour >= 24) {
+                    gameState.gameHour = 0;
+                    gameState.gameDay++;
                 }
-            } catch (e) {
-                console.error('فشل تحميل البيانات:', e);
+                
+                // Update prices every game hour
+                updatePrices();
+                saveGameState();
             }
         }
 
-        // إعادة تعيين اللعبة
-        function resetGame() {
-            if (confirm('هل أنت متأكد من إعادة تعيين اللعبة؟ سيتم فقدان جميع البيانات.')) {
-                localStorage.removeItem('saudiStockGameState');
-                location.reload();
+        // Event listeners
+        document.getElementById('orderType').addEventListener('change', function() {
+            const limitPriceGroup = document.getElementById('limitPriceGroup');
+            if (this.value === 'limit') {
+                limitPriceGroup.style.display = 'flex';
+                const stock = STOCKS.find(s => s.symbol === gameState.selectedStock);
+                document.getElementById('limitPrice').value = stock ? stock.price.toFixed(2) : '';
+            } else {
+                limitPriceGroup.style.display = 'none';
             }
-        }
-
-        // إضافة زر إعادة التعيين
-        window.addEventListener('DOMContentLoaded', () => {
-            const header = document.querySelector('.header');
-            const resetBtn = document.createElement('button');
-            resetBtn.className = 'action-btn';
-            resetBtn.textContent = '🔄 إعادة تعيين';
-            resetBtn.onclick = resetGame;
-            resetBtn.style.background = 'rgba(244, 67, 54, 0.3)';
-            header.appendChild(resetBtn);
+            updateTotalCost();
         });
 
-        // بدء اللعبة عند تحميل الصفحة
-        window.addEventListener('DOMContentLoaded', initGame);
+        document.getElementById('quantity').addEventListener('input', updateTotalCost);
+        document.getElementById('limitPrice').addEventListener('input', updateTotalCost);
 
-        // حفظ تلقائي عند إغلاق الصفحة
-        window.addEventListener('beforeunload', saveGameState);
+        // Initialize
+        async function init() {
+            await loadGameState();
+            updateUI();
+            setInterval(gameLoop, 100);
+        }
+
+        init();
     </script>
 </body>
 </html>
