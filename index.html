@@ -3,1401 +3,1402 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>محاكاة تداول الأسهم السعودية (Tadawul Simulator)</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <title>تداول - محاكاة سوق الأسهم السعودي</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
-        /* أنماط CSS: ثيم داكن احترافي ومتجاوب */
-        :root {
-            --dark-bg: #1e1e2d;
-            --main-bg: #282a36;
-            --card-bg: #32354a;
-            --text-color: #f8f8f2;
-            --accent-color: #50fa7b; /* أخضر للربح */
-            --danger-color: #ff5555; /* أحمر للخسارة */
-            --primary-color: #8be9fd;
-            --secondary-color: #bd93f9;
-        }
-
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: var(--dark-bg);
-            color: var(--text-color);
+        * {
             margin: 0;
             padding: 0;
-            direction: rtl; /* اللغة الافتراضية: العربية */
-            transition: all 0.3s ease;
-        }
-
-        body.en {
-            direction: ltr;
-        }
-
-        .container {
-            display: flex;
-            gap: 15px;
-            padding: 15px;
-            max-width: 1500px;
-            margin: 0 auto;
-        }
-
-        .main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .sidebar {
-            width: 300px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            flex-shrink: 0;
-        }
-
-        /* شريط الأخبار المتحرك */
-        .news-ticker-container {
-            overflow: hidden;
-            background-color: var(--card-bg);
-            padding: 5px 0;
-            white-space: nowrap;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .news-ticker {
-            display: inline-block;
-            animation: ticker-move 30s linear infinite;
-        }
-
-        .news-item {
-            display: inline-block;
-            padding: 0 15px;
-            font-size: 0.9em;
-        }
-
-        .news-item.up { color: var(--accent-color); }
-        .news-item.down { color: var(--danger-color); }
-
-        @keyframes ticker-move {
-            0% { transform: translate(100%, 0); }
-            100% { transform: translate(-100%, 0); }
-        }
-
-        /* مكونات عامة (لوحة/بطاقة) */
-        .panel {
-            background-color: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        #stockChart {
-                /* تحديد ارتفاع ثابت للـ canvas داخل اللوحة */
-                max-height: 400px;
-        }
-
-        h2 {
-            border-bottom: 2px solid var(--secondary-color);
-            padding-bottom: 8px;
-            margin-top: 0;
-            font-size: 1.2em;
-        }
-
-        /* جداول البيانات */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .data-table th, .data-table td {
-            padding: 10px;
-            text-align: right;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.9em;
-        }
-
-        .data-table th {
-            background-color: rgba(0, 0, 0, 0.1);
-            font-weight: bold;
-            color: var(--primary-color);
-        }
-
-        .data-table tr:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-        }
-
-        .price-up { color: var(--accent-color); }
-        .price-down { color: var(--danger-color); }
-        .text-neutral { color: var(--text-color); }
-        .text-positive { color: var(--accent-color); }
-        .text-negative { color: var(--danger-color); }
-
-        /* نموذج الأوامر */
-        .order-form input, .order-form select, .order-form button {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid var(--secondary-color);
-            border-radius: 4px;
-            background-color: var(--main-bg);
-            color: var(--text-color);
             box-sizing: border-box;
         }
-
-        .order-form button {
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
         }
-
-        .btn-buy { background-color: var(--accent-color); color: var(--dark-bg); }
-        .btn-buy:hover { background-color: #69ff91; }
-        .btn-sell { background-color: var(--danger-color); color: var(--text-color); }
-        .btn-sell:hover { background-color: #ff7777; }
-
-        /* المحفظة */
-        .portfolio-header {
+        
+        .ticker {
+            background: #0f3460;
+            padding: 8px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            border-bottom: 2px solid #16a085;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+        
+        .ticker-content {
+            display: inline-block;
+            animation: scroll 30s linear infinite;
+        }
+        
+        @keyframes scroll {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        
+        .ticker-item {
+            display: inline-block;
+            margin: 0 30px;
+            font-size: 14px;
+        }
+        
+        .header {
+            background: #0f3460;
+            padding: 2px 10px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            color: #16a085;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #16a085;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1abc9c;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        
+        .btn-secondary {
+            background: #34495e;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #2c3e50;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        
+        .stat-card {
+            background: #0f3460;
+            padding: 8px;
+            border-radius: 5px;
+            border: 2px solid #16a085;
+            text-align: center;
+            flex: 1;
+        }
+        
+        .stat-label {
+            color: #95a5a6;
+            font-size: 12px;
+            margin-bottom: 3px;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .positive { color: #2ecc71; }
+        .negative { color: #e74c3c; }
+        
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #16a085;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #0f3460;
+            border: none;
+            color: #e0e0e0;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 10px 10px 0 0;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            border-bottom: none;
+        }
+        
+        .tab:hover {
+            background: #16213e;
+        }
+        
+        .tab.active {
+            background: #16a085;
+            color: white;
+            border-color: #16a085;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            background: #0f3460;
+            margin: 5% auto;
+            padding: 30px;
+            border: 2px solid #16a085;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideDown 0.3s;
+            position: relative;
+        }
+        
+        @keyframes slideDown {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #e74c3c;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            line-height: 1;
+            transition: all 0.3s;
+        }
+        
+        .close-modal:hover {
+            color: #c0392b;
+            transform: scale(1.2);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid #16a085;
+        }
+        
+        .panel-title {
+            color: #16a085;
+            font-size: 20px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #16a085;
+            padding-bottom: 10px;
+        }
+        
+        .stock-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .stock-item {
+            background: #1a1a2e;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        
+        .stock-item:hover {
+            background: #16213e;
+            border-left-color: #16a085;
+            transform: translateX(-5px);
+        }
+        
+        .stock-item.selected {
+            border-left-color: #16a085;
+            background: #16213e;
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .stock-name {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .stock-symbol {
+            color: #95a5a6;
+            font-size: 12px;
+        }
+        
+        .stock-price {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .stock-change {
+            font-size: 14px;
+        }
+        
+        .portfolio-item {
+            background: #1a1a2e;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+        
+        .portfolio-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .portfolio-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #34495e;
+            border-radius: 5px;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #16a085;
+        }
+        
+        .order-form {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .order-type {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .order-type label {
+            flex: 1;
+            padding: 10px;
+            background: #1a1a2e;
+            border: 2px solid #34495e;
+            border-radius: 5px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .order-type input[type="radio"] {
+            display: none;
+        }
+        
+        .order-type input[type="radio"]:checked + span {
+            background: #16a085;
+            border-color: #16a085;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 20px 0;
+        }
+        
+        .challenges {
+            margin-top: 20px;
+        }
+        
+        .challenge-item {
+            background: #1a1a2e;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .challenge-progress {
+            width: 100%;
+            height: 20px;
+            background: #34495e;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .challenge-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #16a085, #1abc9c);
+            transition: width 0.5s;
+        }
+        
+        .order-item {
+            background: #1a1a2e;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #f39c12;
+        }
+        
+        .order-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
-            font-size: 1.1em;
-            font-weight: bold;
         }
-
-        .portfolio-stock-item {
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 4px;
+        
+        .order-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 13px;
+            color: #95a5a6;
         }
-
-        .portfolio-stock-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9em;
-            margin-bottom: 5px;
-        }
-
-        .portfolio-actions {
-            display: flex;
-            gap: 5px;
+        
+        .order-actions {
             margin-top: 10px;
         }
-
-        .portfolio-actions button {
-            flex-grow: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 0.85em;
-        }
-
-        /* التحديات والتحكم */
-        .control-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        .control-group button {
-            flex-grow: 1;
-            padding: 10px;
-            background-color: var(--secondary-color);
-            color: var(--dark-bg);
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            transition: background-color 0.2s;
-        }
-
-        .control-group button:hover {
-            background-color: #c9abfb;
-        }
-
-        /* تذييل الصفحة */
+        
         .footer {
             text-align: center;
-            padding: 10px;
-            font-size: 0.8em;
-            color: rgba(255, 255, 255, 0.5);
-            margin-top: 20px;
+            padding: 20px;
+            margin-top: 40px;
+            border-top: 2px solid #16a085;
+            color: #95a5a6;
+            font-size: 14px;
         }
-
-        /* استجابة الجوال */
-        @media (max-width: 900px) {
-            .container {
-                flex-direction: column;
+        
+        .lang-switch {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+        
+        .lang-switch .btn {
+            width: 45px;
+            height: 45px;
+            padding: 0;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
             }
-            .sidebar {
-                width: 100%;
+            
+            .stats {
+                position: sticky;
+                top: 52px;
+                z-index: 998;
+                background: #1a1a2e;
+                padding: 8px 10px;
+                margin: 0 -20px 15px -20px;
+                border-bottom: 2px solid #16a085;
+                gap: 8px;
             }
+            
+            .stat-card {
+                padding: 8px;
+                border-radius: 8px;
+                border-width: 1px;
+            }
+            
+            .stat-label {
+                font-size: 10px;
+                margin-bottom: 3px;
+            }
+            
+            .stat-value {
+                font-size: 13px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 10% auto;
+                padding: 20px;
+            }
+            
+            .tabs {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            
+            .tab {
+                border-radius: 10px;
+                border: 2px solid #34495e;
+                white-space: nowrap;
+            }
+            
+            .tab.active {
+                border-color: #16a085;
+            }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #16a085;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #1abc9c;
         }
     </style>
 </head>
 <body>
-    <div class="news-ticker-container">
-        <div class="news-ticker" id="news-ticker">
-            </div>
+    <div class="lang-switch">
+        <button class="btn btn-secondary" onclick="toggleLanguage()">E</button>
+    </div>
+
+    <div class="ticker">
+        <div class="ticker-content" id="ticker"></div>
+    </div>
+
+    <div class="header">
+        <h1 style="font-size: 2.0em; margin-bottom: 2px;">تداول</h1>
+        <p style="font-size: 1em; color: #95a5a6; margin-bottom: 15px;">محاكاة سوق الأسهم السعودي</p>
+        <div class="controls">
+            <button class="btn btn-primary" onclick="setSpeed(1)">1x</button>
+            <button class="btn btn-primary" onclick="setSpeed(5)">5x</button>
+            <button class="btn btn-primary" onclick="setSpeed(10)">10x</button>
+        </div>
     </div>
 
     <div class="container">
-        <div class="sidebar">
-
-            <div class="panel">
-                <div class="control-group">
-                    <button id="lang-toggle-btn" onclick="toggleLanguage()">English / عربي</button>
-                    <button onclick="changeSpeed(1)" data-speed="1">1x</button>
-                    <button onclick="changeSpeed(5)" data-speed="5">5x</button>
-                    <button onclick="changeSpeed(10)" data-speed="10">10x</button>
-                </div>
-                <p id="time-speed-indicator">سرعة المحاكاة: 1x</p>
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">الرصيد النقدي</div>
+                <div class="stat-value" id="cash">50,000 ريال</div>
             </div>
-
-            <div class="panel" id="portfolio-panel">
-                <h2>💰 المحفظة</h2>
-                <div class="portfolio-header">
-                    <span id="cash-balance">الرصيد النقدي: 50,000.00 ريال</span>
-                    <span id="total-pl">إجمالي الأرباح/الخسائر: 0.00 ريال</span>
-                </div>
-                <div id="portfolio-list">
-                    </div>
+            <div class="stat-card">
+                <div class="stat-label">قيمة المحفظة</div>
+                <div class="stat-value" id="portfolio-value">0 ريال</div>
             </div>
-
-            <div class="panel">
-                <h2 id="order-title">نافذة الأوامر</h2>
-                <form id="order-form" class="order-form">
-                    <select id="order-stock" required onchange="updateOrderTitle(this.value)">
-                        <option value="">اختر سهم</option>
-                        </select>
-
-                    <select id="order-type" onchange="toggleLimitPrice()">
-                        <option value="market">أمر سوق (Market)</option>
-                        <option value="limit">أمر محدد (Limit)</option>
-                    </select>
-
-                    <input type="number" id="order-quantity" placeholder="الكمية (سهم)" min="1" required>
-
-                    <input type="number" id="limit-price" placeholder="سعر محدد (Limit Price)" step="0.01" style="display:none;">
-
-                    <button type="button" class="btn-buy" onclick="submitOrder('buy')">شراء</button>
-                    <button type="button" class="btn-sell" onclick="submitOrder('sell')">بيع</button>
-
-                    <p id="order-status-msg" style="margin-top: 10px;"></p>
-                </form>
+            <div class="stat-card">
+                <div class="stat-label">إجمالي الأصول</div>
+                <div class="stat-value" id="total-value">50,000 ريال</div>
             </div>
-
-            <div class="panel">
-                <h2>🏆 التحديات</h2>
-                <ul id="challenges-list">
-                    </ul>
+            <div class="stat-card">
+                <div class="stat-label">الربح/الخسارة</div>
+                <div class="stat-value" id="pnl">0 ريال (0%)</div>
             </div>
-
         </div>
 
-        <div class="main-content">
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('market')">📊 السوق</button>
+            <button class="tab" onclick="switchTab('portfolio')">💼 المحفظة</button>
+            <button class="tab" onclick="switchTab('orders')">📋 الأوامر</button>
+        </div>
 
+        <div id="market-tab" class="tab-content active">
             <div class="panel">
-                <h2>📊 لوحة السوق (السوق السعودي - تداول)</h2>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>السهم</th>
-                            <th>الرمز</th>
-                            <th>السعر الحالي</th>
-                            <th>التغير (%)</th>
-                            <th>الحجم (الـ24 ساعة)</th>
-                            <th>إجراء</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stock-market-body">
-                        </tbody>
-                </table>
+                <h2 class="panel-title">قائمة الأسهم</h2>
+                <div class="stock-list" id="stock-list"></div>
             </div>
+        </div>
 
+        <div id="portfolio-tab" class="tab-content">
             <div class="panel">
-                <h2 id="chart-title">📈 الرسم البياني (اختر سهم)</h2>
-                <canvas id="stockChart"></canvas>
+                <h2 class="panel-title">محفظتي</h2>
+                <div id="portfolio"></div>
             </div>
+        </div>
 
+        <div id="orders-tab" class="tab-content">
             <div class="panel">
-                <h2>📜 سجل الصفقات</h2>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>السهم</th>
-                            <th>النوع</th>
-                            <th>الكمية</th>
-                            <th>السعر</th>
-                            <th>العمولة</th>
-                            <th>الربح/الخسارة</th>
-                        </tr>
-                    </thead>
-                    <tbody id="trade-log-body">
-                        </tbody>
-                </table>
+                <h2 class="panel-title">الأوامر المعلقة</h2>
+                <div id="pending-orders"></div>
             </div>
+        </div>
 
+        <div class="challenges">
             <div class="panel">
-                <h2>⏳ الأوامر المعلقة (Limit)</h2>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>السهم</th>
-                            <th>النوع</th>
-                            <th>الكمية</th>
-                            <th>السعر المحدد</th>
-                            <th>إلغاء</th>
-                        </tr>
-                    </thead>
-                    <tbody id="pending-orders-body">
-                        </tbody>
-                </table>
+                <h2 class="panel-title">🎯 التحديات</h2>
+                <div class="challenge-item">
+                    <div><strong>التحدي 1:</strong> ربح 10% من رأس المال</div>
+                    <div style="color: #f39c12; margin-top: 5px;">المكافأة: دعم 100,000 ريال</div>
+                    <div class="challenge-progress">
+                        <div class="challenge-progress-bar" id="challenge1-progress" style="width: 0%"></div>
+                    </div>
+                </div>
+                <div class="challenge-item">
+                    <div><strong>التحدي 2:</strong> ربح 20% من رأس المال</div>
+                    <div style="color: #f39c12; margin-top: 5px;">المكافأة: دعم 300,000 ريال</div>
+                    <div class="challenge-progress">
+                        <div class="challenge-progress-bar" id="challenge2-progress" style="width: 0%"></div>
+                    </div>
+                </div>
             </div>
+        </div>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="btn btn-danger" onclick="resetGame()">إعادة تعيين</button>
+        </div>
+    </div>
 
+    <div id="stock-modal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeStockModal()">&times;</button>
+            <div id="stock-details"></div>
         </div>
     </div>
 
     <div class="footer">
-        تطوير: عبدالكريم العبود | abo.saleh.g@gmail.com
-        © 2024 ImageMetrics Tool - All Rights Reserved
+        <p>تطوير: عبدالكريم العبود | abo.saleh.g@gmail.com</p>
+        <p>© 2024 ImageMetrics Tool - All Rights Reserved</p>
     </div>
 
     <script>
-        // ملف JavaScript الكامل يبدأ هنا
-
-        // =================================================================
-        // 💾 مصدر البيانات وعوامل المحاكاة
-        // =================================================================
-
-        const STOCKS = [
-            { symbol: '1010', name: 'الرياض', nameEn: 'Al-Riyadh', sector: 'banks', basePrice: 38.2, mu: 0.0001, sigma: 0.012 },
-            { symbol: '2222', name: 'أرامكو السعودية', nameEn: 'Saudi Aramco', sector: 'energy', basePrice: 33.6, mu: 0.0001, sigma: 0.011 },
-            { symbol: '7010', name: 'الاتصالات السعودية', nameEn: 'STC', sector: 'telecom', basePrice: 44.7, mu: 0.0001, sigma: 0.013 },
-            { symbol: '1211', name: 'معادن', nameEn: 'Ma\'aden', sector: 'materials', basePrice: 67.4, mu: 0.0001, sigma: 0.015 },
-            { symbol: '3010', name: 'أسمنت السعودية', nameEn: 'Saudi Cement', sector: 'cement', basePrice: 54.8, mu: 0.0001, sigma: 0.014 },
+        const INITIAL_CAPITAL = 50000;
+        const COMMISSION = 0.00155;
+        const SLIPPAGE = 0.002;
+        
+        let currentLang = 'ar';
+        let gameState = {
+            cash: INITIAL_CAPITAL,
+            portfolio: {},
+            transactions: [],
+            pendingOrders: [],
+            speed: 1,
+            initialCapital: INITIAL_CAPITAL,
+            challenge1Completed: false,
+            challenge2Completed: false
+        };
+        
+        const stocks = [
+            {symbol: '1180', name: 'الأهلي السعودي', nameEn: 'Al Ahli Bank', sector: 'banking', basePrice: 32.50, mu: 0.0002, sigma: 0.015},
+            {symbol: '1010', name: 'الراجحي', nameEn: 'Al Rajhi Bank', sector: 'banking', basePrice: 85.20, mu: 0.0003, sigma: 0.014},
+            {symbol: '2222', name: 'أرامكو', nameEn: 'Aramco', sector: 'energy', basePrice: 28.45, mu: 0.0001, sigma: 0.012},
+            {symbol: '7010', name: 'الاتصالات السعودية', nameEn: 'STC', sector: 'telecom', basePrice: 42.80, mu: 0.0002, sigma: 0.016},
+            {symbol: '3010', name: 'أسمنت السعودية', nameEn: 'Saudi Cement', sector: 'cement', basePrice: 54.80, mu: 0.0001, sigma: 0.014}
         ];
-
-        const SECTOR_CORRELATION = {
-            'banks': { 'energy': 0.3, 'telecom': 0.5, 'materials': 0.2, 'cement': 0.4 },
-            'energy': { 'banks': 0.3, 'telecom': 0.1, 'materials': 0.6, 'cement': 0.2 },
-            // ... يمكن إضافة باقي العلاقات هنا
-        };
-
-        const COMMISSION_RATE = 0.00155; // 0.155%
-        const SLIPPAGE = 0.002; // ±0.2% للانزلاق السعري في أمر السوق
-
-        // =================================================================
-        // ⚙️ حالة اللعبة العالمية وخطافات DOM
-        // =================================================================
-
-        let gameState = loadGameState();
-        let marketInterval;
-        let simulationSpeed = 1;
-        let currentChartSymbol = STOCKS[0].symbol;
-        let chartInstance;
-        let isArabic = true;
-
-        // العناصر
-        const DOM = {
-            cashBalance: document.getElementById('cash-balance'),
-            totalPL: document.getElementById('total-pl'),
-            portfolioList: document.getElementById('portfolio-list'),
-            stockMarketBody: document.getElementById('stock-market-body'),
-            tradeLogBody: document.getElementById('trade-log-body'),
-            orderStock: document.getElementById('order-stock'),
-            orderType: document.getElementById('order-type'),
-            limitPrice: document.getElementById('limit-price'),
-            newsTicker: document.getElementById('news-ticker'),
-            chartTitle: document.getElementById('chart-title'),
-            pendingOrdersBody: document.getElementById('pending-orders-body'),
-            challengesList: document.getElementById('challenges-list'),
-            orderStatusMsg: document.getElementById('order-status-msg'),
-            timeSpeedIndicator: document.getElementById('time-speed-indicator'),
-        };
-
-        const TEXT = {
-            ar: {
-                cash: 'الرصيد النقدي', totalPL: 'إجمالي الأرباح/الخسائر', marketPanel: 'لوحة السوق (السوق السعودي - تداول)',
-                orderWindow: 'نافذة الأوامر', selectStock: 'اختر سهم', marketOrder: 'أمر سوق (Market)', limitOrder: 'أمر محدد (Limit)',
-                quantity: 'الكمية (سهم)', limitPricePlaceholder: 'سعر محدد (Limit Price)', buy: 'شراء', sell: 'بيع',
-                stock: 'السهم', symbol: 'الرمز', currentPrice: 'السعر الحالي', change: 'التغير (%)', volume: 'الحجم', action: 'إجراء',
-                chart: 'الرسم البياني', log: 'سجل الصفقات', date: 'التاريخ', type: 'النوع', commission: 'العمولة',
-                pnl: 'الربح/الخسارة', pendingOrders: 'الأوامر المعلقة (Limit)', cancel: 'إلغاء',
-                portfolio: 'المحفظة', lastPrice: 'السعر الأخير', avgCost: 'متوسط التكلفة', marketValue: 'القيمة السوقية',
-                totalCost: 'إجمالي التكلفة', valueAfterSale: 'القيمة بعد البيع', avgAfterSale: 'متوسط بعد البيع',
-                speed: 'سرعة المحاكاة', challenges: 'التحديات',
-                orderTitle: (name) => `نافذة الأوامر: ${name}`,
-            },
-            en: {
-                cash: 'Cash Balance', totalPL: 'Total P&L', marketPanel: 'Market Dashboard (Tadawul)',
-                orderWindow: 'Order Window', selectStock: 'Select Stock', marketOrder: 'Market Order', limitOrder: 'Limit Order',
-                quantity: 'Quantity (Shares)', limitPricePlaceholder: 'Limit Price', buy: 'Buy', sell: 'Sell',
-                stock: 'Stock', symbol: 'Symbol', currentPrice: 'Current Price', change: 'Change (%)', volume: 'Volume', action: 'Action',
-                chart: 'Chart', log: 'Trade Log', date: 'Date', type: 'Type', commission: 'Commission',
-                pnl: 'P&L', pendingOrders: 'Pending Orders (Limit)', cancel: 'Cancel',
-                portfolio: 'Portfolio', lastPrice: 'Last Price', avgCost: 'Average Cost', marketValue: 'Market Value',
-                totalCost: 'Total Cost', valueAfterSale: 'Value After Sale', avgAfterSale: 'Average After Sale',
-                speed: 'Simulation Speed', challenges: 'Challenges',
-                orderTitle: (name) => `Order Window: ${name}`,
-            }
-        };
-
-        // =================================================================
-        // 💾 وظائف حفظ وتحميل الحالة
-        // =================================================================
-
-        function loadGameState() {
-            const savedState = localStorage.getItem('tradingSimulatorState');
-            if (savedState) {
-                const state = JSON.parse(savedState);
-                // تحديث حالة الأسهم المحفوظة بأحدث قائمة
-                const marketData = {};
-                for (const stock of STOCKS) {
-                    marketData[stock.symbol] = state.marketData[stock.symbol] || {
-                        price: stock.basePrice,
-                        basePrice: stock.basePrice,
-                        history: [{ price: stock.basePrice, date: Date.now() }],
-                        volume: 0,
+        
+        let stockPrices = {};
+        let priceHistory = {};
+        let selectedStock = null;
+        let updateInterval = null;
+        let chart = null;
+        
+        function initGame() {
+            const saved = localStorage.getItem('tadawulGame');
+            if (saved) {
+                try {
+                    const loadedState = JSON.parse(saved);
+                    gameState = {
+                        ...gameState,
+                        ...loadedState,
+                        pendingOrders: loadedState.pendingOrders || []
                     };
-                    // تأكد من أن الأساسيات موجودة
-                    marketData[stock.symbol].basePrice = stock.basePrice;
-                    marketData[stock.symbol].name = stock.name;
-                    marketData[stock.symbol].nameEn = stock.nameEn;
+                } catch (e) {
+                    console.error('Error loading saved game:', e);
                 }
-                state.marketData = marketData;
-                return state;
             }
-
-            // الحالة الافتراضية
-            const marketData = {};
-            for (const stock of STOCKS) {
-                marketData[stock.symbol] = {
-                    price: stock.basePrice,
-                    basePrice: stock.basePrice,
-                    history: [{ price: stock.basePrice, date: Date.now() }],
-                    volume: 0,
-                    name: stock.name,
-                    nameEn: stock.nameEn,
-                };
-            }
-
-            return {
-                cash: 50000,
-                initialCash: 50000,
-                portfolio: {}, // {symbol: {quantity: N, avgCost: C}}
-                marketData: marketData,
-                tradeLog: [],
-                pendingOrders: [],
-                totalPnl: 0,
-                lastUpdate: Date.now(),
-                challenges: [
-                    { id: 1, desc_ar: 'حقق 10٪ ربح خلال 30 يومًا (30 تحديث للسعر) - دعم 100,000 ريال.', desc_en: 'Achieve 10% profit in 30 days (30 price updates) - 100,000 SAR bonus.', targetPnl: 0.1, durationUpdates: 30, bonus: 100000, completed: false, startUpdate: 0 },
-                    { id: 2, desc_ar: 'حقق 20٪ ربح إجمالي - دعم 300,000 ريال.', desc_en: 'Achieve 20% total profit - 300,000 SAR bonus.', targetPnl: 0.2, bonus: 300000, completed: false },
-                ],
-                updateCount: 0, // لحساب أيام التحدي
-                isArabic: true, // لغة افتراضية
-            };
-        }
-
-        function saveGameState() {
-            localStorage.setItem('tradingSimulatorState', JSON.stringify(gameState));
-        }
-
-        // =================================================================
-        // 📈 محرك المحاكاة: Geometric Brownian Motion (GBM)
-        // =================================================================
-
-        /**
-         * يولد رقم عشوائي يتبع التوزيع الطبيعي المعياري (Box-Muller transform)
-         * @returns {number} Z ~ N(0, 1)
-         */
-        function randn_bm() {
-            let u = 0, v = 0;
-            while (u === 0) u = Math.random(); // لتجنب log(0)
-            while (v === 0) v = Math.random();
-            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-        }
-
-        /**
-         * يقوم بتحديث أسعار الأسهم باستخدام Geometric Brownian Motion
-         * @param {number} symbol - رمز السهم
-         * @param {number} dt - التغير الزمني (نحن نستخدم 1 للتحديث الواحد)
-         * @param {number} sectorShock - صدمة القطاع
-         * @returns {number} السعر الجديد
-         */
-        function updateStockPrice(symbol, dt = 1) {
-            const stock = STOCKS.find(s => s.symbol === symbol);
-            const data = gameState.marketData[symbol];
-            if (!stock || !data) return data.price;
-
-            const mu = stock.mu;
-            const sigma = stock.sigma;
-            const shock = getSectorShock(stock.sector);
-
-            // GBM Formula: S_t = S_{t-1} * exp((mu - 0.5 * sigma^2) * dt + sigma * W_t)
-            // W_t = randn_bm() * sqrt(dt)
-            const W_t = randn_bm() * Math.sqrt(dt);
-            const drift = (mu - 0.5 * sigma * sigma) * dt;
-            const volatility = sigma * W_t;
-            const price = data.price * Math.exp(drift + volatility + shock);
-
-            // لا يُسمح بالسعر السالب
-            data.price = Math.max(0.01, parseFloat(price.toFixed(2)));
             
-            // إضافة للتاريخ
-            data.history.push({ price: data.price, date: Date.now() });
-            // الحفاظ على حجم محدود للتاريخ (للرسم البياني)
-            if (data.history.length > 100) {
-                data.history.shift();
+            // Ensure pendingOrders exists
+            if (!gameState.pendingOrders) {
+                gameState.pendingOrders = [];
             }
-
-            return data.price;
+            
+            stocks.forEach(stock => {
+                if (!stockPrices[stock.symbol]) {
+                    stockPrices[stock.symbol] = stock.basePrice;
+                    priceHistory[stock.symbol] = [{time: Date.now(), price: stock.basePrice}];
+                }
+            });
+            
+            renderStocks();
+            renderPortfolio();
+            renderPendingOrders();
+            updateStats();
+            startPriceUpdates();
         }
-
-        /**
-         * توليد صدمة قطاعية (Shock)
-         * @param {string} sector - قطاع السهم
-         * @returns {number} قيمة الصدمة
-         */
-        function getSectorShock(sector) {
-            // صدمة عشوائية نادرة (حدث أخبار عشوائي)
-            if (Math.random() < 0.005) { // 0.5% فرصة لحدوث صدمة كبيرة
-                const shockValue = randn_bm() * 0.05; // صدمة بنسبة تصل إلى 5%
-                const newsMsg = shockValue > 0 ? `خبر إيجابي مفاجئ في قطاع ${isArabic ? sector : sector.toUpperCase()}!` : `خبر سلبي مفاجئ في قطاع ${isArabic ? sector : sector.toUpperCase()}!`;
-                logNews(newsMsg, shockValue > 0 ? 'up' : 'down');
-                return shockValue;
-            }
-
-            // الارتباط القطاعي (للتشابه في الحركة)
-            let totalShock = 0;
-            const sectorData = STOCKS.filter(s => s.sector === sector);
-            if (sectorData.length > 1) {
-                // نأخذ حركة سهم واحد كمتوسط تأثير قطاعي (للبساطة)
-                const referenceStock = sectorData[0];
-                const refData = gameState.marketData[referenceStock.symbol];
-                if (refData.history.length > 1) {
-                    const lastPrice = refData.history[refData.history.length - 1].price;
-                    const prevPrice = refData.history[refData.history.length - 2].price;
-                    const movement = (lastPrice - prevPrice) / prevPrice; // التغير النسبي
-                    totalShock = movement * 0.5; // تأثير جزئي من حركة السهم المرجعي
-                }
-            }
-
-            return totalShock;
+        
+        function saveGame() {
+            localStorage.setItem('tadawulGame', JSON.stringify(gameState));
         }
-
-        /**
-         * الحلقة الرئيسية لتحديث السوق
-         */
-        function marketUpdateLoop() {
-            gameState.updateCount++;
-            for (const stock of STOCKS) {
-                updateStockPrice(stock.symbol);
-                // تحديث الحجم بشكل عشوائي للعبة (لأنه ليس جزءًا من GBM)
-                gameState.marketData[stock.symbol].volume = Math.floor(Math.random() * 5000000 + 100000);
-            }
-
-            checkPendingOrders();
-            checkChallenges();
-            updateAllDisplays();
-            saveGameState();
+        
+        function startPriceUpdates() {
+            if (updateInterval) clearInterval(updateInterval);
+            
+            updateInterval = setInterval(() => {
+                updatePrices();
+                checkPendingOrders();
+                renderStocks();
+                renderPortfolio();
+                renderPendingOrders();
+                updateStats();
+                updateTicker();
+                saveGame();
+            }, 60000 / gameState.speed);
         }
-
-        // =================================================================
-        // 🔨 نظام الأوامر
-        // =================================================================
-
-        /**
-         * تنفيذ أمر شراء أو بيع
-         * @param {string} type - 'buy' أو 'sell'
-         */
-        function submitOrder(type) {
-            const symbol = DOM.orderStock.value;
-            const orderType = DOM.orderType.value;
-            const quantity = parseInt(DOM.orderQuantity.value);
-            let limitPrice = parseFloat(DOM.limitPrice.value);
-
-            const stock = STOCKS.find(s => s.symbol === symbol);
-            const data = gameState.marketData[symbol];
-
-            // تحقق من المدخلات الأساسية
-            if (!symbol || isNaN(quantity) || quantity <= 0) {
-                showOrderStatus(isArabic ? 'الرجاء إدخال سهم وكمية صحيحة.' : 'Please select a stock and enter a valid quantity.', 'error');
-                return;
-            }
-
-            if (orderType === 'limit' && (isNaN(limitPrice) || limitPrice <= 0)) {
-                showOrderStatus(isArabic ? 'الرجاء إدخال سعر محدد صحيح.' : 'Please enter a valid limit price.', 'error');
-                return;
-            }
-
-            const currentPrice = data.price;
-
-            if (orderType === 'market') {
-                // ------------------ أمر السوق ------------------
-                const executionPrice = currentPrice * (1 + (type === 'buy' ? SLIPPAGE : -SLIPPAGE) * (Math.random() * 2 - 1));
-                executeTrade(symbol, type, quantity, parseFloat(executionPrice.toFixed(2)));
-            } else if (orderType === 'limit') {
-                // ------------------ أمر محدد ------------------
-                if (type === 'buy' && limitPrice >= currentPrice) {
-                    showOrderStatus(isArabic ? 'يجب أن يكون سعر الشراء المحدد أقل من سعر السوق لتجنب التنفيذ الفوري.' : 'Buy limit price must be below market price to avoid immediate execution.', 'error');
-                    return;
-                }
-                if (type === 'sell' && limitPrice <= currentPrice) {
-                    showOrderStatus(isArabic ? 'يجب أن يكون سعر البيع المحدد أعلى من سعر السوق لتجنب التنفيذ الفوري.' : 'Sell limit price must be above market price to avoid immediate execution.', 'error');
-                    return;
-                }
-
-                if (type === 'sell' && (!gameState.portfolio[symbol] || gameState.portfolio[symbol].quantity < quantity)) {
-                    showOrderStatus(isArabic ? 'كمية البيع تتجاوز الأسهم المملوكة في محفظتك.' : 'Sell quantity exceeds shares owned in your portfolio.', 'error');
-                    return;
-                }
-
-                gameState.pendingOrders.push({
-                    id: Date.now() + Math.random(),
-                    symbol: symbol,
-                    type: type,
-                    quantity: quantity,
-                    limitPrice: limitPrice,
-                    date: new Date().toISOString(),
-                });
-                showOrderStatus(isArabic ? `تم وضع أمر ${type === 'buy' ? 'شراء' : 'بيع'} محدد لـ ${quantity} سهم من ${isArabic ? stock.name : stock.nameEn} عند ${limitPrice.toFixed(2)}` : `${quantity} limit ${type} order for ${isArabic ? stock.name : stock.nameEn} at ${limitPrice.toFixed(2)} placed.`, 'info');
-            }
-
-            // تحديث الواجهة وحفظ الحالة
-            updateAllDisplays();
-            saveGameState();
-            DOM.orderQuantity.value = ''; // مسح الكمية بعد التنفيذ
-            DOM.limitPrice.value = '';
-        }
-
-        /**
-         * تنفيذ عملية شراء أو بيع
-         * @param {string} symbol - رمز السهم
-         * @param {string} type - 'buy' أو 'sell'
-         * @param {number} quantity - عدد الأسهم
-         * @param {number} price - سعر التنفيذ
-         * @returns {boolean} - هل تم التنفيذ بنجاح؟
-         */
-        function executeTrade(symbol, type, quantity, price) {
-            const stock = STOCKS.find(s => s.symbol === symbol);
-            const commission = quantity * price * COMMISSION_RATE;
-            let logEntry = {
-                symbol: symbol,
-                type: type,
-                quantity: quantity,
-                price: price,
-                commission: parseFloat(commission.toFixed(2)),
-                date: new Date().toISOString(),
-                pnl: 0, // للبيع فقط
-            };
-
-            if (type === 'buy') {
-                const totalCost = quantity * price + commission;
-                if (gameState.cash < totalCost) {
-                    showOrderStatus(isArabic ? 'الرصيد النقدي غير كافٍ لتنفيذ أمر الشراء.' : 'Insufficient cash balance to execute buy order.', 'error');
-                    return false;
-                }
-
-                gameState.cash -= totalCost;
+        
+        function updatePrices() {
+            const dt = 1/252;
+            const newsImpact = Math.random() < 0.05;
+            
+            stocks.forEach(stock => {
+                let drift = stock.mu * dt;
+                let randomShock = stock.sigma * Math.sqrt(dt) * (Math.random() * 2 - 1);
                 
-                // تحديث المحفظة
-                if (!gameState.portfolio[symbol]) {
-                    gameState.portfolio[symbol] = { quantity: 0, avgCost: 0 };
+                if (newsImpact && Math.random() < 0.3) {
+                    randomShock += (Math.random() - 0.5) * 0.05;
                 }
                 
-                const currentQuantity = gameState.portfolio[symbol].quantity;
-                const currentTotalCost = currentQuantity * gameState.portfolio[symbol].avgCost;
+                let newPrice = stockPrices[stock.symbol] * (1 + drift + randomShock);
+                newPrice = Math.max(newPrice, stock.basePrice * 0.3);
+                newPrice = Math.min(newPrice, stock.basePrice * 3);
                 
-                gameState.portfolio[symbol].quantity += quantity;
-                gameState.portfolio[symbol].avgCost = (currentTotalCost + (quantity * price)) / gameState.portfolio[symbol].quantity;
-
-                showOrderStatus(isArabic ? `شراء ${quantity} سهم من ${isArabic ? stock.name : stock.nameEn} عند ${price.toFixed(2)}` : `Bought ${quantity} shares of ${isArabic ? stock.name : stock.nameEn} at ${price.toFixed(2)}`, 'success');
-
-            } else if (type === 'sell') {
-                if (!gameState.portfolio[symbol] || gameState.portfolio[symbol].quantity < quantity) {
-                    showOrderStatus(isArabic ? 'لا تملك كمية كافية لبيع هذا العدد من الأسهم.' : 'You do not own enough shares to sell this quantity.', 'error');
-                    return false;
-                }
-
-                const totalSaleValue = quantity * price - commission;
-                gameState.cash += totalSaleValue;
-
-                // تحديث المحفظة
-                const avgCost = gameState.portfolio[symbol].avgCost;
-                const costOfSoldShares = quantity * avgCost;
-                const realizedPnl = totalSaleValue - costOfSoldShares;
-                gameState.totalPnl += realizedPnl;
-                logEntry.pnl = parseFloat(realizedPnl.toFixed(2));
-
-                gameState.portfolio[symbol].quantity -= quantity;
-                if (gameState.portfolio[symbol].quantity === 0) {
-                    delete gameState.portfolio[symbol]; // إزالة السهم من المحفظة إذا كانت الكمية صفر
-                }
-
-                showOrderStatus(isArabic ? `بيع ${quantity} سهم من ${isArabic ? stock.name : stock.nameEn} عند ${price.toFixed(2)} - ربح: ${logEntry.pnl.toFixed(2)}` : `Sold ${quantity} shares of ${isArabic ? stock.name : stock.nameEn} at ${price.toFixed(2)} - P&L: ${logEntry.pnl.toFixed(2)}`, realizedPnl >= 0 ? 'success' : 'error');
-            }
-
-            // إضافة للسجل وتحديث الواجهة
-            gameState.tradeLog.unshift(logEntry); // إضافة الأحدث أولاً
-            return true;
-        }
-
-        /**
-         * التحقق من الأوامر المعلقة وتنفيذها
-         */
-        function checkPendingOrders() {
-            const executedOrders = [];
-            const newPendingOrders = [];
-
-            for (const order of gameState.pendingOrders) {
-                const currentPrice = gameState.marketData[order.symbol].price;
-                let executed = false;
-
-                if (order.type === 'buy' && currentPrice <= order.limitPrice) {
-                    // أمر شراء يُنفذ عندما يكون السعر الحالي <= السعر المحدد
-                    executed = executeTrade(order.symbol, order.type, order.quantity, order.limitPrice);
-                } else if (order.type === 'sell' && currentPrice >= order.limitPrice) {
-                    // أمر بيع يُنفذ عندما يكون السعر الحالي >= السعر المحدد
-                    // تحقق مرة أخرى من الكمية في المحفظة عند التنفيذ
-                    const canSell = gameState.portfolio[order.symbol] && gameState.portfolio[order.symbol].quantity >= order.quantity;
-                    if (canSell) {
-                        executed = executeTrade(order.symbol, order.type, order.quantity, order.limitPrice);
-                    } else {
-                        // إلغاء الأمر إذا لم تعد الكمية متاحة للبيع (مثلاً تم بيعها بأمر آخر)
-                        executed = false;
-                        showOrderStatus(isArabic ? `تم إلغاء أمر البيع المحدد لـ ${order.symbol} لعدم توفر الكمية.` : `Limit sell order for ${order.symbol} cancelled due to insufficient quantity.`, 'error');
-                    }
-                }
-
-                if (executed) {
-                    executedOrders.push(order.id);
-                } else {
-                    newPendingOrders.push(order);
-                }
-            }
-            gameState.pendingOrders = newPendingOrders;
-        }
-
-        /**
-         * إلغاء أمر معلق
-         * @param {number} orderId - مُعرّف الأمر
-         */
-        function cancelPendingOrder(orderId) {
-            const initialLength = gameState.pendingOrders.length;
-            gameState.pendingOrders = gameState.pendingOrders.filter(order => order.id !== orderId);
-            if (gameState.pendingOrders.length < initialLength) {
-                showOrderStatus(isArabic ? 'تم إلغاء الأمر بنجاح.' : 'Order cancelled successfully.', 'info');
-                updateAllDisplays();
-                saveGameState();
-            }
-        }
-
-        // =================================================================
-        // 🏆 نظام التحديات
-        // =================================================================
-
-        function checkChallenges() {
-            const initialValue = gameState.initialCash;
-            const currentValue = gameState.cash + getTotalMarketValue();
-            const totalPnlPercentage = (currentValue - initialValue) / initialValue;
-
-            gameState.challenges.forEach(challenge => {
-                if (challenge.completed) return;
-
-                let isCompleted = false;
-
-                if (challenge.targetPnl !== undefined) {
-                    // تحدي نسبة الربح الكلي
-                    if (totalPnlPercentage >= challenge.targetPnl) {
-                        isCompleted = true;
-                    }
-                }
-
-                if (challenge.durationUpdates !== undefined) {
-                    // تحدي نسبة الربح في فترة زمنية (30 يوم/تحديث)
-                    if (gameState.updateCount === challenge.startUpdate) {
-                        // بداية فترة التحدي
-                        challenge.initialValue = currentValue;
-                    }
-
-                    if (gameState.updateCount >= challenge.startUpdate + challenge.durationUpdates) {
-                        const periodPnlPercentage = (currentValue - challenge.initialValue) / challenge.initialValue;
-                        if (periodPnlPercentage >= challenge.targetPnl) {
-                            isCompleted = true;
-                        } else {
-                            // فشل التحدي في الفترة المحددة، يُعاد التعيين للبدء من جديد
-                            challenge.startUpdate = gameState.updateCount;
-                        }
-                    }
-                }
-
-                if (isCompleted) {
-                    gameState.cash += challenge.bonus;
-                    gameState.totalPnl += challenge.bonus; // نعتبر المكافأة جزء من P&L
-                    challenge.completed = true;
-                    showOrderStatus(isArabic ? `🏆 تم إكمال التحدي: ${challenge.desc_ar}. تمت إضافة ${challenge.bonus} ريال.` : `🏆 Challenge completed: ${challenge.desc_en}. ${challenge.bonus} SAR added.`, 'success');
-                    saveGameState();
+                stockPrices[stock.symbol] = newPrice;
+                priceHistory[stock.symbol].push({time: Date.now(), price: newPrice});
+                
+                if (priceHistory[stock.symbol].length > 100) {
+                    priceHistory[stock.symbol].shift();
                 }
             });
         }
-
-        // =================================================================
-        // 🖥️ وظائف تحديث الواجهة (DOM)
-        // =================================================================
-
-        /**
-         * يحسب القيمة السوقية الإجمالية للمحفظة
-         * @returns {number} إجمالي القيمة السوقية
-         */
-        function getTotalMarketValue() {
-            let totalValue = 0;
-            for (const symbol in gameState.portfolio) {
-                const quantity = gameState.portfolio[symbol].quantity;
-                const price = gameState.marketData[symbol] ? gameState.marketData[symbol].price : 0;
-                totalValue += quantity * price;
-            }
-            return totalValue;
-        }
-
-        /**
-         * تحديث عرض الرصيد النقدي وإجمالي الربح/الخسارة
-         */
-        function updateFinancialSummary() {
-            const totalMarketValue = getTotalMarketValue();
-            const realizedPnl = gameState.tradeLog.reduce((sum, log) => sum + log.pnl, 0);
-
-            // P&L الإجمالي = (القيمة السوقية الحالية + النقد) - رأس المال الابتدائي
-            const totalValue = gameState.cash + totalMarketValue;
-            const unrealizedPnl = totalValue - gameState.initialCash - realizedPnl; // هذا تقريبي
-
-            // نعرض P&L المُحقق وغير المُحقق (للسهولة نعتبر مجموعها P&L الإجمالي)
-            const overallPnl = totalValue - gameState.initialCash;
-            const pnlClass = overallPnl >= 0 ? 'text-positive' : 'text-negative';
-
-            DOM.cashBalance.innerHTML = `${isArabic ? TEXT.ar.cash : TEXT.en.cash}: ${gameState.cash.toFixed(2)} ريال`;
-            DOM.totalPL.innerHTML = `${isArabic ? TEXT.ar.totalPL : TEXT.en.totalPL}: <span class="${pnlClass}">${overallPnl.toFixed(2)} ريال (${(overallPnl / gameState.initialCash * 100).toFixed(2)}%)</span>`;
-        }
-
-
-        /**
-         * تحديث جدول السوق
-         */
-        function updateMarketTable() {
-            let html = '';
-            let tickerHtml = '';
-            for (const stock of STOCKS) {
-                const data = gameState.marketData[stock.symbol];
-                const prevPrice = data.history[data.history.length - 2]?.price || stock.basePrice;
-                const change = data.price - prevPrice;
-                const changePercent = (change / prevPrice) * 100;
-                const priceClass = change >= 0 ? 'price-up' : 'price-down';
-
-                // سطر السوق
-                html += `
-                    <tr onclick="selectStock('${stock.symbol}')" style="cursor: pointer;">
-                        <td>${isArabic ? stock.name : stock.nameEn}</td>
-                        <td>${stock.symbol}</td>
-                        <td class="${priceClass}">${data.price.toFixed(2)}</td>
-                        <td class="${priceClass}">${changePercent.toFixed(2)}%</td>
-                        <td>${(data.volume / 1000).toFixed(0)}K</td>
-                        <td><button class="btn-buy" onclick="event.stopPropagation(); selectStock('${stock.symbol}'); submitOrderPrompt('${stock.symbol}', 'buy')">${isArabic ? 'شراء' : 'Buy'}</button></td>
-                    </tr>
-                `;
+        
+        function renderStocks() {
+            const listEl = document.getElementById('stock-list');
+            listEl.innerHTML = '';
+            
+            stocks.forEach(stock => {
+                const price = stockPrices[stock.symbol];
+                const change = ((price - stock.basePrice) / stock.basePrice) * 100;
+                const changeClass = change >= 0 ? 'positive' : 'negative';
                 
-                // سطر شريط الأخبار المتحرك
-                tickerHtml += `
-                    <span class="news-item ${priceClass === 'price-up' ? 'up' : 'down'}">
-                        ${isArabic ? stock.name : stock.nameEn} (${stock.symbol}): ${data.price.toFixed(2)} (${changePercent.toFixed(2)}%)
-                    </span>
-                `;
-            }
-            DOM.stockMarketBody.innerHTML = html;
-            DOM.newsTicker.innerHTML = tickerHtml;
-        }
-
-        /**
-         * تحديث محفظة المستخدم
-         */
-        function updatePortfolio() {
-            let html = '';
-            const allSymbols = Object.keys(gameState.portfolio).filter(symbol => gameState.portfolio[symbol].quantity > 0);
-
-            if (allSymbols.length === 0) {
-                DOM.portfolioList.innerHTML = isArabic ? '<p style="text-align: center;">لا توجد أسهم مملوكة حاليًا.</p>' : '<p style="text-align: center;">No shares owned currently.</p>';
-                return;
-            }
-
-            for (const symbol of allSymbols) {
-                const holding = gameState.portfolio[symbol];
-                const stock = STOCKS.find(s => s.symbol === symbol);
-                const data = gameState.marketData[symbol];
-                const lastPrice = data.price;
-
-                const avgCost = holding.avgCost;
-                const quantity = holding.quantity;
-
-                const totalCost = avgCost * quantity;
-                const marketValue = lastPrice * quantity;
-                const unrealizedPnl = marketValue - totalCost;
-                const pnlPercent = (unrealizedPnl / totalCost) * 100;
-                const pnlClass = unrealizedPnl >= 0 ? 'text-positive' : 'text-negative';
-
-                // القيمة بعد البيع (Sale Value): القيمة السوقية - عمولة البيع
-                const valueAfterSale = marketValue * (1 - COMMISSION_RATE);
+                const div = document.createElement('div');
+                div.className = 'stock-item' + (selectedStock === stock.symbol ? ' selected' : '');
+                div.onclick = () => selectStock(stock.symbol);
                 
-                // الربح/الخسارة بعد البيع: القيمة بعد البيع - إجمالي التكلفة
-                const pnlAfterSale = valueAfterSale - totalCost;
-                const pnlAfterSaleClass = pnlAfterSale >= 0 ? 'text-positive' : 'text-negative';
-
-                html += `
-                    <div class="portfolio-stock-item">
-                        <strong onclick="selectStock('${symbol}')" style="cursor: pointer; display: block; margin-bottom: 5px;">${isArabic ? stock.name : stock.nameEn} (${symbol}) - ${quantity} ${isArabic ? 'سهم' : 'Shs'}</strong>
-                        
-                        <div class="portfolio-stock-row">
-                            <span>${isArabic ? TEXT.ar.lastPrice : TEXT.en.lastPrice}: ${lastPrice.toFixed(2)}</span>
-                            <span>${isArabic ? TEXT.ar.avgCost : TEXT.en.avgCost}: ${avgCost.toFixed(2)}</span>
-                            <span>${isArabic ? TEXT.ar.marketValue : TEXT.en.marketValue}: ${marketValue.toFixed(2)}</span>
+                div.innerHTML = `
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-name">${currentLang === 'ar' ? stock.name : stock.nameEn}</div>
+                            <div class="stock-symbol">${stock.symbol}</div>
                         </div>
-                        
-                        <div class="portfolio-stock-row">
-                            <span>${isArabic ? TEXT.ar.totalCost : TEXT.en.totalCost}: ${totalCost.toFixed(2)}</span>
-                            <span>${isArabic ? TEXT.ar.valueAfterSale : TEXT.en.valueAfterSale}: ${valueAfterSale.toFixed(2)}</span>
-                            <span>${isArabic ? TEXT.ar.pnl : TEXT.en.pnl} (${isArabic ? 'بعد البيع' : 'After Sale'}): <span class="${pnlAfterSaleClass}">${pnlAfterSale.toFixed(2)} (${pnlPercent.toFixed(2)}%)</span></span>
-                        </div>
-
-                        <div class="portfolio-actions">
-                            <button class="btn-buy" onclick="selectStock('${symbol}'); DOM.orderType.value='market'; toggleLimitPrice(); submitOrderPrompt('${symbol}', 'buy')">${isArabic ? 'شراء' : 'Buy'}</button>
-                            <button class="btn-sell" onclick="selectStock('${symbol}'); DOM.orderType.value='market'; toggleLimitPrice(); submitOrderPrompt('${symbol}', 'sell')">${isArabic ? 'بيع' : 'Sell'}</button>
+                        <div style="text-align: left;">
+                            <div class="stock-price">${price.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</div>
+                            <div class="stock-change ${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</div>
                         </div>
                     </div>
                 `;
-            }
-            DOM.portfolioList.innerHTML = html;
-        }
-
-        /**
-         * تحديث سجل الصفقات
-         */
-        function updateTradeLog() {
-            let html = '';
-            // عرض آخر 50 صفقة فقط
-            const displayLog = gameState.tradeLog.slice(0, 50);
-
-            for (const log of displayLog) {
-                const stock = STOCKS.find(s => s.symbol === log.symbol);
-                const typeClass = log.type === 'buy' ? 'text-positive' : 'text-negative';
-                const pnlClass = log.pnl >= 0 ? 'text-positive' : 'text-negative';
-                const typeText = isArabic ? (log.type === 'buy' ? 'شراء' : 'بيع') : (log.type === 'buy' ? 'Buy' : 'Sell');
-
-                html += `
-                    <tr>
-                        <td>${new Date(log.date).toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US')}</td>
-                        <td>${isArabic ? stock.name : stock.nameEn} (${log.symbol})</td>
-                        <td class="${typeClass}">${typeText}</td>
-                        <td>${log.quantity}</td>
-                        <td>${log.price.toFixed(2)}</td>
-                        <td>${log.commission.toFixed(2)}</td>
-                        <td class="${pnlClass}">${log.pnl.toFixed(2)}</td>
-                    </tr>
-                `;
-            }
-            DOM.tradeLogBody.innerHTML = html;
-        }
-
-        /**
-         * تحديث الأوامر المعلقة
-         */
-        function updatePendingOrders() {
-            let html = '';
-
-            if (gameState.pendingOrders.length === 0) {
-                DOM.pendingOrdersBody.innerHTML = isArabic ? `<tr><td colspan="5" style="text-align: center;">لا توجد أوامر معلقة حاليًا.</td></tr>` : `<tr><td colspan="5" style="text-align: center;">No pending orders currently.</td></tr>`;
-                return;
-            }
-
-            for (const order of gameState.pendingOrders) {
-                const stock = STOCKS.find(s => s.symbol === order.symbol);
-                const typeClass = order.type === 'buy' ? 'text-positive' : 'text-negative';
-                const typeText = isArabic ? (order.type === 'buy' ? 'شراء' : 'بيع') : (order.type === 'buy' ? 'Buy' : 'Sell');
-
-                html += `
-                    <tr>
-                        <td>${isArabic ? stock.name : stock.nameEn} (${order.symbol})</td>
-                        <td class="${typeClass}">${typeText}</td>
-                        <td>${order.quantity}</td>
-                        <td>${order.limitPrice.toFixed(2)}</td>
-                        <td><button class="btn-sell" onclick="cancelPendingOrder(${order.id})">${isArabic ? 'إلغاء' : 'Cancel'}</button></td>
-                    </tr>
-                `;
-            }
-            DOM.pendingOrdersBody.innerHTML = html;
-        }
-
-        /**
-         * تحديث قائمة التحديات
-         */
-        function updateChallengesList() {
-            let html = '';
-            gameState.challenges.forEach(challenge => {
-                const desc = isArabic ? challenge.desc_ar : challenge.desc_en;
-                const status = challenge.completed ? (isArabic ? '✅ تم الإكمال' : '✅ Completed') : (isArabic ? '⏳ قيد التقدم' : '⏳ In Progress');
-                const statusClass = challenge.completed ? 'text-positive' : 'text-neutral';
                 
-                html += `
-                    <li style="margin-bottom: 5px;">
-                        ${desc} - <span class="${statusClass}">${status}</span>
-                    </li>
-                `;
+                listEl.appendChild(div);
             });
-            DOM.challengesList.innerHTML = html;
         }
-
-        /**
-         * تحديث جميع مكونات الواجهة
-         */
-        function updateAllDisplays() {
-            updateFinancialSummary();
-            updateMarketTable();
-            updatePortfolio();
-            updateTradeLog();
-            updatePendingOrders();
-            updateChallengesList();
-            updateChart(currentChartSymbol);
-            updateSpeedIndicator();
-            updateLanguageDisplay();
+        
+        function selectStock(symbol) {
+            selectedStock = symbol;
+            renderStocks();
+            showStockDetails(symbol);
+            document.getElementById('stock-modal').style.display = 'block';
         }
-
-        // =================================================================
-        // 📉 وظائف الرسم البياني (Chart.js)
-        // =================================================================
-
-        /**
-         * تهيئة الرسم البياني
-         */
-        function initializeChart() {
-            const ctx = document.getElementById('stockChart').getContext('2d');
-            chartInstance = new Chart(ctx, {
+        
+        function closeStockModal() {
+            document.getElementById('stock-modal').style.display = 'none';
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+        }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if (tab === 'market') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('market-tab').classList.add('active');
+            } else if (tab === 'portfolio') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('portfolio-tab').classList.add('active');
+            } else if (tab === 'orders') {
+                document.querySelector('.tab:nth-child(3)').classList.add('active');
+                document.getElementById('orders-tab').classList.add('active');
+                renderPendingOrders();
+            }
+        }
+        
+        window.onclick = function(event) {
+            const modal = document.getElementById('stock-modal');
+            if (event.target === modal) {
+                closeStockModal();
+            }
+        }
+        
+        function showStockDetails(symbol) {
+            const stock = stocks.find(s => s.symbol === symbol);
+            const price = stockPrices[symbol];
+            const change = ((price - stock.basePrice) / stock.basePrice) * 100;
+            
+            const detailsEl = document.getElementById('stock-details');
+            detailsEl.innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div>
+                        <h3>${currentLang === 'ar' ? stock.name : stock.nameEn} (${symbol})</h3>
+                        <p style="margin: 10px 0;">${currentLang === 'ar' ? 'السعر الحالي' : 'Current Price'}: <strong>${price.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong></p>
+                        <p>${currentLang === 'ar' ? 'التغير' : 'Change'}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span></p>
+                        
+                        <div class="order-form" style="margin-top: 20px;">
+                            <div class="order-type">
+                                <label>
+                                    <input type="radio" name="orderType" value="market" checked>
+                                    <span>${currentLang === 'ar' ? 'سوق' : 'Market'}</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="orderType" value="limit">
+                                    <span>${currentLang === 'ar' ? 'محدد' : 'Limit'}</span>
+                                </label>
+                            </div>
+                            
+                            <input type="number" id="order-quantity" placeholder="${currentLang === 'ar' ? 'الكمية' : 'Quantity'}" min="1" step="1">
+                            <input type="number" id="order-price" placeholder="${currentLang === 'ar' ? 'السعر (للأوامر المحددة)' : 'Price (for limit orders)'}" step="0.01" style="display: none;">
+                            
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-primary" style="flex: 1;" onclick="executeOrder('buy')">${currentLang === 'ar' ? 'شراء' : 'Buy'}</button>
+                                <button class="btn btn-danger" style="flex: 1;" onclick="executeOrder('sell')">${currentLang === 'ar' ? 'بيع' : 'Sell'}</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="chart-container">
+                            <canvas id="price-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.querySelectorAll('input[name="orderType"]').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    document.getElementById('order-price').style.display = 
+                        e.target.value === 'limit' ? 'block' : 'none';
+                });
+            });
+            
+            renderChart(symbol);
+        }
+        
+        function renderChart(symbol) {
+            const ctx = document.getElementById('price-chart');
+            if (!ctx) return;
+            
+            if (chart) chart.destroy();
+            
+            const data = priceHistory[symbol] || [];
+            
+            chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: [],
+                    labels: data.map(d => new Date(d.time).toLocaleTimeString(currentLang === 'ar' ? 'ar-SA' : 'en-US')),
                     datasets: [{
-                        label: 'Price',
-                        data: [],
-                        borderColor: varColor('primary-color'),
-                        borderWidth: 2,
-                        pointRadius: 0,
-                        fill: false,
-                        tension: 0.1
+                        label: currentLang === 'ar' ? 'السعر' : 'Price',
+                        data: data.map(d => d.price),
+                        borderColor: '#16a085',
+                        backgroundColor: 'rgba(22, 160, 133, 0.1)',
+                        tension: 0.4,
+                        fill: true
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            type: 'linear', // استخدام مقياس خطي
-                            ticks: {
-                                callback: function(value, index) {
-                                    // عرض التاريخ كل 10 نقاط (لتجنب الازدحام)
-                                    if (index % 10 === 0) {
-                                        const date = new Date(value);
-                                        return date.toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US');
-                                    }
-                                    return '';
-                                },
-                                color: varColor('text-color'),
-                            },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                        },
-                        y: {
-                            title: { display: true, text: isArabic ? 'السعر (ريال)' : 'Price (SAR)', color: varColor('text-color') },
-                            ticks: { color: varColor('text-color') },
-                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.dataset.label}: ${context.parsed.y.toFixed(2)} SAR`;
-                                },
-                                title: function(context) {
-                                    const date = new Date(context[0].parsed.x);
-                                    return date.toLocaleTimeString(isArabic ? 'ar-SA' : 'en-US') + ' - ' + date.toLocaleDateString(isArabic ? 'ar-SA' : 'en-US');
-                                }
-                            }
+                    scales: {
+                        y: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                        },
+                        x: {
+                            ticks: { color: '#e0e0e0' },
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' }
                         }
                     }
                 }
             });
-            // لتحديد ارتفاع للرسم البياني
-            document.getElementById('stockChart').style.height = '400px';
         }
-
-        /**
-         * تحديث الرسم البياني بسجل الأسعار للسهم المحدد
-         * @param {string} symbol - رمز السهم
-         */
-        function updateChart(symbol) {
-            currentChartSymbol = symbol;
-            const data = gameState.marketData[symbol];
-            const stock = STOCKS.find(s => s.symbol === symbol);
+        
+        function executeOrder(type) {
+            if (!selectedStock) {
+                alert(currentLang === 'ar' ? 'الرجاء اختيار سهم' : 'Please select a stock');
+                return;
+            }
             
-            if (!chartInstance || !data || !stock) return;
-
-            DOM.chartTitle.innerHTML = `${isArabic ? TEXT.ar.chart : TEXT.en.chart}: ${isArabic ? stock.name : stock.nameEn} (${symbol})`;
-
-            const chartData = data.history.map(h => ({ x: h.date, y: h.price }));
-
-            chartInstance.data.datasets[0].data = chartData;
-            chartInstance.options.scales.y.title.text = isArabic ? 'السعر (ريال)' : 'Price (SAR)';
-
-            // تحديد لون الخط بناءً على التغير الأخير
-            const lastPrice = data.history[data.history.length - 1]?.price;
-            const firstPrice = data.history[0]?.price;
-            const color = (lastPrice >= firstPrice) ? varColor('accent-color') : varColor('danger-color');
-            chartInstance.data.datasets[0].borderColor = color;
-
-            chartInstance.update();
-        }
-
-        /**
-         * وظيفة مساعدة للحصول على قيمة متغير CSS
-         */
-        function varColor(varName) {
-            return getComputedStyle(document.documentElement).getPropertyValue(`--${varName}`).trim();
-        }
-
-        // =================================================================
-        // 🌐 وظائف التحكم واللغة
-        // =================================================================
-
-        /**
-         * تبديل سرعة المحاكاة
-         * @param {number} speed - السرعة الجديدة (1, 5, 10)
-         */
-        function changeSpeed(speed) {
-            simulationSpeed = speed;
-            clearInterval(marketInterval);
-            // 60 ثانية (ساعة تداول) / السرعة
-            marketInterval = setInterval(marketUpdateLoop, (60000 / simulationSpeed));
-            updateSpeedIndicator();
-        }
-
-        /**
-         * تحديث مؤشر السرعة
-         */
-        function updateSpeedIndicator() {
-            DOM.timeSpeedIndicator.textContent = `${isArabic ? TEXT.ar.speed : TEXT.en.speed}: ${simulationSpeed}x`;
-        }
-
-        /**
-         * تبديل عرض خانة السعر المحدد
-         */
-        function toggleLimitPrice() {
-            DOM.limitPrice.style.display = DOM.orderType.value === 'limit' ? 'block' : 'none';
-        }
-
-        /**
-         * إظهار رسالة حالة في نافذة الأوامر
-         * @param {string} message - الرسالة
-         * @param {string} type - 'success', 'error', 'info'
-         */
-        function showOrderStatus(message, type) {
-            const msgElement = DOM.orderStatusMsg;
-            msgElement.textContent = message;
-            msgElement.style.color = type === 'success' ? varColor('accent-color') :
-                                     type === 'error' ? varColor('danger-color') :
-                                     varColor('primary-color');
+            const quantity = parseInt(document.getElementById('order-quantity').value);
+            if (!quantity || quantity < 1) {
+                alert(currentLang === 'ar' ? 'الرجاء إدخال كمية صحيحة' : 'Please enter a valid quantity');
+                return;
+            }
             
-            // إخفاء الرسالة بعد 5 ثوان
-            setTimeout(() => { msgElement.textContent = ''; }, 5000);
-        }
-
-        /**
-         * تسجيل رسالة في شريط الأخبار المتحرك
-         * @param {string} message - الرسالة الإخبارية
-         * @param {string} type - 'up' أو 'down'
-         */
-        function logNews(message, type) {
-            const item = document.createElement('span');
-            item.className = `news-item ${type}`;
-            item.textContent = message;
-            DOM.newsTicker.appendChild(item);
+            const orderType = document.querySelector('input[name="orderType"]:checked').value;
             
-            // إزالة الأقدم للحفاظ على الأداء (بعد فترة)
-            setTimeout(() => {
-                if (DOM.newsTicker.firstChild === item) {
-                    DOM.newsTicker.removeChild(item);
+            if (orderType === 'limit') {
+                const limitPrice = parseFloat(document.getElementById('order-price').value);
+                if (!limitPrice || limitPrice <= 0) {
+                    alert(currentLang === 'ar' ? 'الرجاء إدخال سعر محدد' : 'Please enter a limit price');
+                    return;
                 }
-            }, 300000); // إزالة بعد 5 دقائق
-        }
-
-        /**
-         * إعداد قائمة الأسهم في نافذة الأوامر
-         */
-        function populateOrderStockList() {
-            let html = `<option value="">${isArabic ? TEXT.ar.selectStock : TEXT.en.selectStock}</option>`;
-            STOCKS.forEach(stock => {
-                html += `<option value="${stock.symbol}">${isArabic ? stock.name : stock.nameEn} (${stock.symbol})</option>`;
+                
+                // Add to pending orders instead of executing immediately
+                const order = {
+                    id: Date.now(),
+                    symbol: selectedStock,
+                    type: type,
+                    quantity: quantity,
+                    limitPrice: limitPrice,
+                    timestamp: Date.now()
+                };
+                
+                gameState.pendingOrders.push(order);
+                
+                alert(currentLang === 'ar' ? 
+                    'تم إضافة الأمر بنجاح! سيتم تنفيذه عند وصول السعر المحدد.' : 
+                    'Order added successfully! It will be executed when price reaches the limit.');
+                
+                document.getElementById('order-quantity').value = '';
+                document.getElementById('order-price').value = '';
+                renderPendingOrders();
+                saveGame();
+                closeStockModal();
+                return;
+            }
+            
+            // Market order - execute immediately
+            let price = stockPrices[selectedStock];
+            price *= (1 + (Math.random() - 0.5) * SLIPPAGE);
+            
+            if (type === 'buy') {
+                const cost = price * quantity * (1 + COMMISSION);
+                if (cost > gameState.cash) {
+                    alert(currentLang === 'ar' ? 'رصيد غير كافٍ' : 'Insufficient funds');
+                    return;
+                }
+                
+                gameState.cash -= cost;
+                if (!gameState.portfolio[selectedStock]) {
+                    gameState.portfolio[selectedStock] = {quantity: 0, avgCost: 0};
+                }
+                
+                const current = gameState.portfolio[selectedStock];
+                const totalCost = (current.avgCost * current.quantity) + (price * quantity);
+                current.quantity += quantity;
+                current.avgCost = totalCost / current.quantity;
+                
+            } else {
+                if (!gameState.portfolio[selectedStock] || gameState.portfolio[selectedStock].quantity < quantity) {
+                    alert(currentLang === 'ar' ? 'لا تمتلك عدداً كافياً من الأسهم' : 'Insufficient shares');
+                    return;
+                }
+                
+                const revenue = price * quantity * (1 - COMMISSION);
+                gameState.cash += revenue;
+                gameState.portfolio[selectedStock].quantity -= quantity;
+                
+                if (gameState.portfolio[selectedStock].quantity === 0) {
+                    delete gameState.portfolio[selectedStock];
+                }
+            }
+            
+            gameState.transactions.push({
+                symbol: selectedStock,
+                type: type,
+                quantity: quantity,
+                price: price,
+                time: Date.now()
             });
-            DOM.orderStock.innerHTML = html;
+            
+            document.getElementById('order-quantity').value = '';
+            document.getElementById('order-price').value = '';
+            
+            renderPortfolio();
+            updateStats();
+            saveGame();
         }
-
-        /**
-         * تحديث عنوان نافذة الأوامر
-         * @param {string} symbol - رمز السهم المحدد
-         */
-        function updateOrderTitle(symbol) {
-            const stock = STOCKS.find(s => s.symbol === symbol);
-            const name = stock ? (isArabic ? stock.name : stock.nameEn) : (isArabic ? TEXT.ar.orderWindow : TEXT.en.orderWindow);
-            document.getElementById('order-title').textContent = isArabic ? TEXT.ar.orderTitle(name) : TEXT.en.orderTitle(name);
+        
+        function checkPendingOrders() {
+            if (!gameState.pendingOrders || gameState.pendingOrders.length === 0) return;
+            
+            const ordersToRemove = [];
+            
+            gameState.pendingOrders.forEach((order, index) => {
+                const currentPrice = stockPrices[order.symbol];
+                let shouldExecute = false;
+                
+                if (order.type === 'buy' && currentPrice <= order.limitPrice) {
+                    shouldExecute = true;
+                } else if (order.type === 'sell' && currentPrice >= order.limitPrice) {
+                    shouldExecute = true;
+                }
+                
+                if (shouldExecute) {
+                    const price = order.limitPrice;
+                    
+                    if (order.type === 'buy') {
+                        const cost = price * order.quantity * (1 + COMMISSION);
+                        if (cost <= gameState.cash) {
+                            gameState.cash -= cost;
+                            if (!gameState.portfolio[order.symbol]) {
+                                gameState.portfolio[order.symbol] = {quantity: 0, avgCost: 0};
+                            }
+                            
+                            const current = gameState.portfolio[order.symbol];
+                            const totalCost = (current.avgCost * current.quantity) + (price * order.quantity);
+                            current.quantity += order.quantity;
+                            current.avgCost = totalCost / current.quantity;
+                            
+                            ordersToRemove.push(index);
+                        }
+                    } else {
+                        if (gameState.portfolio[order.symbol] && 
+                            gameState.portfolio[order.symbol].quantity >= order.quantity) {
+                            const revenue = price * order.quantity * (1 - COMMISSION);
+                            gameState.cash += revenue;
+                            gameState.portfolio[order.symbol].quantity -= order.quantity;
+                            
+                            if (gameState.portfolio[order.symbol].quantity === 0) {
+                                delete gameState.portfolio[order.symbol];
+                            }
+                            
+                            ordersToRemove.push(index);
+                        }
+                    }
+                    
+                    if (ordersToRemove.includes(index)) {
+                        gameState.transactions.push({
+                            symbol: order.symbol,
+                            type: order.type,
+                            quantity: order.quantity,
+                            price: price,
+                            time: Date.now()
+                        });
+                    }
+                }
+            });
+            
+            // Remove executed orders
+            ordersToRemove.reverse().forEach(index => {
+                gameState.pendingOrders.splice(index, 1);
+            });
+            
+            if (ordersToRemove.length > 0) {
+                renderPortfolio();
+                renderPendingOrders();
+                updateStats();
+            }
         }
-
-        /**
-         * تحديد سهم للرسم البياني وتحديث عنوان نافذة الأوامر
-         * @param {string} symbol - رمز السهم
-         */
-        function selectStock(symbol) {
-            currentChartSymbol = symbol;
-            DOM.orderStock.value = symbol;
-            updateChart(symbol);
-            updateOrderTitle(symbol);
+        
+        function renderPendingOrders() {
+            const ordersEl = document.getElementById('pending-orders');
+            if (!ordersEl) return;
+            
+            if (!gameState.pendingOrders || gameState.pendingOrders.length === 0) {
+                ordersEl.innerHTML = `<p style="text-align: center; color: #95a5a6;">${currentLang === 'ar' ? 'لا توجد أوامر معلقة' : 'No pending orders'}</p>`;
+                return;
+            }
+            
+            ordersEl.innerHTML = '';
+            
+            gameState.pendingOrders.forEach((order, index) => {
+                const stock = stocks.find(s => s.symbol === order.symbol);
+                const currentPrice = stockPrices[order.symbol];
+                const priceDiff = ((currentPrice - order.limitPrice) / order.limitPrice) * 100;
+                
+                const div = document.createElement('div');
+                div.className = 'order-item';
+                div.innerHTML = `
+                    <div class="order-header">
+                        <div>
+                            <strong style="font-size: 16px;">${currentLang === 'ar' ? stock.name : stock.nameEn}</strong>
+                            <span style="color: #95a5a6; margin-right: 10px;">(${order.symbol})</span>
+                        </div>
+                        <span class="btn ${order.type === 'buy' ? 'btn-primary' : 'btn-danger'}" style="padding: 5px 15px; font-size: 12px;">
+                            ${order.type === 'buy' ? (currentLang === 'ar' ? 'شراء' : 'Buy') : (currentLang === 'ar' ? 'بيع' : 'Sell')}
+                        </span>
+                    </div>
+                    
+                    <div class="order-details">
+                        <div>${currentLang === 'ar' ? 'الكمية' : 'Quantity'}: <strong>${order.quantity}</strong></div>
+                        <div>${currentLang === 'ar' ? 'السعر المحدد' : 'Limit Price'}: <strong>${order.limitPrice.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong></div>
+                        <div>${currentLang === 'ar' ? 'السعر الحالي' : 'Current Price'}: <strong>${currentPrice.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong></div>
+                        <div>${currentLang === 'ar' ? 'الفرق' : 'Difference'}: <span class="${priceDiff >= 0 ? 'positive' : 'negative'}">${priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(2)}%</span></div>
+                        <div style="grid-column: 1 / -1;">${currentLang === 'ar' ? 'التاريخ' : 'Date'}: ${new Date(order.timestamp).toLocaleString(currentLang === 'ar' ? 'ar-SA' : 'en-US')}</div>
+                    </div>
+                    
+                    <div class="order-actions">
+                        <button class="btn btn-danger" style="width: 100%;" onclick="cancelOrder(${index})">
+                            ${currentLang === 'ar' ? 'إلغاء الأمر' : 'Cancel Order'}
+                        </button>
+                    </div>
+                `;
+                
+                ordersEl.appendChild(div);
+            });
         }
-
-        /**
-         * وظيفة مساعدة لفتح نافذة الأوامر بكمية افتراضية إذا كان الإجراء من المحفظة/السوق
-         */
-        function submitOrderPrompt(symbol, type) {
-             const data = gameState.marketData[symbol];
-             const stock = STOCKS.find(s => s.symbol === symbol);
-             const isSell = type === 'sell';
-             const price = data.price.toFixed(2);
-             
-             // قم بتعيين السهم والنوع
-             DOM.orderStock.value = symbol;
-             DOM.orderType.value = 'market'; // دائماً سوق من زر الإجراء السريع
-             toggleLimitPrice();
-             updateOrderTitle(symbol);
-
-             // تحديد الكمية الافتراضية
-             let defaultQuantity = 1;
-             if (isSell && gameState.portfolio[symbol]) {
-                 defaultQuantity = gameState.portfolio[symbol].quantity;
-             }
-             DOM.orderQuantity.value = defaultQuantity;
-             
-             // رسالة توجيه
-             showOrderStatus(isArabic ? `سيتم تنفيذ أمر ${isSell ? 'البيع' : 'الشراء'} لـ ${defaultQuantity} سهم بسعر السوق (${price})` : `${isSell ? 'Sell' : 'Buy'} market order for ${defaultQuantity} shares at market price (${price}) is ready.`, 'info');
+        
+        function cancelOrder(index) {
+            if (!gameState.pendingOrders || index >= gameState.pendingOrders.length) return;
+            
+            if (confirm(currentLang === 'ar' ? 'هل أنت متأكد من إلغاء هذا الأمر؟' : 'Are you sure you want to cancel this order?')) {
+                gameState.pendingOrders.splice(index, 1);
+                renderPendingOrders();
+                saveGame();
+            }
         }
-
-        /**
-         * تبديل اللغة
-         */
+        
+        function renderPortfolio() {
+            const portfolioEl = document.getElementById('portfolio');
+            
+            if (Object.keys(gameState.portfolio).length === 0) {
+                portfolioEl.innerHTML = `<p style="text-align: center; color: #95a5a6;">${currentLang === 'ar' ? 'المحفظة فارغة' : 'Portfolio is empty'}</p>`;
+                return;
+            }
+            
+            portfolioEl.innerHTML = '';
+            
+            Object.entries(gameState.portfolio).forEach(([symbol, holding]) => {
+                const stock = stocks.find(s => s.symbol === symbol);
+                const currentPrice = stockPrices[symbol];
+                const marketValue = currentPrice * holding.quantity;
+                const costBasis = holding.avgCost * holding.quantity;
+                const pnl = marketValue - costBasis;
+                const pnlPercent = (pnl / costBasis) * 100;
+                const valueAfterSell = marketValue * (1 - COMMISSION);
+                const profitAfterSell = valueAfterSell - costBasis;
+                
+                const div = document.createElement('div');
+                div.className = 'portfolio-item';
+                div.innerHTML = `
+                    <div class="stock-header">
+                        <div>
+                            <div class="stock-name">${currentLang === 'ar' ? stock.name : stock.nameEn}</div>
+                            <div class="stock-symbol">${symbol} - ${holding.quantity} ${currentLang === 'ar' ? 'سهم' : 'shares'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="portfolio-details">
+                        <div class="detail-item">
+                            <span>${currentLang === 'ar' ? 'السعر الأخير' : 'Last Price'}:</span>
+                            <strong>${currentPrice.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>${currentLang === 'ar' ? 'متوسط التكلفة' : 'Avg Cost'}:</span>
+                            <strong>${holding.avgCost.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>${currentLang === 'ar' ? 'إجمالي التكلفة' : 'Total Cost'}:</span>
+                            <strong>${costBasis.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>${currentLang === 'ar' ? 'القيمة السوقية' : 'Market Value'}:</span>
+                            <strong>${marketValue.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>${currentLang === 'ar' ? 'القيمة بعد البيع' : 'Value After Sell'}:</span>
+                            <strong>${valueAfterSell.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <span>${currentLang === 'ar' ? 'الربح/الخسارة' : 'P&L After Sell'}:</span>
+                            <strong class="${profitAfterSell >= 0 ? 'positive' : 'negative'}">
+                                ${profitAfterSell >= 0 ? '+' : ''}${profitAfterSell.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'} 
+                                (${profitAfterSell >= 0 ? '+' : ''}${((profitAfterSell/costBasis)*100).toFixed(2)}%)
+                            </strong>
+                        </div>
+                    </div>
+                    
+                    <div class="portfolio-actions">
+                        <button class="btn btn-primary" style="flex: 1;" onclick="quickTrade('${symbol}', 'buy')">${currentLang === 'ar' ? 'شراء المزيد' : 'Buy More'}</button>
+                        <button class="btn btn-danger" style="flex: 1;" onclick="quickTrade('${symbol}', 'sell')">${currentLang === 'ar' ? 'بيع الكل' : 'Sell All'}</button>
+                    </div>
+                `;
+                
+                portfolioEl.appendChild(div);
+            });
+        }
+        
+        function quickTrade(symbol, type) {
+            selectedStock = symbol;
+            showStockDetails(symbol);
+            document.getElementById('stock-modal').style.display = 'block';
+            
+            if (type === 'sell' && gameState.portfolio[symbol]) {
+                setTimeout(() => {
+                    const qtyInput = document.getElementById('order-quantity');
+                    if (qtyInput) {
+                        qtyInput.value = gameState.portfolio[symbol].quantity;
+                    }
+                }, 100);
+            }
+        }
+        
+        function updateStats() {
+            let portfolioValue = 0;
+            Object.entries(gameState.portfolio).forEach(([symbol, holding]) => {
+                portfolioValue += stockPrices[symbol] * holding.quantity;
+            });
+            
+            const totalValue = gameState.cash + portfolioValue;
+            const pnl = totalValue - gameState.initialCapital;
+            const pnlPercent = (pnl / gameState.initialCapital) * 100;
+            
+            document.getElementById('cash').textContent = 
+                `${gameState.cash.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}`;
+            document.getElementById('portfolio-value').textContent = 
+                `${portfolioValue.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}`;
+            document.getElementById('total-value').textContent = 
+                `${totalValue.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'}`;
+            
+            const pnlEl = document.getElementById('pnl');
+            pnlEl.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ${currentLang === 'ar' ? 'ريال' : 'SAR'} (${pnl >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`;
+            pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
+            
+            updateChallenges(pnlPercent, totalValue);
+        }
+        
+        function updateChallenges(pnlPercent, totalValue) {
+            const progress1 = Math.min((pnlPercent / 10) * 100, 100);
+            const progress2 = Math.min((pnlPercent / 20) * 100, 100);
+            
+            document.getElementById('challenge1-progress').style.width = `${progress1}%`;
+            document.getElementById('challenge2-progress').style.width = `${progress2}%`;
+            
+            if (pnlPercent >= 10 && !gameState.challenge1Completed) {
+                gameState.challenge1Completed = true;
+                gameState.cash += 100000;
+                gameState.initialCapital = totalValue;
+                alert(currentLang === 'ar' ? 
+                    '🎉 تهانينا! أكملت التحدي الأول وحصلت على 100,000 ريال!' : 
+                    '🎉 Congratulations! You completed Challenge 1 and earned 100,000 SAR!');
+            }
+            
+            if (pnlPercent >= 20 && !gameState.challenge2Completed) {
+                gameState.challenge2Completed = true;
+                gameState.cash += 300000;
+                gameState.initialCapital = totalValue;
+                alert(currentLang === 'ar' ? 
+                    '🎉 رائع! أكملت التحدي الثاني وحصلت على 300,000 ريال!' : 
+                    '🎉 Amazing! You completed Challenge 2 and earned 300,000 SAR!');
+            }
+        }
+        
+        function updateTicker() {
+            const tickerEl = document.getElementById('ticker');
+            let html = '';
+            
+            stocks.forEach(stock => {
+                const price = stockPrices[stock.symbol];
+                const change = ((price - stock.basePrice) / stock.basePrice) * 100;
+                const changeClass = change >= 0 ? 'positive' : 'negative';
+                
+                html += `
+                    <span class="ticker-item">
+                        <strong>${currentLang === 'ar' ? stock.name : stock.nameEn}</strong> 
+                        ${price.toFixed(2)} 
+                        <span class="${changeClass}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>
+                    </span>
+                `;
+            });
+            
+            tickerEl.innerHTML = html + html;
+        }
+        
+        function setSpeed(speed) {
+            gameState.speed = speed;
+            startPriceUpdates();
+            saveGame();
+        }
+        
+        function resetGame() {
+            if (!confirm(currentLang === 'ar' ? 
+                'هل أنت متأكد من إعادة تعيين اللعبة؟ سيتم فقدان جميع التقدم!' : 
+                'Are you sure you want to reset the game? All progress will be lost!')) {
+                return;
+            }
+            
+            localStorage.removeItem('tadawulGame');
+            gameState = {
+                cash: INITIAL_CAPITAL,
+                portfolio: {},
+                transactions: [],
+                speed: 1,
+                initialCapital: INITIAL_CAPITAL,
+                challenge1Completed: false,
+                challenge2Completed: false
+            };
+            
+            stocks.forEach(stock => {
+                stockPrices[stock.symbol] = stock.basePrice;
+                priceHistory[stock.symbol] = [{time: Date.now(), price: stock.basePrice}];
+            });
+            
+            selectedStock = null;
+            renderStocks();
+            renderPortfolio();
+            updateStats();
+            closeStockModal();
+        }
+        
         function toggleLanguage() {
-            isArabic = !isArabic;
-            gameState.isArabic = isArabic;
-            document.body.dir = isArabic ? 'rtl' : 'ltr';
-            document.body.classList.toggle('en', !isArabic);
-
-            // تحديث نصوص الواجهة الثابتة
-            document.querySelector('#portfolio-panel h2').textContent = isArabic ? TEXT.ar.portfolio : TEXT.en.portfolio;
-            document.querySelector('#order-title').textContent = isArabic ? TEXT.ar.orderWindow : TEXT.en.orderWindow;
-            document.querySelector('#order-stock option[value=""]').textContent = isArabic ? TEXT.ar.selectStock : TEXT.en.selectStock;
-            document.querySelector('#order-type option[value="market"]').textContent = isArabic ? TEXT.ar.marketOrder : TEXT.en.marketOrder;
-            document.querySelector('#order-type option[value="limit"]').textContent = isArabic ? TEXT.ar.limitOrder : TEXT.en.limitOrder;
-            document.querySelector('#order-quantity').placeholder = isArabic ? TEXT.ar.quantity : TEXT.en.quantity;
-            document.querySelector('#limit-price').placeholder = isArabic ? TEXT.ar.limitPricePlaceholder : TEXT.en.limitPricePlaceholder;
-            document.querySelector('.btn-buy').textContent = isArabic ? TEXT.ar.buy : TEXT.en.buy;
-            document.querySelector('.btn-sell').textContent = isArabic ? TEXT.ar.sell : TEXT.en.sell;
-            document.querySelector('#challenges-list').previousElementSibling.textContent = isArabic ? TEXT.ar.challenges : TEXT.en.challenges;
-            document.querySelector('.main-content > .panel:nth-child(1) h2').textContent = isArabic ? TEXT.ar.marketPanel : TEXT.en.marketPanel;
-            document.querySelector('#trade-log-body').previousElementSibling.previousElementSibling.textContent = isArabic ? TEXT.ar.log : TEXT.en.log;
-            document.querySelector('#pending-orders-body').previousElementSibling.previousElementSibling.textContent = isArabic ? TEXT.ar.pendingOrders : TEXT.en.pendingOrders;
-
-            // تحديث عناوين الأعمدة
-            const marketHeaders = document.querySelector('#stock-market-body').previousElementSibling.querySelectorAll('th');
-            marketHeaders[0].textContent = isArabic ? TEXT.ar.stock : TEXT.en.stock;
-            marketHeaders[1].textContent = isArabic ? TEXT.ar.symbol : TEXT.en.symbol;
-            marketHeaders[2].textContent = isArabic ? TEXT.ar.currentPrice : TEXT.en.currentPrice;
-            marketHeaders[3].textContent = isArabic ? TEXT.ar.change : TEXT.en.change;
-            marketHeaders[4].textContent = isArabic ? TEXT.ar.volume : TEXT.en.volume;
-            marketHeaders[5].textContent = isArabic ? TEXT.ar.action : TEXT.en.action;
-
-            const logHeaders = document.querySelector('#trade-log-body').previousElementSibling.querySelectorAll('th');
-            logHeaders[0].textContent = isArabic ? TEXT.ar.date : TEXT.en.date;
-            logHeaders[1].textContent = isArabic ? TEXT.ar.stock : TEXT.en.stock;
-            logHeaders[2].textContent = isArabic ? TEXT.ar.type : TEXT.en.type;
-            logHeaders[3].textContent = isArabic ? TEXT.ar.quantity : TEXT.en.quantity;
-            logHeaders[4].textContent = isArabic ? TEXT.ar.currentPrice : TEXT.en.currentPrice;
-            logHeaders[5].textContent = isArabic ? TEXT.ar.commission : TEXT.en.commission;
-            logHeaders[6].textContent = isArabic ? TEXT.ar.pnl : TEXT.en.pnl;
-
-            // تحديث العرض بالكامل
-            populateOrderStockList();
-            updateAllDisplays();
-        }
-
-        /**
-         * وظيفة مساعدة لتحديث عرض اللغة عند التحميل
-         */
-        function updateLanguageDisplay() {
-             isArabic = gameState.isArabic;
-             document.body.dir = isArabic ? 'rtl' : 'ltr';
-             document.body.classList.toggle('en', !isArabic);
-
-             document.getElementById('lang-toggle-btn').textContent = isArabic ? 'English / عربي' : 'عربي / English';
-             
-             // إعادة تهيئة المحتوى الذي يعتمد على اللغة (لتحديث الأسماء في القوائم المنسدلة)
-             populateOrderStockList();
-             updateOrderTitle(DOM.orderStock.value);
-        }
-
-        // =================================================================
-        // 🚀 التهيئة والبدء
-        // =================================================================
-
-        function init() {
-            // تحميل حالة اللغة المحفوظة
-            isArabic = gameState.isArabic;
-
-            // إعداد الواجهة وفقًا للحالة
-            updateLanguageDisplay();
+            currentLang = currentLang === 'ar' ? 'en' : 'ar';
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
             
-            // تهيئة الرسم البياني
-            initializeChart();
-
-            // إعداد القوائم المنسدلة
-            populateOrderStockList();
+            document.querySelector('.lang-switch button').textContent = 
+                currentLang === 'ar' ? 'E' : 'ع';
             
-            // تحديث العرض الأولي
-            updateAllDisplays();
+            document.querySelector('.header h1').textContent = 
+                currentLang === 'ar' ? 'تداول' : 'Tadawul';
             
-            // اختيار السهم الأول افتراضيا للرسم البياني
-            selectStock(STOCKS[0].symbol); 
-
-            // بدء حلقة المحاكاة
-            changeSpeed(simulationSpeed); 
+            document.querySelector('.header p').textContent = 
+                currentLang === 'ar' ? 'محاكاة سوق الأسهم السعودي' : 'Saudi Stock Market Simulator';
+            
+            document.querySelectorAll('.btn-danger').forEach(btn => {
+                if (btn.textContent.includes('إعادة') || btn.textContent.includes('Reset')) {
+                    btn.textContent = currentLang === 'ar' ? 'إعادة تعيين' : 'Reset';
+                }
+            });
+            
+            document.querySelectorAll('.stat-label').forEach((label, index) => {
+                const labels = currentLang === 'ar' ? 
+                    ['الرصيد النقدي', 'قيمة المحفظة', 'إجمالي الأصول', 'الربح/الخسارة'] : 
+                    ['Cash Balance', 'Portfolio Value', 'Total Assets', 'Profit/Loss'];
+                label.textContent = labels[index];
+            });
+            
+            document.querySelectorAll('.panel-title').forEach((title, index) => {
+                const titles = currentLang === 'ar' ? 
+                    ['قائمة الأسهم', 'محفظتي', 'الأوامر المعلقة', '🎯 التحديات'] : 
+                    ['Stock List', 'My Portfolio', 'Pending Orders', '🎯 Challenges'];
+                if (index < titles.length) {
+                    title.textContent = titles[index];
+                }
+            });
+            
+            document.querySelectorAll('.tab').forEach((tab, index) => {
+                const tabLabels = currentLang === 'ar' ? 
+                    ['📊 السوق', '💼 المحفظة', '📋 الأوامر'] : 
+                    ['📊 Market', '💼 Portfolio', '📋 Orders'];
+                if (index < tabLabels.length) {
+                    tab.textContent = tabLabels[index];
+                }
+            });
+            
+            renderStocks();
+            renderPortfolio();
+            renderPendingOrders();
+            updateStats();
+            updateTicker();
+            
+            if (selectedStock) {
+                showStockDetails(selectedStock);
+            }
         }
-
-        window.onload = init;
-
-        // إتاحة الوظائف للاستدعاء المباشر من HTML
-        window.toggleLanguage = toggleLanguage;
-        window.changeSpeed = changeSpeed;
-        window.toggleLimitPrice = toggleLimitPrice;
-        window.submitOrder = submitOrder;
-        window.selectStock = selectStock;
-        window.cancelPendingOrder = cancelPendingOrder;
-        window.updateOrderTitle = updateOrderTitle;
-        window.submitOrderPrompt = submitOrderPrompt;
+        
+        initGame();
+        updateTicker();
+        renderPendingOrders();
     </script>
 </body>
 </html>
