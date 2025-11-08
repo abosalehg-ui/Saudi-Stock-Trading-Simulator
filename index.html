@@ -28,22 +28,61 @@
             position: sticky;
             top: 0;
             z-index: 999;
+            margin-bottom: 0;
         }
         
-        .ticker-content {
-            display: inline-block;
-            animation: scroll 400s linear infinite;
+        /* شريط الأسهم العلوي - من اليمين لليسار */
+.ticker-content {
+    display: inline-block;
+    animation: scrollTicker 400s linear infinite;
+}
+
+@keyframes scrollTicker {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+}
+
+.ticker-item {
+    display: inline-block;
+    margin: 0 30px;
+    font-size: 14px;
+}
+
+/* شريط الأخبار - من اليسار لليمين */
+.news-ticker {
+    background: #0f3460;
+    padding: 8px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    border-bottom: 2px solid #16a085;
+    position: sticky;
+    top: 36px;
+    z-index: 998;
+    margin-top: 0;
+}
+
+.news-ticker-content {
+    display: inline-block;
+    animation: scrollNews 50s linear infinite;
+}
+
+@keyframes scrollNews {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.news-item {
+    display: inline-block;
+    margin: 0 40px;
+    font-size: 14px;
+}
+        
+        .news-positive {
+            color: #2ecc71;
         }
         
-        @keyframes scroll {
-            0% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-        }
-        
-        .ticker-item {
-            display: inline-block;
-            margin: 0 30px;
-            font-size: 14px;
+        .news-negative {
+            color: #e74c3c;
         }
         
         .header {
@@ -387,6 +426,21 @@
             margin: 10px 0;
         }
         
+        .tips-container {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .tip-item {
+            background: #1a1a2e;
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            border-left: 4px solid #16a085;
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+        
         .challenges {
             margin-top: 10px;
         }
@@ -476,8 +530,8 @@
             
             .stats {
                 position: sticky;
-                top: 52px;
-                z-index: 998;
+                top: 104px;  /* كان 52px، غيره إلى 104px */
+                z-index: 997;
                 background: #1a1a2e;
                 padding: 8px 10px;
                 margin: 0 -20px 15px -20px;
@@ -553,9 +607,8 @@
         <div class="ticker-content" id="ticker"></div>
     </div>
 
-    <div class="header">
-        <h1 style="font-size: 2.0em; margin-bottom: 2px;">تداول</h1>
-        <p style="font-size: 1em; color: #95a5a6; margin-bottom: 5px;">محاكاة سوق الأسهم السعودي</p>
+    <div class="news-ticker">
+        <div class="news-ticker-content" id="news-ticker"></div>
     </div>
 
     <div class="container">
@@ -605,6 +658,13 @@
             </div>
         </div>
 
+        <div class="tips-container">
+            <div class="panel">
+                <h2 class="panel-title">💡 نصائح مالية</h2>
+                <div id="tips-list"></div>
+            </div>
+        </div>
+
         <div class="challenges">
             <div class="panel">
                 <h2 class="panel-title">🎯 التحديات</h2>
@@ -627,11 +687,11 @@
         
         <div style="text-align: center; margin: 20px 0;">
             <button class="btn btn-danger" onclick="resetGame()">إعادة تعيين</button>
-            <class="controls">
-            <button class="btn btn-primary" onclick="setSpeed(1)">1x</button>
-            <button class="btn btn-primary" onclick="setSpeed(5)">5x</button>
-            <button class="btn btn-primary" onclick="setSpeed(10)">10x</button>
-        </div>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="setSpeed(1)">1x</button>
+                <button class="btn btn-primary" onclick="setSpeed(5)">5x</button>
+                <button class="btn btn-primary" onclick="setSpeed(10)">10x</button>
+            </div>
         </div>
     </div>
 
@@ -791,6 +851,173 @@
         let selectedStock = null;
         let updateInterval = null;
         let chart = null;
+        let activeNews = [];
+        let newsUpdateInterval = null;
+        
+        const financialTips = {
+            ar: [
+                'لا تضع كل أموالك في سهم واحد، التنويع يقلل المخاطر',
+                'الاستثمار طويل الأجل أكثر أمانًا من المضاربات السريعة',
+                'اشترِ عند الانخفاض وبع عند الارتفاع، لا العكس',
+                'لا تستثمر أموالًا تحتاجها في المدى القريب',
+                'تابع أخبار الشركات والقطاعات التي تستثمر فيها',
+                'ضع خطة استثمارية واضحة والتزم بها',
+                'تعلم من أخطائك ولا تكررها',
+                'الصبر مفتاح النجاح في سوق الأسهم',
+                'لا تستثمر في شركة لا تفهم نشاطها',
+                'احذر من الشائعات والنصائح غير الموثوقة',
+                'راقب نسبة الربح والخسارة باستمرار',
+                'استخدم أوامر وقف الخسارة لحماية استثماراتك',
+                'لا تقترض للاستثمار في الأسهم',
+                'ابدأ بمبالغ صغيرة حتى تكتسب الخبرة',
+                'تابع مؤشرات السوق العامة لفهم الاتجاهات',
+                'استثمر في قطاعات مختلفة لتوزيع المخاطر',
+                'لا تتخذ قرارات عاطفية، كن عقلانيًا',
+                'اقرأ التقارير المالية للشركات قبل الاستثمار',
+                'احتفظ بجزء من أموالك نقدًا للفرص الطارئة',
+                'تذكر أن الخسارة جزء من اللعبة، تعلم منها'
+            ],
+            en: [
+                'Don\'t put all your money in one stock, diversification reduces risk',
+                'Long-term investing is safer than quick speculation',
+                'Buy low and sell high, not the opposite',
+                'Don\'t invest money you need in the short term',
+                'Follow news of companies and sectors you invest in',
+                'Set a clear investment plan and stick to it',
+                'Learn from your mistakes and don\'t repeat them',
+                'Patience is the key to success in the stock market',
+                'Don\'t invest in a company whose business you don\'t understand',
+                'Beware of rumors and unreliable advice',
+                'Monitor your profit and loss ratio constantly',
+                'Use stop-loss orders to protect your investments',
+                'Don\'t borrow to invest in stocks',
+                'Start with small amounts until you gain experience',
+                'Follow general market indicators to understand trends',
+                'Invest in different sectors to spread risk',
+                'Don\'t make emotional decisions, be rational',
+                'Read financial reports before investing',
+                'Keep some cash for emergency opportunities',
+                'Remember that loss is part of the game, learn from it'
+            ]
+        };
+
+        const newsTemplates = {
+            ar: [
+                {text: 'أرباح قوية لـ {stock} تفوق التوقعات', type: 'positive'},
+                {text: '{stock} تعلن عن توزيعات نقدية مجزية', type: 'positive'},
+                {text: '{stock} توقع عقودًا جديدة بقيمة ملايين الريالات', type: 'positive'},
+                {text: 'محللون يرفعون التوصية على سهم {stock}', type: 'positive'},
+                {text: '{stock} تعلن عن خطط توسع طموحة', type: 'positive'},
+                {text: 'ارتفاع الطلب على منتجات {stock}', type: 'positive'},
+                {text: '{stock} تسجل نموًا قياسيًا في المبيعات', type: 'positive'},
+                {text: 'انخفاض أرباح {stock} عن التوقعات', type: 'negative'},
+                {text: '{stock} تواجه تحديات تشغيلية', type: 'negative'},
+                {text: 'محللون يخفضون التوصية على سهم {stock}', type: 'negative'},
+                {text: '{stock} تعلن عن خسائر غير متوقعة', type: 'negative'},
+                {text: 'ضغوط تنافسية على {stock}', type: 'negative'},
+                {text: 'تراجع حصة {stock} السوقية', type: 'negative'},
+                {text: '{stock} تؤجل مشاريع استثمارية', type: 'negative'}
+            ],
+            en: [
+                {text: '{stock} announces strong earnings beating expectations', type: 'positive'},
+                {text: '{stock} declares attractive cash dividends', type: 'positive'},
+                {text: '{stock} signs new contracts worth millions', type: 'positive'},
+                {text: 'Analysts upgrade {stock} rating', type: 'positive'},
+                {text: '{stock} announces ambitious expansion plans', type: 'positive'},
+                {text: 'Increased demand for {stock} products', type: 'positive'},
+                {text: '{stock} records record sales growth', type: 'positive'},
+                {text: '{stock} earnings fall short of expectations', type: 'negative'},
+                {text: '{stock} faces operational challenges', type: 'negative'},
+                {text: 'Analysts downgrade {stock} rating', type: 'negative'},
+                {text: '{stock} announces unexpected losses', type: 'negative'},
+                {text: 'Competitive pressure on {stock}', type: 'negative'},
+                {text: '{stock} market share declines', type: 'negative'},
+                {text: '{stock} postpones investment projects', type: 'negative'}
+            ]
+        };
+        
+        function displayRandomTips() {
+            const tipsEl = document.getElementById('tips-list');
+            if (!tipsEl) return;
+            
+            const tips = financialTips[currentLang];
+            const selectedTips = [];
+            
+            while (selectedTips.length < 3) {
+                const randomTip = tips[Math.floor(Math.random() * tips.length)];
+                if (!selectedTips.includes(randomTip)) {
+                    selectedTips.push(randomTip);
+                }
+            }
+            
+            tipsEl.innerHTML = '';
+            selectedTips.forEach(tip => {
+                const div = document.createElement('div');
+                div.className = 'tip-item';
+                div.textContent = tip;
+                tipsEl.appendChild(div);
+            });
+        }
+
+        function startNewsUpdates() {
+            if (newsUpdateInterval) clearInterval(newsUpdateInterval);
+            
+            generateNews();
+            updateNewsTicker();
+            
+            newsUpdateInterval = setInterval(() => {
+                generateNews();
+                updateNewsTicker();
+            }, 60000);
+        }
+
+        function generateNews() {
+            const now = Date.now();
+            activeNews = activeNews.filter(news => now - news.timestamp < 300000);
+            
+            if (Math.random() < 0.3) {
+                const randomStock = stocks[Math.floor(Math.random() * stocks.length)];
+                const templates = newsTemplates[currentLang];
+                const template = templates[Math.floor(Math.random() * templates.length)];
+                
+                const stockName = currentLang === 'ar' ? randomStock.name : randomStock.nameEn;
+                const newsText = template.text.replace('{stock}', stockName);
+                
+                const impact = (Math.random() * 0.03 + 0.02) * (template.type === 'positive' ? 1 : -1);
+                const duration = 5;
+                
+                const news = {
+                    symbol: randomStock.symbol,
+                    text: newsText,
+                    type: template.type,
+                    impact: impact,
+                    duration: duration,
+                    timestamp: now,
+                    appliedImpact: 0
+                };
+                
+                activeNews.push(news);
+            }
+        }
+
+        function updateNewsTicker() {
+            const tickerEl = document.getElementById('news-ticker');
+            if (!tickerEl) return;
+            
+            let html = '';
+            
+            if (activeNews.length === 0) {
+                html = `<span class="news-item">📰 ${currentLang === 'ar' ? 'مصلح الجابري يجرب المحاكاة 😆' : 'No new news'}</span>`.repeat(3);
+            } else {
+                activeNews.forEach(news => {
+                    const icon = news.type === 'positive' ? '📈' : '📉';
+                    const className = news.type === 'positive' ? 'news-positive' : 'news-negative';
+                    html += `<span class="news-item"><span class="${className}">${icon} 📰 ${news.text}</span></span>`;
+                });
+            }
+            
+            tickerEl.innerHTML = html + html;
+        }
         
         function initGame() {
             const saved = localStorage.getItem('tadawulGame');
@@ -824,6 +1051,8 @@
             renderPendingOrders();
             updateStats();
             startPriceUpdates();
+            displayRandomTips();
+            startNewsUpdates();
         }
         
         function saveGame() {
@@ -852,6 +1081,18 @@
             stocks.forEach(stock => {
                 let drift = stock.mu * dt;
                 let randomShock = stock.sigma * Math.sqrt(dt) * (Math.random() * 2 - 1);
+                
+                // Apply news impact gradually
+                const relevantNews = activeNews.filter(n => n.symbol === stock.symbol);
+                relevantNews.forEach(news => {
+                    const elapsed = (Date.now() - news.timestamp) / 60000;
+                    if (elapsed < news.duration) {
+                        const remainingImpact = news.impact - news.appliedImpact;
+                        const stepImpact = remainingImpact / (news.duration - elapsed);
+                        drift += stepImpact;
+                        news.appliedImpact += stepImpact;
+                    }
+                });
                 
                 if (newsImpact && Math.random() < 0.3) {
                     randomShock += (Math.random() - 0.5) * 0.05;
@@ -1448,10 +1689,13 @@
             });
             
             selectedStock = null;
+            activeNews = [];
             renderStocks();
             renderPortfolio();
             updateStats();
             closeStockModal();
+            displayRandomTips();
+            updateNewsTicker();
         }
         
         function toggleLanguage() {
@@ -1461,12 +1705,6 @@
             
             document.querySelector('.lang-switch button').textContent = 
                 currentLang === 'ar' ? 'E' : 'ع';
-            
-            document.querySelector('.header h1').textContent = 
-                currentLang === 'ar' ? 'تداول' : 'Tadawul';
-            
-            document.querySelector('.header p').textContent = 
-                currentLang === 'ar' ? 'محاكاة سوق الأسهم السعودي' : 'Saudi Stock Market Simulator';
             
             document.querySelectorAll('.btn-danger').forEach(btn => {
                 if (btn.textContent.includes('إعادة') || btn.textContent.includes('Reset')) {
@@ -1504,6 +1742,8 @@
             renderPendingOrders();
             updateStats();
             updateTicker();
+            displayRandomTips();
+            updateNewsTicker();
             
             if (selectedStock) {
                 showStockDetails(selectedStock);
