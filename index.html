@@ -59,6 +59,7 @@
     top: 36px;
     z-index: 998;
     margin-top: 0;
+    margin-bottom: 0;
 }
 
 .news-ticker-content {
@@ -155,6 +156,8 @@
             justify-content: space-between;
             gap: 8px;
             margin-bottom: 10px;
+            margin-top: 0; /* إزالة أي هامش علوي */
+            padding-top: 0; /* إزالة الحشوة العلوية إذا كانت موجودة */
         }
         
         .stat-card {
@@ -530,7 +533,7 @@
             
             .stats {
                 position: sticky;
-                top: 104px;  /* كان 52px، غيره إلى 104px */
+                top: 88px;  /* كان 52px، غيره إلى 104px */
                 z-index: 997;
                 background: #1a1a2e;
                 padding: 8px 10px;
@@ -1007,7 +1010,7 @@
             let html = '';
             
             if (activeNews.length === 0) {
-                html = `<span class="news-item">📰 ${currentLang === 'ar' ? 'مصلح الجابري يجرب المحاكاة 😆' : 'No new news'}</span>`.repeat(3);
+                html = `<span class="news-item">📰 ${currentLang === 'ar' ? 'لا توجد أخبار جديدة' : 'No new news'}</span>`.repeat(3);
             } else {
                 activeNews.forEach(news => {
                     const icon = news.type === 'positive' ? '📈' : '📉';
