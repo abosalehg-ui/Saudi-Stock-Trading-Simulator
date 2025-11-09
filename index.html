@@ -1095,7 +1095,7 @@ function showConfirm(message) {
             let html = '';
             
             if (activeNews.length === 0) {
-                html = `<span class="news-item">📰 ${currentLang === 'ar' ? 'مصلح الجابري يجرب المحاكي 😆' : 'No new news'}</span>`.repeat(3);
+                html = `<span class="news-item">📰 ${currentLang === 'ar' ? 'لا توجد أخبار جديدة' : 'No new news'}</span>`.repeat(3);
             } else {
                 activeNews.forEach(news => {
                     const icon = news.type === 'positive' ? '📈' : '📉';
