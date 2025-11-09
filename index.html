@@ -274,6 +274,25 @@
             color: #c0392b;
             transform: scale(1.2);
         }
+
+        .alert-modal .modal-content {
+            max-width: 500px;
+            text-align: center;
+        }
+
+        .alert-modal-body {
+            padding: 20px 0;
+            font-size: 16px;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .alert-modal-footer {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
         
         .main-content {
             display: grid;
@@ -695,12 +714,31 @@
         </div>
     </div>
 
-    <div id="stock-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal" onclick="closeStockModal()">&times;</button>
-            <div id="stock-details"></div>
+        <div id="stock-modal" class="modal">
+            <div class="modal-content">
+                <button class="close-modal" onclick="closeStockModal()">&times;</button>
+                <div id="stock-details"></div>
+            </div>
         </div>
-    </div>
+
+        <div id="alert-modal" class="modal alert-modal">
+            <div class="modal-content">
+                <div class="alert-modal-body" id="alert-modal-body"></div>
+                <div class="alert-modal-footer">
+                    <button class="btn btn-primary" id="alert-modal-ok" onclick="closeAlertModal()">موافق</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="confirm-modal" class="modal alert-modal">
+            <div class="modal-content">
+                <div class="alert-modal-body" id="confirm-modal-body"></div>
+                <div class="alert-modal-footer">
+                    <button class="btn btn-primary" id="confirm-modal-yes">نعم</button>
+                    <button class="btn btn-secondary" id="confirm-modal-no">لا</button>
+                </div>
+            </div>
+        </div>
 
     <div class="footer">
         <p>تطوير: عبدالكريم العبود | abo.saleh.g@gmail.com</p>
@@ -711,6 +749,8 @@
         const INITIAL_CAPITAL = 50000;
         const COMMISSION = 0.00155;
         const SLIPPAGE = 0.002;
+        const VOLUME_IMPACT_FACTOR = 0.1; // 1% of volume = 0.1% price impact
+        const IMPACT_DECAY_RATE = 0.05; // Impact decays 5% per minute
         
         let currentLang = 'ar';
         let gameState = {
@@ -721,7 +761,8 @@
             speed: 1,
             initialCapital: INITIAL_CAPITAL,
             challenge1Completed: false,
-            challenge2Completed: false
+            challenge2Completed: false,
+            priceImpacts: {} // Track temporary price impacts
         };
         
         const stocks = [
@@ -853,6 +894,53 @@
         let chart = null;
         let activeNews = [];
         let newsUpdateInterval = null;
+// Custom Alert Function
+function showAlert(message) {
+    const modal = document.getElementById('alert-modal');
+    const body = document.getElementById('alert-modal-body');
+    const okBtn = document.getElementById('alert-modal-ok');
+    
+    body.textContent = message;
+    okBtn.textContent = currentLang === 'ar' ? 'موافق' : 'OK';
+    modal.style.display = 'block';
+}
+
+function closeAlertModal() {
+    document.getElementById('alert-modal').style.display = 'none';
+}
+
+// Custom Confirm Function
+function showConfirm(message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('confirm-modal');
+        const body = document.getElementById('confirm-modal-body');
+        const yesBtn = document.getElementById('confirm-modal-yes');
+        const noBtn = document.getElementById('confirm-modal-no');
+        
+        body.textContent = message;
+        yesBtn.textContent = currentLang === 'ar' ? 'نعم' : 'Yes';
+        noBtn.textContent = currentLang === 'ar' ? 'لا' : 'No';
+        
+        modal.style.display = 'block';
+        
+        const handleYes = () => {
+            modal.style.display = 'none';
+            yesBtn.removeEventListener('click', handleYes);
+            noBtn.removeEventListener('click', handleNo);
+            resolve(true);
+        };
+        
+        const handleNo = () => {
+            modal.style.display = 'none';
+            yesBtn.removeEventListener('click', handleYes);
+            noBtn.removeEventListener('click', handleNo);
+            resolve(false);
+        };
+        
+        yesBtn.addEventListener('click', handleYes);
+        noBtn.addEventListener('click', handleNo);
+    });
+}
         
         const financialTips = {
             ar: [
@@ -1027,16 +1115,20 @@
                     gameState = {
                         ...gameState,
                         ...loadedState,
-                        pendingOrders: loadedState.pendingOrders || []
+                        pendingOrders: loadedState.pendingOrders || [],
+                        priceImpacts: loadedState.priceImpacts || {}
                     };
                 } catch (e) {
                     console.error('Error loading saved game:', e);
                 }
             }
-            
-            // Ensure pendingOrders exists
+    
+            // Ensure pendingOrders and priceImpacts exist
             if (!gameState.pendingOrders) {
                 gameState.pendingOrders = [];
+            }
+            if (!gameState.priceImpacts) {
+                gameState.priceImpacts = {};
             }
             
             stocks.forEach(stock => {
@@ -1075,28 +1167,39 @@
         }
         
         function updatePrices() {
-            const dt = 1/252;
-            const newsImpact = Math.random() < 0.05;
-            
-            stocks.forEach(stock => {
-                let drift = stock.mu * dt;
-                let randomShock = stock.sigma * Math.sqrt(dt) * (Math.random() * 2 - 1);
-                
-                // Apply news impact gradually
-                const relevantNews = activeNews.filter(n => n.symbol === stock.symbol);
-                relevantNews.forEach(news => {
-                    const elapsed = (Date.now() - news.timestamp) / 60000;
-                    if (elapsed < news.duration) {
-                        const remainingImpact = news.impact - news.appliedImpact;
-                        const stepImpact = remainingImpact / (news.duration - elapsed);
-                        drift += stepImpact;
-                        news.appliedImpact += stepImpact;
-                    }
-                });
-                
-                if (newsImpact && Math.random() < 0.3) {
-                    randomShock += (Math.random() - 0.5) * 0.05;
-                }
+    const dt = 1/252;
+    const newsImpact = Math.random() < 0.05;
+    
+    stocks.forEach(stock => {
+        let drift = stock.mu * dt;
+        let randomShock = stock.sigma * Math.sqrt(dt) * (Math.random() * 2 - 1);
+        
+        // Apply news impact gradually
+        const relevantNews = activeNews.filter(n => n.symbol === stock.symbol);
+        relevantNews.forEach(news => {
+            const elapsed = (Date.now() - news.timestamp) / 60000;
+            if (elapsed < news.duration) {
+                const remainingImpact = news.impact - news.appliedImpact;
+                const stepImpact = remainingImpact / (news.duration - elapsed);
+                drift += stepImpact;
+                news.appliedImpact += stepImpact;
+            }
+        });
+        
+        // Apply and decay volume impact
+        if (gameState.priceImpacts[stock.symbol]) {
+            const impact = gameState.priceImpacts[stock.symbol];
+            drift += impact.value;
+            // Decay impact
+            impact.value *= (1 - IMPACT_DECAY_RATE);
+            if (Math.abs(impact.value) < 0.0001) {
+                delete gameState.priceImpacts[stock.symbol];
+            }
+        }
+        
+        if (newsImpact && Math.random() < 0.3) {
+            randomShock += (Math.random() - 0.5) * 0.05;
+        }
                 
                 let newPrice = stockPrices[stock.symbol] * (1 + drift + randomShock);
                 newPrice = Math.max(newPrice, stock.basePrice * 0.3);
@@ -1277,101 +1380,141 @@
         }
         
         function executeOrder(type) {
-            if (!selectedStock) {
-                alert(currentLang === 'ar' ? 'الرجاء اختيار سهم' : 'Please select a stock');
-                return;
-            }
-            
-            const quantity = parseInt(document.getElementById('order-quantity').value);
-            if (!quantity || quantity < 1) {
-                alert(currentLang === 'ar' ? 'الرجاء إدخال كمية صحيحة' : 'Please enter a valid quantity');
-                return;
-            }
-            
-            const orderType = document.querySelector('input[name="orderType"]:checked').value;
-            
-            if (orderType === 'limit') {
-                const limitPrice = parseFloat(document.getElementById('order-price').value);
-                if (!limitPrice || limitPrice <= 0) {
-                    alert(currentLang === 'ar' ? 'الرجاء إدخال سعر محدد' : 'Please enter a limit price');
-                    return;
-                }
-                
-                // Add to pending orders instead of executing immediately
-                const order = {
-                    id: Date.now(),
-                    symbol: selectedStock,
-                    type: type,
-                    quantity: quantity,
-                    limitPrice: limitPrice,
-                    timestamp: Date.now()
-                };
-                
-                gameState.pendingOrders.push(order);
-                
-                alert(currentLang === 'ar' ? 
-                    'تم إضافة الأمر بنجاح! سيتم تنفيذه عند وصول السعر المحدد.' : 
-                    'Order added successfully! It will be executed when price reaches the limit.');
-                
-                document.getElementById('order-quantity').value = '';
-                document.getElementById('order-price').value = '';
-                renderPendingOrders();
-                saveGame();
-                closeStockModal();
-                return;
-            }
-            
-            // Market order - execute immediately
-            let price = stockPrices[selectedStock];
-            price *= (1 + (Math.random() - 0.5) * SLIPPAGE);
-            
-            if (type === 'buy') {
-                const cost = price * quantity * (1 + COMMISSION);
-                if (cost > gameState.cash) {
-                    alert(currentLang === 'ar' ? 'رصيد غير كافٍ' : 'Insufficient funds');
-                    return;
-                }
-                
-                gameState.cash -= cost;
-                if (!gameState.portfolio[selectedStock]) {
-                    gameState.portfolio[selectedStock] = {quantity: 0, avgCost: 0};
-                }
-                
-                const current = gameState.portfolio[selectedStock];
-                const totalCost = (current.avgCost * current.quantity) + (price * quantity);
-                current.quantity += quantity;
-                current.avgCost = totalCost / current.quantity;
-                
-            } else {
-                if (!gameState.portfolio[selectedStock] || gameState.portfolio[selectedStock].quantity < quantity) {
-                    alert(currentLang === 'ar' ? 'لا تمتلك عدداً كافياً من الأسهم' : 'Insufficient shares');
-                    return;
-                }
-                
-                const revenue = price * quantity * (1 - COMMISSION);
-                gameState.cash += revenue;
-                gameState.portfolio[selectedStock].quantity -= quantity;
-                
-                if (gameState.portfolio[selectedStock].quantity === 0) {
-                    delete gameState.portfolio[selectedStock];
-                }
-            }
-            
-            gameState.transactions.push({
-                symbol: selectedStock,
-                type: type,
-                quantity: quantity,
-                price: price,
-                time: Date.now()
-            });
-            
-            document.getElementById('order-quantity').value = '';
-            document.getElementById('order-price').value = '';
-            
-            renderPortfolio();
-            updateStats();
-            saveGame();
+    if (!selectedStock) {
+        showAlert(currentLang === 'ar' ? 'الرجاء اختيار سهم' : 'Please select a stock');
+        return;
+    }
+    
+    const quantity = parseInt(document.getElementById('order-quantity').value);
+    if (!quantity || quantity < 1) {
+        showAlert(currentLang === 'ar' ? 'الرجاء إدخال كمية صحيحة' : 'Please enter a valid quantity');
+        return;
+    }
+    
+    const orderType = document.querySelector('input[name="orderType"]:checked').value;
+    
+    if (orderType === 'limit') {
+        const limitPrice = parseFloat(document.getElementById('order-price').value);
+        if (!limitPrice || limitPrice <= 0) {
+            showAlert(currentLang === 'ar' ? 'الرجاء إدخال سعر محدد' : 'Please enter a limit price');
+            return;
         }
+        
+        // Add to pending orders
+        const order = {
+            id: Date.now(),
+            symbol: selectedStock,
+            type: type,
+            quantity: quantity,
+            limitPrice: limitPrice,
+            timestamp: Date.now()
+        };
+        
+        gameState.pendingOrders.push(order);
+        
+        showAlert(currentLang === 'ar' ? 
+            'تم إضافة الأمر بنجاح! سيتم تنفيذه عند وصول السعر المحدد.' : 
+            'Order added successfully! It will be executed when price reaches the limit.');
+        
+        document.getElementById('order-quantity').value = '';
+        document.getElementById('order-price').value = '';
+        renderPendingOrders();
+        saveGame();
+        
+        // Close stock modal after showing alert
+        setTimeout(() => {
+            closeStockModal();
+        }, 100);
+        return;
+    }
+    
+    // Market order - execute immediately with volume impact
+    let price = stockPrices[selectedStock];
+    price *= (1 + (Math.random() - 0.5) * SLIPPAGE);
+    
+    // Calculate volume impact
+    const stock = stocks.find(s => s.symbol === selectedStock);
+    const avgDailyVolume = stock.basePrice * 1000000;
+    const orderValue = price * quantity;
+    const volumePercentage = (orderValue / avgDailyVolume) * 100;
+    const priceImpact = volumePercentage * VOLUME_IMPACT_FACTOR / 100;
+    
+    // Apply immediate impact
+    if (type === 'buy') {
+        price *= (1 + priceImpact);
+        if (!gameState.priceImpacts[selectedStock]) {
+            gameState.priceImpacts[selectedStock] = { value: 0 };
+        }
+        gameState.priceImpacts[selectedStock].value += priceImpact;
+    } else {
+        price *= (1 - priceImpact);
+        if (!gameState.priceImpacts[selectedStock]) {
+            gameState.priceImpacts[selectedStock] = { value: 0 };
+        }
+        gameState.priceImpacts[selectedStock].value -= priceImpact;
+    }
+    
+    if (type === 'buy') {
+        const cost = price * quantity * (1 + COMMISSION);
+        if (cost > gameState.cash) {
+            showAlert(currentLang === 'ar' ? 'رصيد غير كافٍ' : 'Insufficient funds');
+            return;
+        }
+        
+        gameState.cash -= cost;
+        if (!gameState.portfolio[selectedStock]) {
+            gameState.portfolio[selectedStock] = {quantity: 0, avgCost: 0};
+        }
+        
+        const current = gameState.portfolio[selectedStock];
+        const totalCost = (current.avgCost * current.quantity) + (price * quantity);
+        current.quantity += quantity;
+        current.avgCost = totalCost / current.quantity;
+        
+    } else {
+        if (!gameState.portfolio[selectedStock] || gameState.portfolio[selectedStock].quantity < quantity) {
+            showAlert(currentLang === 'ar' ? 'لا تمتلك عدداً كافياً من الأسهم' : 'Insufficient shares');
+            return;
+        }
+        
+        const revenue = price * quantity * (1 - COMMISSION);
+        gameState.cash += revenue;
+        gameState.portfolio[selectedStock].quantity -= quantity;
+        
+        if (gameState.portfolio[selectedStock].quantity === 0) {
+            delete gameState.portfolio[selectedStock];
+        }
+    }
+    
+    gameState.transactions.push({
+        symbol: selectedStock,
+        type: type,
+        quantity: quantity,
+        price: price,
+        time: Date.now()
+    });
+    
+    // Update price immediately
+    stockPrices[selectedStock] = price;
+    
+    document.getElementById('order-quantity').value = '';
+    document.getElementById('order-price').value = '';
+    
+    renderPortfolio();
+    updateStats();
+    saveGame();
+    
+    // Show success and close
+    const successMsg = type === 'buy' ? 
+        (currentLang === 'ar' ? 'تم الشراء بنجاح!' : 'Purchase successful!') :
+        (currentLang === 'ar' ? 'تم البيع بنجاح!' : 'Sale successful!');
+    
+    showAlert(successMsg);
+    
+    setTimeout(() => {
+        closeStockModal();
+    }, 100);
+}
         
         function checkPendingOrders() {
             if (!gameState.pendingOrders || gameState.pendingOrders.length === 0) return;
@@ -1494,14 +1637,17 @@
         }
         
         function cancelOrder(index) {
-            if (!gameState.pendingOrders || index >= gameState.pendingOrders.length) return;
-            
-            if (confirm(currentLang === 'ar' ? 'هل أنت متأكد من إلغاء هذا الأمر؟' : 'Are you sure you want to cancel this order?')) {
+    if (!gameState.pendingOrders || index >= gameState.pendingOrders.length) return;
+    
+    showConfirm(currentLang === 'ar' ? 'هل أنت متأكد من إلغاء هذا الأمر؟' : 'Are you sure you want to cancel this order?')
+        .then(result => {
+            if (result) {
                 gameState.pendingOrders.splice(index, 1);
                 renderPendingOrders();
                 saveGame();
             }
-        }
+        });
+}
         
         function renderPortfolio() {
             const portfolioEl = document.getElementById('portfolio');
@@ -1623,19 +1769,19 @@
                 gameState.challenge1Completed = true;
                 gameState.cash += 100000;
                 gameState.initialCapital = totalValue;
-                alert(currentLang === 'ar' ? 
-                    '🎉 تهانينا! أكملت التحدي الأول وحصلت على 100,000 ريال!' : 
-                    '🎉 Congratulations! You completed Challenge 1 and earned 100,000 SAR!');
-            }
-            
-            if (pnlPercent >= 20 && !gameState.challenge2Completed) {
-                gameState.challenge2Completed = true;
-                gameState.cash += 300000;
-                gameState.initialCapital = totalValue;
-                alert(currentLang === 'ar' ? 
-                    '🎉 رائع! أكملت التحدي الثاني وحصلت على 300,000 ريال!' : 
-                    '🎉 Amazing! You completed Challenge 2 and earned 300,000 SAR!');
-            }
+                    showAlert(currentLang === 'ar' ? 
+                        '🎉 تهانينا! أكملت التحدي الأول وحصلت على 100,000 ريال!' : 
+                        '🎉 Congratulations! You completed Challenge 1 and earned 100,000 SAR!');
+          }
+
+          if (pnlPercent >= 20 && !gameState.challenge2Completed) {
+              gameState.challenge2Completed = true;
+              gameState.cash += 300000;
+              gameState.initialCapital = totalValue;
+              showAlert(currentLang === 'ar' ? 
+                  '🎉 رائع! أكملت التحدي الثاني وحصلت على 300,000 ريال!' : 
+                  '🎉 Amazing! You completed Challenge 2 and earned 300,000 SAR!');
+          }
         }
         
         function updateTicker() {
@@ -1666,21 +1812,23 @@
         }
         
         function resetGame() {
-            if (!confirm(currentLang === 'ar' ? 
-                'هل أنت متأكد من إعادة تعيين اللعبة؟ سيتم فقدان جميع التقدم!' : 
-                'Are you sure you want to reset the game? All progress will be lost!')) {
-                return;
-            }
+    showConfirm(currentLang === 'ar' ? 
+        'هل أنت متأكد من إعادة تعيين اللعبة؟ سيتم فقدان جميع التقدم!' : 
+        'Are you sure you want to reset the game? All progress will be lost!')
+        .then(result => {
+            if (!result) return;
             
             localStorage.removeItem('tadawulGame');
             gameState = {
                 cash: INITIAL_CAPITAL,
                 portfolio: {},
                 transactions: [],
+                pendingOrders: [],
                 speed: 1,
                 initialCapital: INITIAL_CAPITAL,
                 challenge1Completed: false,
-                challenge2Completed: false
+                challenge2Completed: false,
+                priceImpacts: {}
             };
             
             stocks.forEach(stock => {
@@ -1692,11 +1840,13 @@
             activeNews = [];
             renderStocks();
             renderPortfolio();
+            renderPendingOrders();
             updateStats();
             closeStockModal();
             displayRandomTips();
             updateNewsTicker();
-        }
+        });
+}
         
         function toggleLanguage() {
             currentLang = currentLang === 'ar' ? 'en' : 'ar';
@@ -1756,4 +1906,3 @@
     </script>
 </body>
 </html>
-
