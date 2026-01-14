@@ -529,8 +529,8 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 ## 🔗 روابط مفيدة
 
 - 📧 **التواصل**: abo.saleh.g@gmail.com
-- 🌐 **GitHub**: [[Your Repository URL](https://github.com/abosalehg-ui)]
-- 📱 **التطبيق**: [[Your App URL](https://abosalehg-ui.github.io/Saudi-Stock-Trading-Simulator)]
+- 🌐 **GitHub**: [[abosalehg-ui](https://github.com/abosalehg-ui)]
+- 📱 **التطبيق**: [[أنقر هنا](https://abosalehg-ui.github.io/Saudi-Stock-Trading-Simulator)]
 
 ---
 
@@ -1038,8 +1038,8 @@ Read financial tips, try different strategies, and learn from mistakes!
 ## 🔗 Useful Links
 
 - 📧 **Contact**: abo.saleh.g@gmail.com
-- 🌐 **GitHub**: [[Your Repository URL](https://github.com/abosalehg-ui)]
-- 📱 **App**: [[Your App URL](https://abosalehg-ui.github.io/Saudi-Stock-Trading-Simulator)]
+- 🌐 **GitHub**: [[abosalehg-ui](https://github.com/abosalehg-ui)]
+- 📱 **App**: [[App URL](https://abosalehg-ui.github.io/Saudi-Stock-Trading-Simulator)]
 
 ---
 
