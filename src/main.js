@@ -11,6 +11,7 @@ import {
   saveGameState,
   resetGameState,
   initPriceState,
+  loadStats,
 } from './state.js';
 import { updatePrices } from './engine/prices.js';
 import { generateNews } from './engine/news.js';
@@ -39,13 +40,25 @@ import { bindStockDetailsCallbacks, renderStockDetails } from './ui/stock-detail
 import { showAlert, showConfirm, openStockModal, closeStockModal } from './ui/modal.js';
 import { downloadTransactionsCsv } from './ui/csv-export.js';
 import { getLang, setLang, toggleLang, t } from './ui/i18n.js';
+import { openGlossary, attachGlossaryListeners } from './ui/glossary.js';
+import { openStatsModal, closeStatsModal } from './ui/stats.js';
+import { openLearningModal, closeLearningModal } from './ui/learning.js';
+import { openScenariosModal, closeScenariosModal, bindScenariosCallbacks } from './ui/scenarios.js';
+import { startTour, attachTourListeners, maybeAutoStart } from './ui/tour.js';
+import { recordTrade, recordPnlSnapshot, recordChallengeCompleted, recordSessionStart } from './engine/stats.js';
 
 function refreshAll() {
   renderStocks();
   renderPortfolio();
   renderPendingOrders();
   const { pnlPercent, totalValue } = updateStats();
+  const c1Before = gameState.challenge1Completed;
+  const c2Before = gameState.challenge2Completed;
   updateChallenges({ pnlPercent, totalValue, showAlertFn: showAlert });
+  if (!c1Before && gameState.challenge1Completed) recordChallengeCompleted();
+  if (!c2Before && gameState.challenge2Completed) recordChallengeCompleted();
+  const pnlAmount = totalValue - gameState.initialCapital;
+  recordPnlSnapshot(pnlPercent, pnlAmount);
   updateTicker();
   updateNewsTicker();
   updateMarketStatusBadge();
@@ -134,11 +147,20 @@ function handleSubmitOrder(input) {
       showAlert(t('marketClosedMessage'));
       return;
     }
+    const preTradeAvgCost = gameState.portfolio[order.symbol]?.avgCost;
     const result = executeMarketOrder(order);
     if (!result.ok) {
       showAlert(errorMessageFor(result.error));
       return;
     }
+    recordTrade({
+      symbol: order.symbol,
+      type: order.type,
+      quantity: order.quantity,
+      price: result.executedPrice,
+      commission: result.executedPrice * order.quantity * 0.00155,
+      avgCostBefore: preTradeAvgCost,
+    });
     const msg = order.type === 'buy' ? t('purchaseSuccess') : t('sellSuccess');
     refreshAll();
     saveGameState();
@@ -197,6 +219,11 @@ function rebuildStaticLabels() {
   document.getElementById('export-csv-btn').textContent = t('exportCsv');
   document.getElementById('sharia-filter-label-text').textContent = t('showShariaOnly');
   document.getElementById('allow-24-7-label-text').textContent = t('enable24Trading');
+  document.getElementById('glossary-btn').textContent = t('glossaryBtn');
+  document.getElementById('stats-btn').textContent = t('statsBtn');
+  document.getElementById('learning-btn').textContent = t('learningPathsBtn');
+  document.getElementById('scenarios-btn').textContent = t('scenariosBtn');
+  document.getElementById('tour-btn').textContent = t('tourStartBtn');
 }
 
 function handleToggleLanguage() {
@@ -256,16 +283,36 @@ function attachEventListeners() {
 
   document.getElementById('close-stock-modal').addEventListener('click', () => closeStockModal());
 
+  document.getElementById('glossary-btn').addEventListener('click', openGlossary);
+  document.getElementById('stats-btn').addEventListener('click', openStatsModal);
+  document.getElementById('learning-btn').addEventListener('click', openLearningModal);
+  document.getElementById('scenarios-btn').addEventListener('click', openScenariosModal);
+  document.getElementById('tour-btn').addEventListener('click', startTour);
+
+  document.getElementById('close-stats-modal').addEventListener('click', closeStatsModal);
+  document.getElementById('close-learning-modal').addEventListener('click', closeLearningModal);
+  document.getElementById('close-scenarios-modal').addEventListener('click', closeScenariosModal);
+
+  attachGlossaryListeners();
+  attachTourListeners();
+  bindScenariosCallbacks({ onChange: refreshAll });
+
   window.addEventListener('click', (event) => {
-    const modal = document.getElementById('stock-modal');
-    if (event.target === modal) closeStockModal();
+    const stockModal = document.getElementById('stock-modal');
+    if (event.target === stockModal) closeStockModal();
+    ['glossary-modal', 'stats-modal', 'learning-modal', 'scenarios-modal'].forEach((id) => {
+      const m = document.getElementById(id);
+      if (event.target === m) m.style.display = 'none';
+    });
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
       const stockModal = document.getElementById('stock-modal');
-      if (stockModal.style.display === 'block') {
-        closeStockModal();
-      }
+      if (stockModal.style.display === 'block') closeStockModal();
+      ['glossary-modal', 'stats-modal', 'learning-modal', 'scenarios-modal'].forEach((id) => {
+        const m = document.getElementById(id);
+        if (m && m.style.display === 'block') m.style.display = 'none';
+      });
     }
   });
 }
@@ -273,7 +320,9 @@ function attachEventListeners() {
 function init() {
   setLang('ar');
   loadGameState();
+  loadStats();
   initPriceState();
+  recordSessionStart();
 
   bindRenderCallbacks({
     onSelectStock: selectStock,
@@ -292,6 +341,7 @@ function init() {
   startPriceUpdates();
   startNewsUpdates();
   displayRandomTips();
+  maybeAutoStart();
 
   setInterval(() => {
     updateMarketStatusBadge();

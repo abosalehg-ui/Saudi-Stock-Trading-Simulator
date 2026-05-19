@@ -2,6 +2,7 @@ import { findStock } from '../data/stocks.js';
 import { gameState, stockPrices, session } from '../state.js';
 import { getLang, t } from './i18n.js';
 import { renderChart } from './chart.js';
+import { renderCandlestick } from './candlestick.js';
 import { isMarketOpen } from '../engine/market-hours.js';
 
 let onSubmitOrder = () => {};
@@ -70,6 +71,7 @@ export function renderStockDetails(symbol) {
       <canvas id="price-chart" aria-label="${t('currentPrice')}"></canvas>
     </div>
     <div class="indicator-controls" role="group" aria-label="${t('indicators')}" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px;">
+      <label><input type="checkbox" id="ind-candle"> ${t('candlestickToggle')}</label>
       <label><input type="checkbox" id="ind-sma20"> SMA 20</label>
       <label><input type="checkbox" id="ind-sma50"> SMA 50</label>
       <label><input type="checkbox" id="ind-rsi"> RSI</label>
@@ -101,12 +103,19 @@ export function renderStockDetails(symbol) {
   document.getElementById('order-sell').addEventListener('click', () => submit('sell'));
 
   const rerender = () => {
-    renderChart(symbol, {
+    const useCandles = document.getElementById('ind-candle').checked;
+    const indicators = {
       sma20: document.getElementById('ind-sma20').checked,
       sma50: document.getElementById('ind-sma50').checked,
       rsi: document.getElementById('ind-rsi').checked,
-    });
+    };
+    if (useCandles) {
+      renderCandlestick('price-chart', symbol);
+    } else {
+      renderChart(symbol, indicators);
+    }
   };
+  document.getElementById('ind-candle').addEventListener('change', rerender);
   document.getElementById('ind-sma20').addEventListener('change', rerender);
   document.getElementById('ind-sma50').addEventListener('change', rerender);
   document.getElementById('ind-rsi').addEventListener('change', rerender);

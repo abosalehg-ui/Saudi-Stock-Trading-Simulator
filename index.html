@@ -52,6 +52,14 @@
         </div>
       </div>
 
+      <div class="action-bar">
+        <button id="glossary-btn" class="btn btn-secondary">📖 قاموس المصطلحات</button>
+        <button id="stats-btn" class="btn btn-secondary">🏆 إحصائياتي</button>
+        <button id="learning-btn" class="btn btn-secondary">📚 مسارات التعلم</button>
+        <button id="scenarios-btn" class="btn btn-secondary">📜 سيناريوهات تاريخية</button>
+        <button id="tour-btn" class="btn btn-secondary">🎓 جولة تعريفية</button>
+      </div>
+
       <nav class="tabs" role="tablist">
         <button class="tab active" id="tab-market" role="tab" aria-controls="market-tab">📊 السوق</button>
         <button class="tab" id="tab-portfolio" role="tab" aria-controls="portfolio-tab">💼 المحفظة</button>
@@ -129,6 +137,52 @@
         <div class="alert-modal-body" id="alert-modal-body"></div>
         <div class="alert-modal-footer">
           <button class="btn btn-primary" id="alert-modal-ok">موافق</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="glossary-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="glossary-title">
+      <div class="modal-content">
+        <button class="close-modal" id="close-glossary-modal" aria-label="إغلاق">&times;</button>
+        <h2 id="glossary-title" class="panel-title">قاموس مصطلحات التداول</h2>
+        <input type="text" id="glossary-search" class="glossary-search" placeholder="بحث عن مصطلح…" />
+        <div id="glossary-list" class="glossary-list"></div>
+      </div>
+    </div>
+
+    <div id="stats-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+      <div class="modal-content">
+        <button class="close-modal" id="close-stats-modal" aria-label="إغلاق">&times;</button>
+        <h2 id="stats-title" class="panel-title">إحصائياتي الشخصية</h2>
+        <div id="stats-content"></div>
+      </div>
+    </div>
+
+    <div id="learning-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="learning-title">
+      <div class="modal-content">
+        <button class="close-modal" id="close-learning-modal" aria-label="إغلاق">&times;</button>
+        <h2 id="learning-title" class="panel-title">مسارات التعلم</h2>
+        <div id="learning-content"></div>
+      </div>
+    </div>
+
+    <div id="scenarios-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="scenarios-title">
+      <div class="modal-content">
+        <button class="close-modal" id="close-scenarios-modal" aria-label="إغلاق">&times;</button>
+        <h2 id="scenarios-title" class="panel-title">سيناريوهات تاريخية</h2>
+        <div id="scenarios-content"></div>
+      </div>
+    </div>
+
+    <div id="tour-overlay" class="tour-overlay">
+      <div id="tour-highlight" class="tour-highlight"></div>
+      <div id="tour-tooltip" class="tour-tooltip" role="dialog" aria-live="polite">
+        <h3 id="tour-title"></h3>
+        <p id="tour-body"></p>
+        <div class="tour-tooltip-actions">
+          <button id="tour-skip" class="btn btn-secondary">تخطي</button>
+          <button id="tour-prev" class="btn btn-secondary">السابق</button>
+          <button id="tour-next" class="btn btn-primary">التالي</button>
         </div>
       </div>
     </div>

@@ -29,7 +29,59 @@ export function defaultState() {
     priceImpacts: {},
     shariaFilter: false,
     allow24Trading: false,
+    tourCompleted: false,
+    completedLessons: {},
+    activeScenario: null,
   };
+}
+
+export function defaultStats() {
+  return {
+    bestPnlPct: 0,
+    bestPnlAmount: 0,
+    bestTradeProfit: 0,
+    bestTradeSymbol: null,
+    worstTradeLoss: 0,
+    worstTradeSymbol: null,
+    totalTrades: 0,
+    challengesCompleted: 0,
+    lifetimeCommission: 0,
+    sessionsPlayed: 0,
+  };
+}
+
+const STATS_KEY = 'tadawulStats';
+
+export const personalStats = defaultStats();
+
+export function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) return;
+    const loaded = JSON.parse(raw);
+    if (loaded && typeof loaded === 'object') {
+      Object.assign(personalStats, defaultStats(), loaded);
+    }
+  } catch (e) {
+    console.error('Failed to load stats:', e);
+  }
+}
+
+export function saveStats() {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(personalStats));
+  } catch (e) {
+    console.error('Failed to save stats:', e);
+  }
+}
+
+export function resetStats() {
+  Object.assign(personalStats, defaultStats());
+  try {
+    localStorage.removeItem(STATS_KEY);
+  } catch (e) {
+    console.error('Failed to clear stats:', e);
+  }
 }
 
 export const gameState = defaultState();

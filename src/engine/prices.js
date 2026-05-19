@@ -2,6 +2,7 @@ import { IMPACT_DECAY_RATE, MIN_PRICE_RATIO, MAX_PRICE_RATIO, PRICE_HISTORY_MAX_
 import { stocks } from '../data/stocks.js';
 import { gameState, stockPrices, priceHistory, activeNews } from '../state.js';
 import { isMarketOpen } from './market-hours.js';
+import { getScenarioMultipliers } from './scenarios.js';
 
 /**
  * Simulate a single Geometric Brownian Motion step for one stock.
@@ -11,8 +12,11 @@ import { isMarketOpen } from './market-hours.js';
  */
 function gbmStep(stock, currentPrice) {
   const dt = 1 / 252;
-  let drift = stock.mu * dt;
-  let randomShock = stock.sigma * Math.sqrt(dt) * (Math.random() * 2 - 1);
+  const scenarioFx = getScenarioMultipliers(stock);
+  const muMult = scenarioFx ? scenarioFx.muMultiplier : 1;
+  const sigmaMult = scenarioFx ? scenarioFx.sigmaMultiplier : 1;
+  let drift = stock.mu * muMult * dt;
+  let randomShock = stock.sigma * sigmaMult * Math.sqrt(dt) * (Math.random() * 2 - 1);
 
   const relevantNews = activeNews.items.filter((n) => n.symbol === stock.symbol);
   relevantNews.forEach((news) => {
