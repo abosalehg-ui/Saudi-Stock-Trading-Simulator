@@ -1,0 +1,250 @@
+/**
+ * Bilingual learning paths. Each path is a sequence of lessons.
+ * A lesson's `content` is plain Markdown-like text rendered as paragraphs and
+ * bullet lists (`- ` prefix).
+ */
+export const learningPaths = {
+  beginner: {
+    titleKey: 'lessonBeginnerTitle',
+    lessons: [
+      {
+        id: 'b1',
+        title: { ar: 'ما هو سوق الأسهم؟', en: 'What is the stock market?' },
+        content: {
+          ar: [
+            'سوق الأسهم مكان يلتقي فيه المشترون والبائعون لتبادل ملكية حصص الشركات.',
+            'عند شرائك سهماً، تصبح مالكاً لجزء صغير من الشركة، ولك الحق في حصة من أرباحها وقراراتها (للأسهم العادية).',
+            'في المملكة العربية السعودية، السوق الرسمي هو **تداول (Tadawul)** الذي يعمل أيام الأحد إلى الخميس من 10ص إلى 3م.',
+            'الأهداف الرئيسية للاستثمار:',
+            '- نمو رأس المال (الربح من ارتفاع الأسعار)',
+            '- التوزيعات النقدية (Dividends)',
+            '- حماية المدخرات من التضخم',
+          ],
+          en: [
+            'A stock market is a place where buyers and sellers meet to trade ownership shares of companies.',
+            'When you buy a stock, you become a partial owner of the company, entitled to a share of its profits and (for common stock) voting rights.',
+            'In Saudi Arabia, the official market is **Tadawul**, open Sunday through Thursday, 10:00-15:00.',
+            'Main investment goals:',
+            '- Capital growth (profit from rising prices)',
+            '- Cash dividends',
+            '- Protecting savings from inflation',
+          ],
+        },
+      },
+      {
+        id: 'b2',
+        title: { ar: 'أنواع الأوامر الأساسية', en: 'Basic order types' },
+        content: {
+          ar: [
+            'هناك ثلاثة أنواع رئيسية من الأوامر يجب أن تعرفها:',
+            '- **الأمر السوقي:** ينفذ فوراً بأفضل سعر متاح. سريع لكن عرضة لانزلاق السعر.',
+            '- **الأمر المحدد:** تحدد فيه السعر بنفسك، ولا ينفذ إلا عند الوصول إليه. تحكم أكبر، لكن قد لا ينفذ.',
+            '- **أمر وقف الخسارة:** يبيع تلقائياً عند هبوط السعر إلى مستوى تحدده. أداة لحماية رأس المال.',
+            'نصيحة: استخدم الأوامر المحددة عندما يكون السعر متذبذباً، والسوقية عندما تكون السرعة أهم من السعر.',
+          ],
+          en: [
+            'There are three main order types you should know:',
+            '- **Market order:** Executes instantly at the best available price. Fast but exposed to slippage.',
+            '- **Limit order:** You set the price; it only fills when the market reaches it. More control, may not fill.',
+            '- **Stop-loss order:** Sells automatically when the price drops to a level you set. A capital-protection tool.',
+            'Tip: use limit orders in volatile markets, market orders when speed matters more than price.',
+          ],
+        },
+      },
+      {
+        id: 'b3',
+        title: { ar: 'العمولات والرسوم', en: 'Commissions and fees' },
+        content: {
+          ar: [
+            'كل صفقة (شراء أو بيع) تتطلب دفع عمولة لشركة الوساطة.',
+            'في هذا المحاكي العمولة 0.155% من قيمة الصفقة (مماثلة لعمولات السوق الحقيقية).',
+            'مثال: شراء أسهم بـ 10,000 ريال يكلفك 15.50 ريال عمولة.',
+            'العمولات الصغيرة تتراكم! إذا أجريت 100 صفقة بـ 10,000 ريال، تكون قد دفعت 1,550 ريال عمولات.',
+            'الدرس: قلل الصفقات غير الضرورية، وفكر مرتين قبل كل عملية.',
+          ],
+          en: [
+            'Every trade (buy or sell) incurs a brokerage commission.',
+            'This simulator uses 0.155% of trade value (close to real market commissions).',
+            'Example: buying SAR 10,000 worth of stock costs SAR 15.50 in commission.',
+            'Small commissions add up! 100 trades of SAR 10,000 = SAR 1,550 paid in commissions.',
+            'Lesson: minimize unnecessary trades, and think twice before each one.',
+          ],
+        },
+      },
+    ],
+  },
+  intermediate: {
+    titleKey: 'lessonIntermediateTitle',
+    lessons: [
+      {
+        id: 'i1',
+        title: { ar: 'التنويع وإدارة المخاطر', en: 'Diversification & risk management' },
+        content: {
+          ar: [
+            '**التنويع** هو توزيع استثماراتك على أسهم وقطاعات مختلفة لتقليل المخاطر.',
+            'لماذا؟ لأن وضع كل أموالك في سهم واحد يعرضك لخطر كبير إذا تعثرت الشركة.',
+            'قواعد عملية:',
+            '- لا تضع أكثر من 20% من محفظتك في سهم واحد',
+            '- وزع بين 3-5 قطاعات على الأقل (بنوك، طاقة، تجزئة، صناعة، إلخ)',
+            '- اخلط بين أسهم استقرار (Blue Chip) وأسهم نمو',
+            'استخدم أوامر وقف الخسارة لتحديد سقف للخسائر المحتملة (مثلاً 10% تحت سعر الشراء).',
+          ],
+          en: [
+            '**Diversification** means spreading investments across different stocks and sectors to reduce risk.',
+            'Why? Because putting all your money in one stock exposes you to massive risk if the company fails.',
+            'Practical rules:',
+            '- Never put more than 20% of your portfolio in one stock',
+            '- Diversify across at least 3-5 sectors (banks, energy, retail, industrials, etc.)',
+            '- Mix stable blue chips with growth stocks',
+            'Use stop-loss orders to cap potential losses (e.g., 10% below your buy price).',
+          ],
+        },
+      },
+      {
+        id: 'i2',
+        title: { ar: 'قراءة الشموع اليابانية', en: 'Reading candlesticks' },
+        content: {
+          ar: [
+            'الشموع اليابانية طريقة بصرية فعّالة لعرض حركة السعر في فترة زمنية.',
+            'كل شمعة تحتوي 4 معلومات:',
+            '- **الافتتاح (Open):** السعر في بداية الفترة',
+            '- **الإغلاق (Close):** السعر في نهاية الفترة',
+            '- **الأعلى (High):** أعلى سعر خلال الفترة',
+            '- **الأدنى (Low):** أدنى سعر خلال الفترة',
+            'الشمعة **خضراء (صاعدة)** إذا كان الإغلاق أعلى من الافتتاح، و**حمراء (هابطة)** إذا كان أقل.',
+            'الجسم العريض = حركة قوية. الفتيل الطويل = تقلب عالٍ لكن السعر عاد.',
+            'فعّل وضع الشموع في تفاصيل أي سهم لتجربتها بنفسك.',
+          ],
+          en: [
+            'Candlesticks are an efficient visual way to show price movement over a time period.',
+            'Each candle contains 4 pieces of info:',
+            '- **Open:** Price at the start of the period',
+            '- **Close:** Price at the end of the period',
+            '- **High:** Highest price during the period',
+            '- **Low:** Lowest price during the period',
+            'The candle is **green (up)** if close > open, **red (down)** if close < open.',
+            'Wide body = strong move. Long wick = high volatility but price returned.',
+            'Toggle candlesticks in any stock\'s detail view to try it.',
+          ],
+        },
+      },
+      {
+        id: 'i3',
+        title: { ar: 'المؤشرات الفنية (SMA و RSI)', en: 'Technical indicators (SMA & RSI)' },
+        content: {
+          ar: [
+            'المؤشرات الفنية حسابات تساعدك على فهم اتجاه السعر.',
+            '**المتوسط المتحرك البسيط (SMA):**',
+            '- متوسط السعر خلال آخر N فترة (مثلاً 20 أو 50)',
+            '- إذا كان السعر فوق SMA-50، الاتجاه عام صاعد',
+            '- تقاطع SMA-20 صعوداً فوق SMA-50 إشارة شراء محتملة',
+            '**مؤشر القوة النسبية (RSI):**',
+            '- يتراوح بين 0 و 100',
+            '- فوق 70: ذروة شراء، احتمال تصحيح هابط',
+            '- تحت 30: ذروة بيع، احتمال ارتداد صاعد',
+            'تنبيه: لا تعتمد على مؤشر واحد، استخدم أكثر من مؤشر للتأكيد.',
+          ],
+          en: [
+            'Technical indicators are calculations that help you understand price direction.',
+            '**Simple Moving Average (SMA):**',
+            '- Average price over the last N periods (e.g., 20 or 50)',
+            '- Price above SMA-50: overall uptrend',
+            '- SMA-20 crossing above SMA-50: a potential buy signal',
+            '**Relative Strength Index (RSI):**',
+            '- Ranges from 0 to 100',
+            '- Above 70: overbought, possible downward correction',
+            '- Below 30: oversold, possible upward bounce',
+            'Caveat: never rely on one indicator alone, use multiple for confirmation.',
+          ],
+        },
+      },
+    ],
+  },
+  advanced: {
+    titleKey: 'lessonAdvancedTitle',
+    lessons: [
+      {
+        id: 'a1',
+        title: { ar: 'علم نفس التداول', en: 'Trading psychology' },
+        content: {
+          ar: [
+            'أكبر عدو للمتداول هو نفسه. الانفعالات تدمر المحافظ:',
+            '- **الجشع:** البقاء في صفقة رابحة طمعاً في المزيد، حتى تنقلب لخسارة',
+            '- **الخوف:** البيع المتسرع عند أول هبوط بسيط',
+            '- **الانتقام:** الدخول في صفقات سريعة لتعويض خسارة سابقة',
+            '- **التحيز التأكيدي:** البحث فقط عن أخبار تدعم قرارك المسبق',
+            'مبادئ للالتزام:',
+            '- اكتب خطة قبل الصفقة (الدخول، الهدف، وقف الخسارة)',
+            '- لا تغيّر الخطة وأنت تحت ضغط الانفعال',
+            '- خذ استراحات بعد كل خسارة كبيرة',
+            '- راجع صفقاتك أسبوعياً واستخلص الدروس',
+          ],
+          en: [
+            'A trader\'s biggest enemy is themselves. Emotions destroy portfolios:',
+            '- **Greed:** Staying in a winning trade hoping for more, until it turns to a loss',
+            '- **Fear:** Panic-selling at the first small dip',
+            '- **Revenge trading:** Quick trades to recover a previous loss',
+            '- **Confirmation bias:** Only seeking news that supports your existing decision',
+            'Principles to commit to:',
+            '- Write a plan before the trade (entry, target, stop-loss)',
+            '- Don\'t change the plan while emotionally pressured',
+            '- Take breaks after big losses',
+            '- Review your trades weekly and extract lessons',
+          ],
+        },
+      },
+      {
+        id: 'a2',
+        title: { ar: 'تحجيم المراكز', en: 'Position sizing' },
+        content: {
+          ar: [
+            '**تحجيم المركز** هو تحديد حجم كل صفقة بناءً على المخاطرة المقبولة.',
+            'قاعدة الـ 1-2%: لا تخاطر بأكثر من 1-2% من رأس المال في صفقة واحدة.',
+            'مثال: رأس المال 50,000 ريال، مخاطرة مقبولة 2% = 1,000 ريال خسارة قصوى.',
+            'إذا كان وقف الخسارة 5 ريال تحت سعر الشراء، فعدد الأسهم = 1,000 / 5 = 200 سهم.',
+            'فوائد:',
+            '- تحمي رأس المال من سلسلة خسائر متتالية',
+            '- تسمح بالاستمرار في السوق على المدى الطويل',
+            '- تقلل التأثير العاطفي لأي صفقة منفردة',
+          ],
+          en: [
+            '**Position sizing** means determining each trade\'s size based on acceptable risk.',
+            'The 1-2% rule: never risk more than 1-2% of capital on a single trade.',
+            'Example: 50,000 SAR capital, 2% risk = 1,000 SAR max loss.',
+            'If your stop-loss is 5 SAR below the buy price, position size = 1,000 / 5 = 200 shares.',
+            'Benefits:',
+            '- Protects capital from consecutive-loss streaks',
+            '- Lets you stay in the market long-term',
+            '- Reduces the emotional impact of any single trade',
+          ],
+        },
+      },
+      {
+        id: 'a3',
+        title: { ar: 'تحليل القطاعات', en: 'Sector analysis' },
+        content: {
+          ar: [
+            'تتحرك أسهم القطاع الواحد بشكل متشابه أحياناً بسبب عوامل اقتصادية مشتركة:',
+            '- **البنوك:** تتأثر بأسعار الفائدة من ساما',
+            '- **البتروكيماويات:** تتأثر بأسعار النفط والغاز',
+            '- **الاتصالات:** قطاع دفاعي، أقل تأثراً بالدورات الاقتصادية',
+            '- **العقار:** يتأثر بمعدلات الفائدة والطلب السكني',
+            '- **التجزئة:** يتأثر بالاستهلاك والمواسم',
+            'استراتيجية تدوير القطاعات: انقل أموالك بين القطاعات حسب الدورة الاقتصادية.',
+            'مثال: عند ارتفاع أسعار النفط، البتروكيماويات والطاقة تستفيد. عند خفض الفائدة، البنوك والعقار يستفيدان.',
+          ],
+          en: [
+            'Stocks in the same sector often move together due to shared economic drivers:',
+            '- **Banks:** Affected by SAMA interest rate decisions',
+            '- **Petrochemicals:** Driven by oil and gas prices',
+            '- **Telecom:** Defensive sector, less cyclical',
+            '- **Real estate:** Tied to interest rates and housing demand',
+            '- **Retail:** Tied to consumer spending and seasons',
+            'Sector rotation strategy: move money between sectors based on the economic cycle.',
+            'Example: rising oil prices benefit petrochemicals and energy. Falling rates benefit banks and real estate.',
+          ],
+        },
+      },
+    ],
+  },
+};

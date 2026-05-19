@@ -544,6 +544,159 @@ input[type='number']:focus {
   .indicator-controls { font-size: 14px; }
 }
 
+/* Glossary */
+.glossary-search {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 2px solid #34495e;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+.glossary-search:focus { outline: none; border-color: #16a085; }
+.glossary-list { max-height: 60vh; overflow-y: auto; padding-inline-end: 6px; }
+.glossary-item {
+  background: #1a1a2e;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border-inline-start: 4px solid #16a085;
+}
+.glossary-term { font-weight: bold; color: #1abc9c; margin-bottom: 4px; }
+.glossary-definition { font-size: 13px; line-height: 1.6; color: #e0e0e0; }
+
+/* Personal stats */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+.stats-card {
+  background: #1a1a2e;
+  padding: 14px;
+  border-radius: 8px;
+  border: 2px solid #34495e;
+  text-align: center;
+}
+.stats-card-label { color: #95a5a6; font-size: 12px; margin-bottom: 6px; }
+.stats-card-value { font-size: 20px; font-weight: bold; color: #1abc9c; }
+
+/* Tour overlay */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1500;
+  display: none;
+  pointer-events: auto;
+}
+.tour-highlight {
+  position: absolute;
+  border: 3px solid #f1c40f;
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  transition: all 0.3s;
+}
+.tour-tooltip {
+  position: absolute;
+  background: #0f3460;
+  color: #e0e0e0;
+  padding: 16px;
+  border-radius: 8px;
+  border: 2px solid #16a085;
+  max-width: 320px;
+  z-index: 1501;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+.tour-tooltip h3 { color: #1abc9c; margin-bottom: 6px; font-size: 16px; }
+.tour-tooltip p { font-size: 13px; line-height: 1.5; }
+.tour-tooltip-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* Action bar (extra feature buttons) */
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 10px 0 15px;
+}
+.action-bar .btn { font-size: 13px; padding: 8px 12px; min-height: auto; }
+
+/* Lessons */
+.lesson-paths { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.lesson-path-card {
+  background: #1a1a2e;
+  padding: 14px;
+  border-radius: 8px;
+  border-inline-start: 4px solid #16a085;
+}
+.lesson-path-title { font-weight: bold; color: #1abc9c; margin-bottom: 6px; font-size: 15px; }
+.lesson-path-progress-bar {
+  height: 8px;
+  background: #34495e;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 6px 0 10px;
+}
+.lesson-path-progress-fill { height: 100%; background: linear-gradient(90deg, #16a085, #1abc9c); transition: width 0.3s; }
+.lesson-list { display: flex; flex-direction: column; gap: 4px; }
+.lesson-list-item {
+  padding: 6px 8px;
+  background: #0f3460;
+  border-radius: 4px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.lesson-list-item.completed { color: #2ecc71; }
+.lesson-content {
+  background: #1a1a2e;
+  padding: 16px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border-inline-start: 4px solid #f39c12;
+}
+.lesson-content h3 { color: #1abc9c; margin-bottom: 10px; }
+.lesson-content p { line-height: 1.7; margin-bottom: 10px; font-size: 14px; }
+.lesson-content ul { padding-inline-start: 20px; margin-bottom: 10px; }
+.lesson-content li { margin-bottom: 4px; font-size: 14px; line-height: 1.6; }
+.lesson-content strong { color: #f1c40f; }
+.lesson-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 14px; flex-wrap: wrap; }
+
+/* Scenarios */
+.scenario-card {
+  background: #1a1a2e;
+  padding: 12px;
+  border-radius: 6px;
+  border-inline-start: 4px solid #9b59b6;
+  margin-bottom: 10px;
+}
+.scenario-title { font-weight: bold; color: #1abc9c; margin-bottom: 4px; }
+.scenario-description { font-size: 13px; color: #e0e0e0; line-height: 1.6; margin-bottom: 10px; }
+.scenario-badge {
+  display: inline-block;
+  background: #9b59b6;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-inline-start: 6px;
+}
+.scenario-active-banner {
+  background: linear-gradient(90deg, #9b59b6, #8e44ad);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #1a1a2e; }
 ::-webkit-scrollbar-thumb { background: #16a085; border-radius: 4px; }
