@@ -1,0 +1,32 @@
+{
+  "name": "saudi-stock-trading-simulator",
+  "version": "2.0.0",
+  "description": "Educational Saudi (Tadawul) stock trading simulator with bilingual UI",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint \"src/**/*.js\" \"tests/**/*.js\"",
+    "lint:fix": "eslint \"src/**/*.js\" \"tests/**/*.js\" --fix",
+    "format": "prettier --write \"src/**/*.{js,css}\" \"tests/**/*.js\" \"index.html\""
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^1.6.0",
+    "eslint": "^8.57.0",
+    "jsdom": "^24.0.0",
+    "prettier": "^3.2.5",
+    "vite": "^5.2.0",
+    "vitest": "^1.6.0"
+  },
+  "dependencies": {
+    "chart.js": "^3.9.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

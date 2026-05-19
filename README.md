@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Version](https://img.shields.io/badge/version-2.0.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Language](https://img.shields.io/badge/languages-Arabic%20%7C%20English-green)
 ![Platform](https://img.shields.io/badge/platform-Web-purple)
@@ -19,6 +19,32 @@
 ## 📋 نظرة عامة
 
 **تداول** هي لعبة محاكاة واقعية لسوق الأسهم السعودي (تداول) تتيح لك تعلم التداول دون مخاطر مالية حقيقية. تحتوي على أكثر من 100 سهم سعودي حقيقي من مختلف القطاعات مع نظام أخبار ديناميكي يؤثر على الأسعار بشكل واقعي.
+
+## 🚧 التطوير المحلي (Local development)
+
+```bash
+npm install      # تثبيت الاعتماديات
+npm run dev      # تشغيل خادم التطوير على http://localhost:5173
+npm test         # تشغيل اختبارات Vitest
+npm run lint     # فحص الكود عبر ESLint
+npm run build    # توليد مجلد dist/ للنشر
+npm run preview  # معاينة محلية للبناء النهائي
+```
+
+النشر تلقائي عبر GitHub Actions على GitHub Pages عند الدفع إلى `main`.
+
+### 🆕 إضافات الإصدار 2.0
+- بنية مودولية (Vite + ES Modules)، تقسيم index.html إلى `src/` مع JSDoc
+- اختبارات وحدة بـ Vitest (44 اختباراً) لمنطق التداول، المؤشرات الفنية، ساعات السوق، حفظ الحالة
+- أوامر **وقف الخسارة (stop-loss)** بالإضافة إلى الأوامر السوقية والمحددة
+- مؤشرات فنية على الرسم البياني: SMA 20/50 و RSI 14 و MACD
+- فرض **ساعات تداول السوق السعودي** (الأحد-الخميس، 10ص-3م بتوقيت الرياض) مع وضع تجاوز "24/7"
+- مرشّح **الأسهم الشرعية** 🕌 (تصنيف مبدئي، يحتاج مراجعة فقهية)
+- **تاريخ هجري** بجانب الميلادي في الواجهة
+- **تصدير CSV** لسجل المعاملات (UTF-8 BOM)
+- تحسينات a11y: ARIA labels، تنقّل كيبورد، focus trap في المودالات، أحجام لمس ≥ 44px
+- تحقق صارم من المدخلات (NaN، سالب، تجاوز الحد) مع رسائل خطأ ودودة
+- ESLint + Prettier + GitHub Actions (CI + نشر)
 
 ### 🎯 الهدف من المشروع
 - تعليم أساسيات التداول في سوق الأسهم
@@ -570,7 +596,7 @@ Made with ❤️ by **Abdulkareem Al-Aboud**
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Version](https://img.shields.io/badge/version-2.0.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Language](https://img.shields.io/badge/languages-Arabic%20%7C%20English-green)
 ![Platform](https://img.shields.io/badge/platform-Web-purple)
