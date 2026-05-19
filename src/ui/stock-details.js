@@ -1,0 +1,129 @@
+import { findStock } from '../data/stocks.js';
+import { gameState, stockPrices, session } from '../state.js';
+import { getLang, t } from './i18n.js';
+import { renderChart } from './chart.js';
+import { isMarketOpen } from '../engine/market-hours.js';
+
+let onSubmitOrder = () => {};
+
+export function bindStockDetailsCallbacks(callbacks) {
+  onSubmitOrder = callbacks.onSubmitOrder ?? onSubmitOrder;
+}
+
+export function renderStockDetails(symbol) {
+  const stock = findStock(symbol);
+  if (!stock) return;
+  const price = stockPrices[symbol];
+  const change = ((price - stock.basePrice) / stock.basePrice) * 100;
+  const lang = getLang();
+  const sar = t('sar');
+  const marketOpen = isMarketOpen() || gameState.allow24Trading;
+
+  const detailsEl = document.getElementById('stock-details');
+  detailsEl.innerHTML = '';
+
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:20px;';
+
+  const left = document.createElement('div');
+  left.innerHTML = `
+    <h3 id="stock-title">${lang === 'ar' ? stock.name : stock.nameEn} (${symbol})${stock.isShariaCompliant ? ' 🕌' : ''}</h3>
+    <p style="margin:10px 0;">${t('currentPrice')}: <strong>${price.toFixed(2)} ${sar}</strong></p>
+    <p>${t('change')}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span></p>
+    ${marketOpen ? '' : `<p class="market-warning" role="alert">⚠️ ${t('marketClosedMessage')}</p>`}
+  `;
+
+  const form = document.createElement('div');
+  form.className = 'order-form';
+  form.style.marginTop = '20px';
+  form.setAttribute('role', 'group');
+  form.setAttribute('aria-labelledby', 'stock-title');
+  form.innerHTML = `
+    <div class="order-type" role="radiogroup" aria-label="${t('orderKindLimit')}">
+      <label>
+        <input type="radio" name="orderType" value="market" checked>
+        <span>${t('market')}</span>
+      </label>
+      <label>
+        <input type="radio" name="orderType" value="limit">
+        <span>${t('limit')}</span>
+      </label>
+      <label>
+        <input type="radio" name="orderType" value="stop-loss">
+        <span>${t('stopLoss')}</span>
+      </label>
+    </div>
+    <label for="order-quantity" class="sr-only">${t('quantity')}</label>
+    <input type="number" id="order-quantity" placeholder="${t('quantity')}" min="1" max="1000000" step="1" inputmode="numeric" aria-label="${t('quantity')}">
+    <label for="order-price" class="sr-only">${t('priceForLimitOrders')}</label>
+    <input type="number" id="order-price" placeholder="${t('priceForLimitOrders')}" min="0.01" step="0.01" inputmode="decimal" style="display:none;" aria-label="${t('priceForLimitOrders')}">
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-primary" id="order-buy" style="flex:1;" aria-label="${t('buy')}">${t('buy')}</button>
+      <button class="btn btn-danger" id="order-sell" style="flex:1;" aria-label="${t('sell')}">${t('sell')}</button>
+    </div>
+  `;
+  left.appendChild(form);
+
+  const right = document.createElement('div');
+  right.innerHTML = `
+    <div class="chart-container">
+      <canvas id="price-chart" aria-label="${t('currentPrice')}"></canvas>
+    </div>
+    <div class="indicator-controls" role="group" aria-label="${t('indicators')}" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px;">
+      <label><input type="checkbox" id="ind-sma20"> SMA 20</label>
+      <label><input type="checkbox" id="ind-sma50"> SMA 50</label>
+      <label><input type="checkbox" id="ind-rsi"> RSI</label>
+    </div>
+  `;
+
+  grid.appendChild(left);
+  grid.appendChild(right);
+  detailsEl.appendChild(grid);
+
+  const priceInput = document.getElementById('order-price');
+  document.querySelectorAll('input[name="orderType"]').forEach((radio) => {
+    radio.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (val === 'market') {
+        priceInput.style.display = 'none';
+        priceInput.placeholder = t('priceForLimitOrders');
+      } else if (val === 'limit') {
+        priceInput.style.display = 'block';
+        priceInput.placeholder = t('priceForLimitOrders');
+      } else if (val === 'stop-loss') {
+        priceInput.style.display = 'block';
+        priceInput.placeholder = t('stopPricePlaceholder');
+      }
+    });
+  });
+
+  document.getElementById('order-buy').addEventListener('click', () => submit('buy'));
+  document.getElementById('order-sell').addEventListener('click', () => submit('sell'));
+
+  const rerender = () => {
+    renderChart(symbol, {
+      sma20: document.getElementById('ind-sma20').checked,
+      sma50: document.getElementById('ind-sma50').checked,
+      rsi: document.getElementById('ind-rsi').checked,
+    });
+  };
+  document.getElementById('ind-sma20').addEventListener('change', rerender);
+  document.getElementById('ind-sma50').addEventListener('change', rerender);
+  document.getElementById('ind-rsi').addEventListener('change', rerender);
+
+  renderChart(symbol);
+}
+
+function submit(type) {
+  const quantityRaw = document.getElementById('order-quantity').value;
+  const kindEl = document.querySelector('input[name="orderType"]:checked');
+  const kind = kindEl ? kindEl.value : 'market';
+  const priceRaw = document.getElementById('order-price').value;
+  onSubmitOrder({
+    symbol: session.selectedStock,
+    type,
+    kind,
+    quantityRaw,
+    priceRaw,
+  });
+}
