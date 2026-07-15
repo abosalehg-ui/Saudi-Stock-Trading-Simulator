@@ -8,6 +8,7 @@ import {
 import { gameState, stockPrices } from '../state.js';
 import { findStock } from '../data/stocks.js';
 import { safeParseNumber } from '../utils/numbers.js';
+import { recordTrade } from './stats.js';
 
 /**
  * @typedef {Object} OrderInput
@@ -120,7 +121,11 @@ function applyMarketImpact(symbol, type, quantity) {
   return price;
 }
 
-function recordTransaction(order, executedPrice) {
+/**
+ * Log an executed trade in the transaction history and the personal stats.
+ * Single recording point for both market and pending-order executions.
+ */
+function recordExecution(order, executedPrice, avgCostBefore) {
   const commission = executedPrice * order.quantity * COMMISSION;
   gameState.transactions.push({
     symbol: order.symbol,
@@ -131,6 +136,14 @@ function recordTransaction(order, executedPrice) {
     commission,
     time: Date.now(),
   });
+  recordTrade({
+    symbol: order.symbol,
+    type: order.type,
+    quantity: order.quantity,
+    price: executedPrice,
+    commission,
+    avgCostBefore,
+  });
 }
 
 /**
@@ -138,12 +151,13 @@ function recordTransaction(order, executedPrice) {
  * Returns { ok: true } or { ok: false, error }.
  */
 export function executeMarketOrder(order) {
+  const avgCostBefore = gameState.portfolio[order.symbol]?.avgCost;
   const price = applyMarketImpact(order.symbol, order.type, order.quantity);
   const result = order.type === 'buy'
     ? applyBuy(order.symbol, price, order.quantity)
     : applySell(order.symbol, price, order.quantity);
   if (!result.ok) return result;
-  recordTransaction(order, price);
+  recordExecution(order, price, avgCostBefore);
   return { ok: true, executedPrice: price };
 }
 
@@ -177,22 +191,23 @@ export function checkPendingOrders() {
   for (const order of gameState.pendingOrders) {
     const currentPrice = stockPrices[order.symbol];
     let shouldExecute = false;
-    let executionPrice = order.limitPrice;
 
     if (order.kind === 'stop-loss' && currentPrice <= order.stopPrice) {
       shouldExecute = true;
-      executionPrice = currentPrice;
     } else if (order.kind === 'limit') {
       if (order.type === 'buy' && currentPrice <= order.limitPrice) shouldExecute = true;
       else if (order.type === 'sell' && currentPrice >= order.limitPrice) shouldExecute = true;
     }
 
     if (shouldExecute) {
+      // Fill at the market price, as a real broker would: for a limit buy the
+      // current price is at or below the limit (never worse), and vice versa.
+      const avgCostBefore = gameState.portfolio[order.symbol]?.avgCost;
       const op = order.type === 'buy'
-        ? applyBuy(order.symbol, executionPrice, order.quantity)
-        : applySell(order.symbol, executionPrice, order.quantity);
+        ? applyBuy(order.symbol, currentPrice, order.quantity)
+        : applySell(order.symbol, currentPrice, order.quantity);
       if (op.ok) {
-        recordTransaction({ ...order, kind: order.kind || 'limit' }, executionPrice);
+        recordExecution({ ...order, kind: order.kind || 'limit' }, currentPrice, avgCostBefore);
         executed += 1;
         continue;
       }
@@ -204,8 +219,15 @@ export function checkPendingOrders() {
   return executed;
 }
 
-export function cancelPendingOrder(index) {
-  if (index < 0 || index >= gameState.pendingOrders.length) return false;
+/**
+ * Cancel a pending order by its stable id (not its position, which can shift
+ * whenever another order executes between render and confirmation).
+ * @param {number} id
+ * @returns {boolean} true if an order was removed
+ */
+export function cancelPendingOrder(id) {
+  const index = gameState.pendingOrders.findIndex((o) => o.id === id);
+  if (index === -1) return false;
   gameState.pendingOrders.splice(index, 1);
   return true;
 }

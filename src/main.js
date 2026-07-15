@@ -45,7 +45,7 @@ import { openStatsModal, closeStatsModal } from './ui/stats.js';
 import { openLearningModal, closeLearningModal } from './ui/learning.js';
 import { openScenariosModal, closeScenariosModal, bindScenariosCallbacks } from './ui/scenarios.js';
 import { startTour, attachTourListeners, maybeAutoStart } from './ui/tour.js';
-import { recordTrade, recordPnlSnapshot, recordChallengeCompleted, recordSessionStart } from './engine/stats.js';
+import { recordPnlSnapshot, recordChallengeCompleted, recordSessionStart } from './engine/stats.js';
 
 function refreshAll() {
   renderStocks();
@@ -102,10 +102,10 @@ function handleQuickTrade(symbol, type) {
   }
 }
 
-function handleCancelOrder(index) {
+function handleCancelOrder(orderId) {
   showConfirm(t('confirmCancelOrder')).then((ok) => {
     if (!ok) return;
-    if (cancelPendingOrder(index)) {
+    if (cancelPendingOrder(orderId)) {
       renderPendingOrders();
       saveGameState();
     }
@@ -147,20 +147,11 @@ function handleSubmitOrder(input) {
       showAlert(t('marketClosedMessage'));
       return;
     }
-    const preTradeAvgCost = gameState.portfolio[order.symbol]?.avgCost;
     const result = executeMarketOrder(order);
     if (!result.ok) {
       showAlert(errorMessageFor(result.error));
       return;
     }
-    recordTrade({
-      symbol: order.symbol,
-      type: order.type,
-      quantity: order.quantity,
-      price: result.executedPrice,
-      commission: result.executedPrice * order.quantity * 0.00155,
-      avgCostBefore: preTradeAvgCost,
-    });
     const msg = order.type === 'buy' ? t('purchaseSuccess') : t('sellSuccess');
     refreshAll();
     saveGameState();

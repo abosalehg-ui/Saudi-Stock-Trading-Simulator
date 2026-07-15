@@ -171,7 +171,7 @@ export function renderPendingOrders() {
     return;
   }
 
-  orders.forEach((order, index) => {
+  orders.forEach((order) => {
     const stock = findStock(order.symbol);
     if (!stock) return;
     const currentPrice = stockPrices[order.symbol];
@@ -204,7 +204,7 @@ export function renderPendingOrders() {
     cancelBtn.className = 'btn btn-danger';
     cancelBtn.style.width = '100%';
     cancelBtn.textContent = t('cancelOrder');
-    cancelBtn.addEventListener('click', () => onCancelOrder(index));
+    cancelBtn.addEventListener('click', () => onCancelOrder(order.id));
     actions.appendChild(cancelBtn);
     div.appendChild(actions);
     ordersEl.appendChild(div);
@@ -238,16 +238,21 @@ export function updateChallenges({ pnlPercent, totalValue, showAlertFn }) {
   document.getElementById('challenge1-progress').style.width = `${progress1}%`;
   document.getElementById('challenge2-progress').style.width = `${progress2}%`;
 
+  // The reward is capital support, not profit: the new baseline must include it,
+  // otherwise the next tick reports the reward as P&L and cascades into the next challenge.
+  let rewardedBaseline = totalValue;
   if (pnlPercent >= CHALLENGE_1_THRESHOLD && !gameState.challenge1Completed) {
     gameState.challenge1Completed = true;
     gameState.cash += CHALLENGE_1_REWARD;
-    gameState.initialCapital = totalValue;
+    rewardedBaseline += CHALLENGE_1_REWARD;
+    gameState.initialCapital = rewardedBaseline;
     if (showAlertFn) showAlertFn(t('challenge1Complete'));
   }
   if (pnlPercent >= CHALLENGE_2_THRESHOLD && !gameState.challenge2Completed) {
     gameState.challenge2Completed = true;
     gameState.cash += CHALLENGE_2_REWARD;
-    gameState.initialCapital = totalValue;
+    rewardedBaseline += CHALLENGE_2_REWARD;
+    gameState.initialCapital = rewardedBaseline;
     if (showAlertFn) showAlertFn(t('challenge2Complete'));
   }
 }

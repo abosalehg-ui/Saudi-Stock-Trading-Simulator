@@ -1,31 +1,58 @@
-import { getLang, t } from './i18n.js';
+import { t } from './i18n.js';
 
 let lastFocused = null;
 
-function trapFocus(modal) {
+// One controller per open modal: aborting it detaches every listener the modal
+// registered, so no close path (button, Escape, backdrop) can leak handlers.
+// Keyed per modal element because modals can stack (e.g. an alert opens while
+// the stock modal's deferred close is still pending).
+const traps = new WeakMap();
+
+function releaseTrap(modal) {
+  const controller = traps.get(modal);
+  if (controller) {
+    controller.abort();
+    traps.delete(modal);
+  }
+}
+
+/**
+ * Trap Tab focus inside the modal and wire Escape to `onEscape`.
+ * Returns an AbortSignal; register the modal's own listeners with it so they
+ * are removed together when the trap is released.
+ */
+function trapFocus(modal, onEscape) {
+  releaseTrap(modal);
+  const controller = new AbortController();
+  traps.set(modal, controller);
+  const { signal } = controller;
+
   const focusables = modal.querySelectorAll(
     'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
   );
-  if (focusables.length === 0) return;
   const first = focusables[0];
   const last = focusables[focusables.length - 1];
-  first.focus();
-  modal.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Escape') {
-      e.stopPropagation();
-      modal.style.display = 'none';
-      restoreFocus();
-      modal.removeEventListener('keydown', handler);
-    } else if (e.key === 'Tab') {
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
+  if (first) first.focus();
+
+  modal.addEventListener(
+    'keydown',
+    (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onEscape();
+      } else if (e.key === 'Tab' && first) {
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
-    }
-  });
+    },
+    { signal }
+  );
+  return signal;
 }
 
 function restoreFocus() {
@@ -45,16 +72,11 @@ export function showAlert(message) {
 
   const close = () => {
     modal.style.display = 'none';
-    okBtn.removeEventListener('click', close);
+    releaseTrap(modal);
     restoreFocus();
   };
-  okBtn.addEventListener('click', close);
-  trapFocus(modal);
-}
-
-export function closeAlertModal() {
-  document.getElementById('alert-modal').style.display = 'none';
-  restoreFocus();
+  const signal = trapFocus(modal, close);
+  okBtn.addEventListener('click', close, { signal });
 }
 
 export function showConfirm(message) {
@@ -69,24 +91,16 @@ export function showConfirm(message) {
     noBtn.textContent = t('confirmNo');
     lastFocused = document.activeElement;
     modal.style.display = 'block';
-    trapFocus(modal);
 
-    const cleanup = () => {
+    const settle = (answer) => {
       modal.style.display = 'none';
-      yesBtn.removeEventListener('click', handleYes);
-      noBtn.removeEventListener('click', handleNo);
+      releaseTrap(modal);
       restoreFocus();
+      resolve(answer);
     };
-    const handleYes = () => {
-      cleanup();
-      resolve(true);
-    };
-    const handleNo = () => {
-      cleanup();
-      resolve(false);
-    };
-    yesBtn.addEventListener('click', handleYes);
-    noBtn.addEventListener('click', handleNo);
+    const signal = trapFocus(modal, () => settle(false));
+    yesBtn.addEventListener('click', () => settle(true), { signal });
+    noBtn.addEventListener('click', () => settle(false), { signal });
   });
 }
 
@@ -94,16 +108,13 @@ export function openStockModal() {
   const modal = document.getElementById('stock-modal');
   lastFocused = document.activeElement;
   modal.style.display = 'block';
-  trapFocus(modal);
+  trapFocus(modal, () => closeStockModal());
 }
 
 export function closeStockModal(onClose) {
-  document.getElementById('stock-modal').style.display = 'none';
+  const modal = document.getElementById('stock-modal');
+  modal.style.display = 'none';
+  releaseTrap(modal);
   if (typeof onClose === 'function') onClose();
   restoreFocus();
-}
-
-// Backwards-compat helper for any code that still cares about the lang
-export function getModalLang() {
-  return getLang();
 }

@@ -1,6 +1,6 @@
 import Chart from 'chart.js/auto';
 import { priceHistory, session } from '../state.js';
-import { getLang, t } from './i18n.js';
+import { getLang } from './i18n.js';
 import { formatTimeShort } from '../utils/dates.js';
 import { sma, rsi } from '../engine/indicators.js';
 
@@ -109,8 +109,6 @@ export function renderChart(symbol, indicators = {}) {
       scales,
     },
   });
-  // Reference to satisfy linter
-  void t;
 }
 
 export function destroyChart() {

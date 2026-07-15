@@ -133,6 +133,12 @@ export function loadGameState() {
   if (!gameState.pendingOrders || !Array.isArray(gameState.pendingOrders)) {
     gameState.pendingOrders = [];
   }
+  // Saves from older versions may predate order ids; cancellation looks orders up by id.
+  gameState.pendingOrders.forEach((order) => {
+    if (order && order.id === undefined) {
+      order.id = Date.now() + Math.random();
+    }
+  });
   if (!gameState.priceImpacts || typeof gameState.priceImpacts !== 'object') {
     gameState.priceImpacts = {};
   }

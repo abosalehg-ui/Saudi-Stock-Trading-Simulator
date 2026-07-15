@@ -27,5 +27,3 @@ export const MARKET_TIMEZONE = 'Asia/Riyadh';
 export const MARKET_OPEN_HOUR = 10;
 export const MARKET_CLOSE_HOUR = 15;
 export const MARKET_OPEN_DAYS = [0, 1, 2, 3, 4];
-
-export const ALLOW_24_7_TRADING_KEY = 'tadawul_allow_24_7';

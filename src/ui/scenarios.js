@@ -1,4 +1,4 @@
-import { historicalScenarios, findScenario } from '../data/scenarios.js';
+import { historicalScenarios } from '../data/scenarios.js';
 import { startScenario, stopScenario, getActiveScenario } from '../engine/scenarios.js';
 import { getLang, t } from './i18n.js';
 import { showConfirm } from './modal.js';
@@ -77,11 +77,3 @@ function renderScenariosContent() {
   });
 }
 
-export function activeScenarioBanner() {
-  const active = getActiveScenario();
-  if (!active) return null;
-  const lang = getLang();
-  return `${t('scenarioActive')}: ${active.title[lang]}`;
-}
-
-void findScenario;
