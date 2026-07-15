@@ -1,3 +1,4 @@
+import { COMMISSION } from '../config.js';
 import { gameState } from '../state.js';
 import { findStock } from '../data/stocks.js';
 import { getLang, t } from './i18n.js';
@@ -18,7 +19,7 @@ export function buildTransactionsCsv() {
     const stock = findStock(tx.symbol);
     const name = stock ? (lang === 'ar' ? stock.name : stock.nameEn) : tx.symbol;
     const date = new Date(tx.time).toISOString();
-    const commission = tx.commission ?? tx.price * tx.quantity * 0.00155;
+    const commission = tx.commission ?? tx.price * tx.quantity * COMMISSION;
     const total = tx.price * tx.quantity;
     rows.push(
       [date, tx.type, name, tx.symbol, tx.quantity, tx.price.toFixed(2), commission.toFixed(2), total.toFixed(2)]

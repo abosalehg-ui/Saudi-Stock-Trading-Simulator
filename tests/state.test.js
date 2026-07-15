@@ -38,4 +38,16 @@ describe('loadGameState', () => {
     expect(gameState.portfolio).toEqual({});
     expect(gameState.priceImpacts).toEqual({});
   });
+
+  it('backfills ids on pending orders from older saves', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        pendingOrders: [{ symbol: '1180', type: 'buy', kind: 'limit', quantity: 5, limitPrice: 80 }],
+      })
+    );
+    loadGameState();
+    expect(gameState.pendingOrders).toHaveLength(1);
+    expect(gameState.pendingOrders[0].id).toBeDefined();
+  });
 });
