@@ -12,6 +12,7 @@ import { getLang, t } from './i18n.js';
 import { formatCurrency } from '../utils/numbers.js';
 import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
+import { newsText } from '../engine/news.js';
 
 let onSelectStock = () => {};
 let onCancelOrder = () => {};
@@ -289,7 +290,7 @@ export function updateNewsTicker() {
     activeNews.items.forEach((news) => {
       const icon = news.type === 'positive' ? '📈' : '📉';
       const className = news.type === 'positive' ? 'news-positive' : 'news-negative';
-      html += `<span class="news-item"><span class="${className}">${icon} 📰 ${escapeHtml(news.text)}</span></span>`;
+      html += `<span class="news-item"><span class="${className}">${icon} 📰 ${escapeHtml(newsText(news, lang))}</span></span>`;
     });
   }
   tickerEl.innerHTML = html + html;

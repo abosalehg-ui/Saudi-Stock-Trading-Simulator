@@ -3,6 +3,7 @@ import {
   PRICE_UPDATE_INTERVAL_MS,
   NEWS_UPDATE_INTERVAL_MS,
   STORAGE_KEY,
+  PRICES_STORAGE_KEY,
 } from './config.js';
 import {
   gameState,
@@ -11,6 +12,8 @@ import {
   saveGameState,
   resetGameState,
   initPriceState,
+  loadPriceState,
+  savePriceState,
   loadStats,
 } from './state.js';
 import { updatePrices } from './engine/prices.js';
@@ -39,7 +42,7 @@ import {
 import { bindStockDetailsCallbacks, renderStockDetails } from './ui/stock-details.js';
 import { showAlert, showConfirm, openStockModal, closeStockModal } from './ui/modal.js';
 import { downloadTransactionsCsv } from './ui/csv-export.js';
-import { getLang, setLang, toggleLang, t } from './ui/i18n.js';
+import { getLang, initLang, toggleLang, t } from './ui/i18n.js';
 import { openGlossary, attachGlossaryListeners } from './ui/glossary.js';
 import { openStatsModal, closeStatsModal } from './ui/stats.js';
 import { openLearningModal, closeLearningModal } from './ui/learning.js';
@@ -72,6 +75,7 @@ function startPriceUpdates() {
     checkPendingOrders();
     refreshAll();
     saveGameState();
+    savePriceState();
   }, PRICE_UPDATE_INTERVAL_MS / gameState.speed);
 }
 
@@ -155,6 +159,10 @@ function handleSubmitOrder(input) {
     const msg = order.type === 'buy' ? t('purchaseSuccess') : t('sellSuccess');
     refreshAll();
     saveGameState();
+    // A market order shifts stockPrices immediately (applyMarketImpact); persist that
+    // now instead of waiting for the next interval tick, or a reload right after a
+    // trade would show the price snapping back.
+    savePriceState();
     showAlert(msg);
     setTimeout(() => closeStockModal(), 100);
   } else {
@@ -177,6 +185,7 @@ function resetGame() {
     if (!ok) return;
     try {
       localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(PRICES_STORAGE_KEY);
     } catch (e) {
       console.error('Failed to clear localStorage:', e);
     }
@@ -309,9 +318,10 @@ function attachEventListeners() {
 }
 
 function init() {
-  setLang('ar');
+  initLang();
   loadGameState();
   loadStats();
+  loadPriceState();
   initPriceState();
   recordSessionStart();
 

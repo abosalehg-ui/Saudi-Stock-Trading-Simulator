@@ -1,4 +1,4 @@
-import { gameState, stockPrices, saveGameState } from '../state.js';
+import { gameState, stockPrices, saveGameState, savePriceState } from '../state.js';
 import { stocks } from '../data/stocks.js';
 import { findScenario } from '../data/scenarios.js';
 import { MIN_PRICE_RATIO, MAX_PRICE_RATIO } from '../config.js';
@@ -33,6 +33,7 @@ export function startScenario(scenarioId) {
   };
   applyInitialShocks(scenario);
   saveGameState();
+  savePriceState(); // applyInitialShocks mutates stockPrices directly
   return true;
 }
 

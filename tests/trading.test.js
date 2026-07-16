@@ -145,8 +145,8 @@ describe('pending orders', () => {
   it('records executed pending orders in personal stats', () => {
     executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 10 });
     expect(personalStats.totalTrades).toBe(1);
-    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 10, stopPrice: 80 });
-    stockPrices['1180'] = 40;
+    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 10, stopPrice: 30 });
+    stockPrices['1180'] = 10; // well below the ~32.4 average cost → a clear loss
     expect(checkPendingOrders()).toBe(1);
     expect(personalStats.totalTrades).toBe(2);
     expect(personalStats.worstTradeSymbol).toBe('1180');

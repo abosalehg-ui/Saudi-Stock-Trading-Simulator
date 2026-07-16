@@ -22,6 +22,8 @@ export const CHALLENGE_2_THRESHOLD = 20;
 export const CHALLENGE_2_REWARD = 300000;
 
 export const STORAGE_KEY = 'tadawulGame';
+export const PRICES_STORAGE_KEY = 'tadawulPrices';
+export const LANG_STORAGE_KEY = 'tadawulLang';
 
 export const MARKET_TIMEZONE = 'Asia/Riyadh';
 export const MARKET_OPEN_HOUR = 10;

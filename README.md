@@ -2,12 +2,12 @@
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.0.0-orange)
+![Version](https://img.shields.io/badge/version-3.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Language](https://img.shields.io/badge/languages-Arabic%20%7C%20English-green)
 ![Platform](https://img.shields.io/badge/platform-Web-purple)
 
-**محاكي احترافي لتداول الأسهم السعودية مع أكثر من 100 سهم حقيقي وأخبار مؤثرة**
+**محاكي احترافي لتداول الأسهم السعودية مع أكثر من 90 سهماً حقيقياً وأخبار مؤثرة**
 
 [العربية](#arabic) | [English](#english)
 
@@ -18,7 +18,7 @@
 <a name="arabic"></a>
 ## 📋 نظرة عامة
 
-**تداول** هي لعبة محاكاة واقعية لسوق الأسهم السعودي (تداول) تتيح لك تعلم التداول دون مخاطر مالية حقيقية. تحتوي على أكثر من 100 سهم سعودي حقيقي من مختلف القطاعات مع نظام أخبار ديناميكي يؤثر على الأسعار بشكل واقعي.
+**تداول** هي لعبة محاكاة واقعية لسوق الأسهم السعودي (تداول) تتيح لك تعلم التداول دون مخاطر مالية حقيقية. تحتوي على أكثر من 90 سهماً سعودياً حقيقياً من مختلف القطاعات مع نظام أخبار ديناميكي يؤثر على الأسعار بشكل واقعي.
 
 ## 🚧 التطوير المحلي (Local development)
 
@@ -65,7 +65,7 @@ npm run preview  # معاينة محلية للبناء النهائي
 ## ✨ المميزات الرئيسية
 
 ### 📊 سوق أسهم واقعي
-- **100+ سهم سعودي حقيقي** من جميع القطاعات:
+- **90+ سهماً سعودياً حقيقياً** من جميع القطاعات:
   - 🏦 البنوك (الراجحي، الأهلي، الرياض، وغيرها)
   - ⚗️ البتروكيماويات (سابك، معادن، اللجين)
   - 📱 الاتصالات (STC، موبايلي، زين)
@@ -284,7 +284,7 @@ npm run preview  # معاينة محلية للبناء النهائي
 
 ### المكتبات والأدوات المستخدمة
 - **Vite 5**: أداة البناء والـ dev server
-- **Chart.js 4**: للرسوم البيانية الخطية والمؤشرات
+- **Chart.js 3.9.1** (عبر npm): للرسوم البيانية الخطية والمؤشرات
 - **Canvas API**: للرسوم الشمعية المخصصة (بدون اعتماديات إضافية)
 - **Vitest + jsdom**: لاختبارات الوحدة (59 اختباراً)
 - **ESLint + Prettier**: لجودة الكود وتنسيقه
@@ -384,15 +384,16 @@ tests/                       # اختبارات Vitest
 ⚗️ البتروكيماويات (10 أسهم)
 📱 الاتصالات (4 أسهم)
 🛒 التجزئة (8 أسهم)
-🏥 التأمين (8 أسهم)
+🏥 الرعاية الصحية (سهم واحد)
+🛡️ التأمين (9 أسهم)
 🏗️ الأسمنت (8 أسهم)
-⚡ الطاقة (4 أسهم)
+⚡ الطاقة (3 أسهم)
 🏘️ العقار (7 أسهم)
-🚚 النقل (4 أسهم)
-📺 الإعلام (3 أسهم)
+🚚 النقل (3 أسهم)
+📺 الإعلام (سهمان)
 🏨 الفنادق والسياحة (3 أسهم)
 🌾 الزراعة والأغذية (7 أسهم)
-🏭 الصناعة (10 أسهم)
+🏭 الصناعة (11 سهماً)
 👷 التشييد والبناء (5 أسهم)
 ```
 
@@ -414,15 +415,24 @@ tests/                       # اختبارات Vitest
 
 ### 📁 البيانات المحفوظة
 ```javascript
+// tadawulGame — حالة اللعبة
 {
   "cash": 50000,
   "portfolio": {...},
   "transactions": [...],
   "pendingOrders": [...],
   "speed": 1,
+  "initialCapital": 50000,
   "challenge1Completed": false,
-  "challenge2Completed": false
+  "challenge2Completed": false,
+  "shariaFilter": false,
+  "allow24Trading": false,
+  "tourCompleted": false,
+  "completedLessons": {...},
+  "activeScenario": null,
+  "schemaVersion": 1
 }
+// إضافة إلى: tadawulPrices (الأسعار وتاريخها)، tadawulStats (الإحصائيات الشخصية)، tadawulLang (اللغة)
 ```
 
 ---
@@ -437,8 +447,7 @@ JavaScript   ████████████████████ 100%
 ```
 
 ### المكتبات
-- **Chart.js 3.9.1**: الرسوم البيانية التفاعلية
-- **CDN**: تحميل سريع من Cloudflare
+- **Chart.js 3.9.1**: الرسوم البيانية التفاعلية (مضمّنة في حزمة Vite، بدون CDN)
 
 ### APIs
 - **LocalStorage API**: حفظ البيانات
@@ -508,10 +517,39 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 
 ## 🔄 سجل التحديثات
 
+### الإصدار 3.1.0
+```
+✅ حفظ الأسعار وتاريخها بين الجلسات (لا تعود الأسعار للصفر عند التحديث)
+✅ حفظ تفضيل اللغة، وترجمة الأخبار النشطة فور تبديل اللغة
+✅ تحقق صارم من الحفظات المحملة (schemaVersion) لمنع فساد البيانات
+✅ تدقيق بيانات الأسهم: تصحيح رموز وقطاعات (الراجحي 1120، الأهلي 1180، الكهرباء 5110…)
+✅ إصلاح احتساب مكافآت التحديات ضمن رأس المال بدل الربح
+✅ إلغاء الأوامر المعلقة بمعرّف ثابت، وتسجيل كل الصفقات في الإحصائيات
+✅ تنفيذ الأوامر المحددة على سعر السوق الحالي (الأفضل)
+✅ ملف LICENSE رسمي (MIT)
+```
+
+### الإصدار 3.0.0
+```
+✅ قاموس مصطلحات ثنائي اللغة مع بحث فوري
+✅ إحصائيات شخصية دائمة وجولة تعريفية تفاعلية
+✅ رسوم شموع يابانية ومسارات تعلم ثلاثية المستويات
+✅ سيناريوهات تاريخية قابلة للتشغيل
+```
+
+### الإصدار 2.0.0
+```
+✅ بنية مودولية (Vite + ES Modules) واختبارات Vitest
+✅ أوامر وقف الخسارة ومؤشرات SMA/RSI
+✅ ساعات تداول السوق السعودي مع وضع 24/7
+✅ مرشح الأسهم الشرعية وتاريخ هجري وتصدير CSV
+✅ تحسينات إتاحة (a11y) وESLint + Prettier + CI
+```
+
 ### الإصدار 1.0.0 (2024)
 ```
 ✅ إطلاق الإصدار الأول
-✅ 100+ سهم سعودي حقيقي
+✅ 90+ سهماً سعودياً حقيقياً
 ✅ نظام أخبار ديناميكي مؤثر على الأسعار
 ✅ 20 نصيحة مالية تعليمية
 ✅ أوامر سوق ومحددة
@@ -533,27 +571,25 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - [ ] **تنبيهات الأسعار**: إشعارات عند وصول السعر لحد معين
 
 ### مخطط له
-- [ ] **التحليل الفني**: مؤشرات RSI, MACD, MA
-- [ ] **أوامر Stop Loss**: وقف الخسارة التلقائي
+- [ ] **مؤشر MACD على الرسم البياني** (الخوارزمية جاهزة ومختبرة في `src/engine/indicators.js`)
 - [ ] **توزيعات الأرباح**: محاكاة توزيعات نقدية
 - [ ] **التقارير المالية**: ملخص شهري للأداء
-- [ ] **الوضع الليلي**: Dark Mode
-- [ ] **تصدير البيانات**: CSV للتحليل الخارجي
+- [ ] **الوضع الفاتح**: Light Mode
 - [ ] **تعدد العملات**: دولار، يورو، الخ
 - [ ] **أسواق عالمية**: NYSE, NASDAQ
+
+> ملاحظة: وقف الخسارة، مؤشرات RSI/SMA، وتصدير CSV أصبحت ميزات منفَّذة منذ الإصدار 2.0.
 
 ---
 
 ## 📊 إحصائيات المشروع
 
 ```
-عدد الأسهم:        100+
-عدد القطاعات:      14
+عدد الأسهم:        91
+عدد القطاعات:      15
 أنواع الأخبار:     14
 النصائح المالية:  20
 اللغات المدعومة:   2
-أسطر الكود:        ~2000
-حجم الملف:         ~80KB
 ```
 
 ---
@@ -580,7 +616,7 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 الأسهم حقيقية والأسعار الأساسية واقعية، لكن التحركات محاكاة.
 
 ### ❓ كيف أبدأ؟
-فقط افتح الملف في متصفحك وابدأ التداول مباشرة!
+افتح رابط التطبيق في متصفحك وابدأ التداول مباشرة!
 
 ### ❓ هل يعمل على الجوال؟
 نعم، التصميم متجاوب ويعمل على جميع الأجهزة.
@@ -624,7 +660,6 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 ## 🙏 شكر وتقدير
 
 - **Chart.js**: للمكتبة الرائعة للرسوم البيانية
-- **Cloudflare**: لخدمة CDN السريعة
 - **سوق الأسهم السعودي**: للبيانات المرجعية
 - **المجتمع التعليمي**: للدعم والتشجيع
 
@@ -651,12 +686,12 @@ Made with ❤️ by **Abdulkareem Al-Aboud**
 
 <div align="center">
 
-![Version](https://img.shields.io/badge/version-3.0.0-orange)
+![Version](https://img.shields.io/badge/version-3.1.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Language](https://img.shields.io/badge/languages-Arabic%20%7C%20English-green)
 ![Platform](https://img.shields.io/badge/platform-Web-purple)
 
-**Professional Saudi stock trading simulator with 100+ real stocks and dynamic news**
+**Professional Saudi stock trading simulator with 90+ real stocks and dynamic news**
 
 </div>
 
@@ -664,14 +699,14 @@ Made with ❤️ by **Abdulkareem Al-Aboud**
 
 ## 📋 Overview
 
-**Tadawul** is a realistic simulation of the Saudi Stock Exchange (Tadawul) that allows you to learn trading without real financial risks. Features 100+ real Saudi stocks from various sectors with a dynamic news system that realistically affects prices.
+**Tadawul** is a realistic simulation of the Saudi Stock Exchange (Tadawul) that allows you to learn trading without real financial risks. Features 90+ real Saudi stocks from various sectors with a dynamic news system that realistically affects prices.
 
 ---
 
 ## ✨ Key Features
 
 ### 📊 Realistic Stock Market
-- **100+ Real Saudi Stocks** from all sectors
+- **90+ Real Saudi Stocks** from all sectors
 - Real company names and symbols
 - Realistic price movements using Geometric Brownian Motion
 - Multiple sectors: Banking, Petrochemicals, Telecom, Retail, and more
@@ -707,9 +742,10 @@ Made with ❤️ by **Abdulkareem Al-Aboud**
   - Expected profit/loss
 
 ### 📈 Professional Trading System
-- **Two Order Types**:
+- **Three Order Types**:
   - Market Orders: Execute immediately
   - Limit Orders: Execute at specific price
+  - Stop-loss Orders: Automatic sell when the price drops
 - **Pending Orders Management**:
   - View all pending orders
   - Track difference between current and limit price
@@ -832,7 +868,7 @@ Made with ❤️ by **Abdulkareem Al-Aboud**
   - Canvas API (for Chart.js)
 
 ### Libraries Used
-- **Chart.js 3.9.1**: Interactive charts
+- **Chart.js 3.9.1**: Interactive charts (bundled via npm/Vite)
 - **Vanilla JavaScript**: All functionality
 
 ---
@@ -912,15 +948,16 @@ Warning: #f39c12 (Orange)
 ⚗️ Petrochemicals (10 stocks)
 📱 Telecom (4 stocks)
 🛒 Retail (8 stocks)
-🏥 Insurance (8 stocks)
+🏥 Healthcare (1 stock)
+🛡️ Insurance (9 stocks)
 🏗️ Cement (8 stocks)
-⚡ Energy (4 stocks)
+⚡ Energy (3 stocks)
 🏘️ Real Estate (7 stocks)
-🚚 Transportation (4 stocks)
-📺 Media (3 stocks)
+🚚 Transportation (3 stocks)
+📺 Media (2 stocks)
 🏨 Hotels & Tourism (3 stocks)
 🌾 Agriculture & Food (7 stocks)
-🏭 Industrial (10 stocks)
+🏭 Industrial (11 stocks)
 👷 Construction (5 stocks)
 ```
 
@@ -946,8 +983,7 @@ JavaScript   ████████████████████ 100%
 ```
 
 ### Libraries
-- **Chart.js 3.9.1**: Interactive charts
-- **CDN**: Fast loading from Cloudflare
+- **Chart.js 3.9.1**: Interactive charts (bundled via Vite, no CDN)
 
 ### APIs
 - **LocalStorage API**: Data persistence
@@ -1017,10 +1053,35 @@ Contributions are welcome! If you have suggestions or improvements:
 
 ## 🔄 Changelog
 
+### Version 3.1.0
+```
+✅ Prices and price history persist across sessions
+✅ Language preference persists; active news re-renders on language toggle
+✅ Strict validation of loaded saves (schemaVersion)
+✅ Stock data audit: corrected symbols and sectors
+✅ Challenge rewards now count as capital, not profit
+✅ Cancel pending orders by stable id; all executions recorded in stats
+✅ Limit orders fill at the current market price
+✅ Official MIT LICENSE file
+```
+
+### Version 3.0.0
+```
+✅ Bilingual glossary, personal stats, interactive tour
+✅ Candlestick charts, tiered learning paths, historical scenarios
+```
+
+### Version 2.0.0
+```
+✅ Modular architecture (Vite + ES Modules) with Vitest tests
+✅ Stop-loss orders, SMA/RSI indicators, Saudi market hours + 24/7 mode
+✅ Sharia filter, Hijri dates, CSV export, a11y, ESLint + Prettier + CI
+```
+
 ### Version 1.0.0 (2024)
 ```
 ✅ First release
-✅ 100+ real Saudi stocks
+✅ 90+ real Saudi stocks
 ✅ Dynamic news system affecting prices
 ✅ 20 educational financial tips
 ✅ Market and limit orders
@@ -1042,27 +1103,25 @@ Contributions are welcome! If you have suggestions or improvements:
 - [ ] **Price Alerts**: Notifications when price reaches limit
 
 ### Planned
-- [ ] **Technical Analysis**: RSI, MACD, MA indicators
-- [ ] **Stop Loss Orders**: Automatic loss prevention
+- [ ] **MACD on the chart** (the indicator itself is implemented and tested in `src/engine/indicators.js`)
 - [ ] **Dividends**: Cash distribution simulation
 - [ ] **Financial Reports**: Monthly performance summary
-- [ ] **Dark Mode**: Night theme
-- [ ] **Data Export**: CSV for external analysis
+- [ ] **Light Mode**: Light theme
 - [ ] **Multi-Currency**: Dollar, Euro, etc.
 - [ ] **Global Markets**: NYSE, NASDAQ
+
+> Note: stop-loss orders, RSI/SMA indicators, and CSV export shipped in v2.0.
 
 ---
 
 ## 📊 Project Statistics
 
 ```
-Number of Stocks:     100+
-Number of Sectors:    14
+Number of Stocks:     91
+Number of Sectors:    15
 News Types:           14
 Financial Tips:       20
 Supported Languages:  2
-Lines of Code:        ~2000
-File Size:            ~80KB
 ```
 
 ---
@@ -1089,7 +1148,7 @@ File Size:            ~80KB
 Stocks are real and base prices realistic, but movements are simulated.
 
 ### ❓ How do I start?
-Just open the file in your browser and start trading immediately!
+Just open the app URL in your browser and start trading immediately!
 
 ### ❓ Does it work on mobile?
 Yes, the design is responsive and works on all devices.
@@ -1133,7 +1192,6 @@ Read financial tips, try different strategies, and learn from mistakes!
 ## 🙏 Acknowledgments
 
 - **Chart.js**: For the amazing charting library
-- **Cloudflare**: For fast CDN service
 - **Saudi Stock Market**: For reference data
 - **Educational Community**: For support and encouragement
 
