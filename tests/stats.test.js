@@ -25,13 +25,27 @@ describe('personal stats', () => {
   });
 
   it('tracks best profit on sells with avgCostBefore', () => {
-    recordTrade({ symbol: '1180', type: 'sell', quantity: 10, price: 100, commission: 1, avgCostBefore: 80 });
+    recordTrade({
+      symbol: '1180',
+      type: 'sell',
+      quantity: 10,
+      price: 100,
+      commission: 1,
+      avgCostBefore: 80,
+    });
     expect(personalStats.bestTradeProfit).toBe(200);
     expect(personalStats.bestTradeSymbol).toBe('1180');
   });
 
   it('tracks worst loss on losing sells', () => {
-    recordTrade({ symbol: '2222', type: 'sell', quantity: 5, price: 20, commission: 1, avgCostBefore: 30 });
+    recordTrade({
+      symbol: '2222',
+      type: 'sell',
+      quantity: 5,
+      price: 20,
+      commission: 1,
+      avgCostBefore: 30,
+    });
     expect(personalStats.worstTradeLoss).toBe(-50);
     expect(personalStats.worstTradeSymbol).toBe('2222');
   });

@@ -20,11 +20,17 @@ import { recordTrade } from './stats.js';
  * @property {number} [stopPrice]
  */
 
+/** @typedef {'NO_STOCK'|'INVALID_QUANTITY'|'QUANTITY_TOO_LARGE'|'INVALID_PRICE'|'STOP_LOSS_SELL_ONLY'|'NO_HOLDING'} OrderValidationError */
+
+/**
+ * @typedef {{ ok: true, order: OrderInput } | { ok: false, error: OrderValidationError }} OrderValidationResult
+ */
+
 /**
  * Validate raw user inputs and return a normalized order or an error.
  *
  * @param {{ symbol: string, type: 'buy'|'sell', kind: 'market'|'limit'|'stop-loss', quantityRaw: any, priceRaw?: any }} input
- * @returns {{ ok: true, order: OrderInput } | { ok: false, error: 'NO_STOCK'|'INVALID_QUANTITY'|'QUANTITY_TOO_LARGE'|'INVALID_PRICE'|'STOP_LOSS_SELL_ONLY'|'NO_HOLDING' }}
+ * @returns {OrderValidationResult}
  */
 export function validateOrder(input) {
   if (!input.symbol || !findStock(input.symbol)) {
@@ -153,9 +159,10 @@ function recordExecution(order, executedPrice, avgCostBefore) {
 export function executeMarketOrder(order) {
   const avgCostBefore = gameState.portfolio[order.symbol]?.avgCost;
   const price = applyMarketImpact(order.symbol, order.type, order.quantity);
-  const result = order.type === 'buy'
-    ? applyBuy(order.symbol, price, order.quantity)
-    : applySell(order.symbol, price, order.quantity);
+  const result =
+    order.type === 'buy'
+      ? applyBuy(order.symbol, price, order.quantity)
+      : applySell(order.symbol, price, order.quantity);
   if (!result.ok) return result;
   recordExecution(order, price, avgCostBefore);
   return { ok: true, executedPrice: price };
@@ -213,9 +220,10 @@ export function checkPendingOrders() {
       // Fill at the market price, as a real broker would: for a limit buy the
       // current price is at or below the limit (never worse), and vice versa.
       const avgCostBefore = gameState.portfolio[order.symbol]?.avgCost;
-      const op = order.type === 'buy'
-        ? applyBuy(order.symbol, currentPrice, order.quantity)
-        : applySell(order.symbol, currentPrice, order.quantity);
+      const op =
+        order.type === 'buy'
+          ? applyBuy(order.symbol, currentPrice, order.quantity)
+          : applySell(order.symbol, currentPrice, order.quantity);
       if (op.ok) {
         recordExecution({ ...order, kind: order.kind || 'limit' }, currentPrice, avgCostBefore);
         executed += 1;

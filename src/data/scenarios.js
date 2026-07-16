@@ -1,4 +1,29 @@
 /**
+ * @typedef {Object} ScenarioEffect
+ * @property {string} [sector]
+ * @property {string} [symbol]
+ * @property {number} [muMultiplier]
+ * @property {number} [sigmaMultiplier]
+ */
+
+/**
+ * @typedef {Object} ScenarioShock
+ * @property {string} [sector]
+ * @property {string} [symbol]
+ * @property {number} shock - one-time price multiplier delta, e.g. -0.15 for -15%
+ */
+
+/**
+ * @typedef {Object} Scenario
+ * @property {string} id
+ * @property {{ar: string, en: string}} title
+ * @property {{ar: string, en: string}} description
+ * @property {number} durationMinutes
+ * @property {ScenarioEffect[]} [effects]
+ * @property {ScenarioShock[]} [initialShocks]
+ */
+
+/**
  * Predefined historical-like scenarios. Each scenario, when activated,
  * applies a multiplier to mu (drift) and/or sigma (volatility) for one or
  * more sectors/symbols, plus optional one-time price shocks.
@@ -6,6 +31,8 @@
  * effects:
  *   - { sector: 'banking', muMultiplier: 2, sigmaMultiplier: 1.5 }
  *   - { symbol: '2222', shock: -0.15 }  // one-time -15% jolt on start
+ *
+ * @type {Scenario[]}
  */
 export const historicalScenarios = [
   {
@@ -40,9 +67,7 @@ export const historicalScenarios = [
       { sector: 'banking', muMultiplier: 2, sigmaMultiplier: 1.3 },
       { sector: 'petrochemical', muMultiplier: 1.5, sigmaMultiplier: 1.4 },
     ],
-    initialShocks: [
-      { symbol: '2222', shock: 0.1 },
-    ],
+    initialShocks: [{ symbol: '2222', shock: 0.1 }],
   },
   {
     id: 'oil_shock',
@@ -74,12 +99,14 @@ export const historicalScenarios = [
       { sector: 'realestate', muMultiplier: -2, sigmaMultiplier: 1.8 },
       { sector: 'building', muMultiplier: -1.5, sigmaMultiplier: 1.5 },
     ],
-    initialShocks: [
-      { sector: 'realestate', shock: -0.04 },
-    ],
+    initialShocks: [{ sector: 'realestate', shock: -0.04 }],
   },
 ];
 
+/**
+ * @param {string} id
+ * @returns {Scenario|undefined}
+ */
 export function findScenario(id) {
   return historicalScenarios.find((s) => s.id === id);
 }

@@ -19,8 +19,12 @@ import { stocks, findStock } from './data/stocks.js';
  * @property {Record<string, {value: number}>} priceImpacts
  * @property {boolean} shariaFilter
  * @property {boolean} allow24Trading
+ * @property {boolean} tourCompleted
+ * @property {Record<string, number>} completedLessons - lessonId -> completion timestamp
+ * @property {{id: string, startedAt: number, durationMs: number}|null} activeScenario
  */
 
+/** @returns {GameState} */
 export function defaultState() {
   return {
     cash: INITIAL_CAPITAL,
@@ -40,6 +44,21 @@ export function defaultState() {
   };
 }
 
+/**
+ * @typedef {Object} PersonalStats
+ * @property {number} bestPnlPct
+ * @property {number} bestPnlAmount
+ * @property {number} bestTradeProfit
+ * @property {string|null} bestTradeSymbol
+ * @property {number} worstTradeLoss
+ * @property {string|null} worstTradeSymbol
+ * @property {number} totalTrades
+ * @property {number} challengesCompleted
+ * @property {number} lifetimeCommission
+ * @property {number} sessionsPlayed
+ */
+
+/** @returns {PersonalStats} */
 export function defaultStats() {
   return {
     bestPnlPct: 0,
@@ -120,8 +139,10 @@ const SCHEMA_VERSION = 1;
  * corrupt (wrong type, non-finite number, unknown stock symbol). Prevents a
  * damaged save from permanently poisoning the game with NaN arithmetic.
  *
- * @param {object} loaded - parsed, untrusted JSON from storage
- * @returns {object} a complete, valid game state
+ * @param {any} loaded - parsed, untrusted JSON from storage; shape is not
+ *   trusted, which is why every field below is read defensively rather than
+ *   typed
+ * @returns {GameState} a complete, valid game state
  */
 function sanitizeLoadedState(loaded) {
   const clean = defaultState();
@@ -132,11 +153,15 @@ function sanitizeLoadedState(loaded) {
   }
   if ([1, 5, 10].includes(loaded.speed)) clean.speed = loaded.speed;
 
-  ['challenge1Completed', 'challenge2Completed', 'shariaFilter', 'allow24Trading', 'tourCompleted'].forEach(
-    (key) => {
-      clean[key] = loaded[key] === true;
-    }
-  );
+  [
+    'challenge1Completed',
+    'challenge2Completed',
+    'shariaFilter',
+    'allow24Trading',
+    'tourCompleted',
+  ].forEach((key) => {
+    clean[key] = loaded[key] === true;
+  });
 
   if (loaded.portfolio && typeof loaded.portfolio === 'object') {
     Object.entries(loaded.portfolio).forEach(([symbol, holding]) => {
@@ -229,7 +254,10 @@ export function loadGameState() {
 
 export function saveGameState() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...gameState, schemaVersion: SCHEMA_VERSION }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ ...gameState, schemaVersion: SCHEMA_VERSION })
+    );
   } catch (e) {
     console.error('Failed to save game state:', e);
   }
@@ -263,7 +291,10 @@ export function savePriceState() {
       const price = stockPrices[stock.symbol];
       if (!Number.isFinite(price)) return;
       prices[stock.symbol] = round4(price);
-      history[stock.symbol] = (priceHistory[stock.symbol] || []).map((p) => [p.time, round4(p.price)]);
+      history[stock.symbol] = (priceHistory[stock.symbol] || []).map((p) => [
+        p.time,
+        round4(p.price),
+      ]);
     });
     localStorage.setItem(
       PRICES_STORAGE_KEY,
@@ -301,7 +332,9 @@ export function loadPriceState() {
     const price = data.prices?.[stock.symbol];
     if (!Number.isFinite(price) || price <= 0) return;
     stockPrices[stock.symbol] = price;
-    const rawHistory = Array.isArray(data.history?.[stock.symbol]) ? data.history[stock.symbol] : [];
+    const rawHistory = Array.isArray(data.history?.[stock.symbol])
+      ? data.history[stock.symbol]
+      : [];
     const points = rawHistory
       .filter(
         (pt) => Array.isArray(pt) && Number.isFinite(pt[0]) && Number.isFinite(pt[1]) && pt[1] > 0

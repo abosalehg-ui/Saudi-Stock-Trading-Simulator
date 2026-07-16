@@ -1,6 +1,19 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { validateOrder, executeMarketOrder, addPendingOrder, checkPendingOrders, cancelPendingOrder } from '../src/engine/trading.js';
-import { gameState, stockPrices, resetGameState, initPriceState, personalStats, resetStats } from '../src/state.js';
+import {
+  validateOrder,
+  executeMarketOrder,
+  addPendingOrder,
+  checkPendingOrders,
+  cancelPendingOrder,
+} from '../src/engine/trading.js';
+import {
+  gameState,
+  stockPrices,
+  resetGameState,
+  initPriceState,
+  personalStats,
+  resetStats,
+} from '../src/state.js';
 import { COMMISSION } from '../src/config.js';
 
 beforeEach(() => {
@@ -42,25 +55,49 @@ describe('validateOrder', () => {
   });
 
   it('rejects limit order without a valid price', () => {
-    const r = validateOrder({ symbol: '1180', type: 'buy', kind: 'limit', quantityRaw: '10', priceRaw: '-1' });
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'buy',
+      kind: 'limit',
+      quantityRaw: '10',
+      priceRaw: '-1',
+    });
     expect(r.ok).toBe(false);
     expect(r.error).toBe('INVALID_PRICE');
   });
 
   it('accepts a valid limit order', () => {
-    const r = validateOrder({ symbol: '1180', type: 'buy', kind: 'limit', quantityRaw: '10', priceRaw: '80' });
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'buy',
+      kind: 'limit',
+      quantityRaw: '10',
+      priceRaw: '80',
+    });
     expect(r.ok).toBe(true);
     expect(r.order.limitPrice).toBe(80);
   });
 
   it('blocks stop-loss for buy orders', () => {
-    const r = validateOrder({ symbol: '1180', type: 'buy', kind: 'stop-loss', quantityRaw: '10', priceRaw: '70' });
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'buy',
+      kind: 'stop-loss',
+      quantityRaw: '10',
+      priceRaw: '70',
+    });
     expect(r.ok).toBe(false);
     expect(r.error).toBe('STOP_LOSS_SELL_ONLY');
   });
 
   it('blocks stop-loss when user has no holding', () => {
-    const r = validateOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantityRaw: '10', priceRaw: '70' });
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'stop-loss',
+      quantityRaw: '10',
+      priceRaw: '70',
+    });
     expect(r.ok).toBe(false);
     expect(r.error).toBe('NO_HOLDING');
   });
@@ -103,7 +140,13 @@ describe('pending orders', () => {
   });
 
   it('cancelPendingOrder removes by id', () => {
-    const pending = addPendingOrder({ symbol: '1180', type: 'buy', kind: 'limit', quantity: 5, limitPrice: 50 });
+    const pending = addPendingOrder({
+      symbol: '1180',
+      type: 'buy',
+      kind: 'limit',
+      quantity: 5,
+      limitPrice: 50,
+    });
     expect(cancelPendingOrder(pending.id)).toBe(true);
     expect(gameState.pendingOrders).toHaveLength(0);
   });
@@ -116,7 +159,13 @@ describe('pending orders', () => {
 
   it('cancels the intended order even after an earlier order executed', () => {
     addPendingOrder({ symbol: '1180', type: 'buy', kind: 'limit', quantity: 5, limitPrice: 80 });
-    const second = addPendingOrder({ symbol: '2222', type: 'buy', kind: 'limit', quantity: 5, limitPrice: 20 });
+    const second = addPendingOrder({
+      symbol: '2222',
+      type: 'buy',
+      kind: 'limit',
+      quantity: 5,
+      limitPrice: 20,
+    });
     stockPrices['1180'] = 70; // first order fills, indices shift
     expect(checkPendingOrders().executed).toBe(1);
     expect(cancelPendingOrder(second.id)).toBe(true);
@@ -145,7 +194,13 @@ describe('pending orders', () => {
   it('records executed pending orders in personal stats', () => {
     executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 10 });
     expect(personalStats.totalTrades).toBe(1);
-    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 10, stopPrice: 30 });
+    addPendingOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'stop-loss',
+      quantity: 10,
+      stopPrice: 30,
+    });
     stockPrices['1180'] = 10; // well below the ~32.4 average cost → a clear loss
     expect(checkPendingOrders().executed).toBe(1);
     expect(personalStats.totalTrades).toBe(2);
@@ -157,7 +212,13 @@ describe('pending orders', () => {
     executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 10 });
     const holding = gameState.portfolio['1180'];
     expect(holding.quantity).toBe(10);
-    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 5, stopPrice: 80 });
+    addPendingOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'stop-loss',
+      quantity: 5,
+      stopPrice: 80,
+    });
     stockPrices['1180'] = 75;
     const { executed } = checkPendingOrders();
     expect(executed).toBe(1);
@@ -166,7 +227,13 @@ describe('pending orders', () => {
 
   it('stop-loss does not fire when price is above stopPrice', () => {
     executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 10 });
-    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 5, stopPrice: 50 });
+    addPendingOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'stop-loss',
+      quantity: 5,
+      stopPrice: 50,
+    });
     stockPrices['1180'] = 90;
     const { executed } = checkPendingOrders();
     expect(executed).toBe(0);
@@ -178,8 +245,20 @@ describe('pending orders', () => {
     // all 10 shares, so the second's applySell fails despite its trigger
     // condition (price <= stopPrice) being met.
     executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 10 });
-    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 10, stopPrice: 80 });
-    addPendingOrder({ symbol: '1180', type: 'sell', kind: 'stop-loss', quantity: 5, stopPrice: 80 });
+    addPendingOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'stop-loss',
+      quantity: 10,
+      stopPrice: 80,
+    });
+    addPendingOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'stop-loss',
+      quantity: 5,
+      stopPrice: 80,
+    });
     stockPrices['1180'] = 70;
 
     const { executed, cancelled } = checkPendingOrders();

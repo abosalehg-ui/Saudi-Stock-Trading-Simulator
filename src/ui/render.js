@@ -9,10 +9,16 @@ import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
 import { evaluateChallenges } from '../engine/challenges.js';
 
+/** @type {(symbol: string) => void} */
 let onSelectStock = () => {};
+/** @type {(orderId: number) => void} */
 let onCancelOrder = () => {};
+/** @type {(symbol: string, type: 'buy'|'sell') => void} */
 let onQuickTrade = () => {};
 
+/**
+ * @param {{onSelectStock?: (symbol: string) => void, onCancelOrder?: (orderId: number) => void, onQuickTrade?: (symbol: string, type: 'buy'|'sell') => void}} callbacks
+ */
 export function bindRenderCallbacks(callbacks) {
   onSelectStock = callbacks.onSelectStock ?? onSelectStock;
   onCancelOrder = callbacks.onCancelOrder ?? onCancelOrder;
@@ -83,9 +89,7 @@ export function renderStocks() {
   clearChildren(listEl);
   stockItemRefs.clear();
   const lang = getLang();
-  const filtered = gameState.shariaFilter
-    ? stocks.filter((s) => s.isShariaCompliant)
-    : stocks;
+  const filtered = gameState.shariaFilter ? stocks.filter((s) => s.isShariaCompliant) : stocks;
 
   filtered.forEach((stock) => {
     const refs = buildStockItem(stock, lang);
@@ -264,7 +268,11 @@ export function updateStats() {
   const lang = getLang();
 
   document.getElementById('cash').textContent = formatCurrency(gameState.cash, lang, t('sar'));
-  document.getElementById('portfolio-value').textContent = formatCurrency(portfolioValue, lang, t('sar'));
+  document.getElementById('portfolio-value').textContent = formatCurrency(
+    portfolioValue,
+    lang,
+    t('sar')
+  );
   document.getElementById('total-value').textContent = formatCurrency(totalValue, lang, t('sar'));
 
   const pnlEl = document.getElementById('pnl');

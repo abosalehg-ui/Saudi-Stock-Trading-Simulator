@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { startScenario, stopScenario, getActiveScenario, getScenarioMultipliers } from '../src/engine/scenarios.js';
+import {
+  startScenario,
+  stopScenario,
+  getActiveScenario,
+  getScenarioMultipliers,
+} from '../src/engine/scenarios.js';
 import { gameState, stockPrices, resetGameState, initPriceState } from '../src/state.js';
 import { findStock } from '../src/data/stocks.js';
 

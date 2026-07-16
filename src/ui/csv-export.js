@@ -22,7 +22,16 @@ export function buildTransactionsCsv() {
     const commission = tx.commission ?? tx.price * tx.quantity * COMMISSION;
     const total = tx.price * tx.quantity;
     rows.push(
-      [date, tx.type, name, tx.symbol, tx.quantity, tx.price.toFixed(2), commission.toFixed(2), total.toFixed(2)]
+      [
+        date,
+        tx.type,
+        name,
+        tx.symbol,
+        tx.quantity,
+        tx.price.toFixed(2),
+        commission.toFixed(2),
+        total.toFixed(2),
+      ]
         .map(escapeCsvField)
         .join(',')
     );

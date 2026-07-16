@@ -15,7 +15,7 @@ export function recordPnlSnapshot(pnlPct, pnlAmount) {
 
 /**
  * Record an executed trade and update aggregate counters.
- * @param {{symbol: string, type: 'buy'|'sell', quantity: number, price: number, commission: number}} tx
+ * @param {{symbol: string, type: 'buy'|'sell', quantity: number, price: number, commission: number, avgCostBefore?: number}} tx
  */
 export function recordTrade(tx) {
   personalStats.totalTrades += 1;

@@ -76,4 +76,3 @@ function renderScenariosContent() {
     root.appendChild(card);
   });
 }
-
