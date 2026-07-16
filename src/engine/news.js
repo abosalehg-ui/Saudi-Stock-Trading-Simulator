@@ -1,7 +1,8 @@
 import { NEWS_DURATION_MS, NEWS_GENERATION_PROBABILITY } from '../config.js';
 import { stocks, findStock } from '../data/stocks.js';
 import { newsTemplates } from '../data/news.js';
-import { activeNews } from '../state.js';
+import { activeNews, gameState } from '../state.js';
+import { simElapsedMs } from './sim-time.js';
 
 /**
  * Maybe generate a news item and expire old ones.
@@ -10,7 +11,9 @@ import { activeNews } from '../state.js';
  */
 export function generateNews() {
   const now = Date.now();
-  activeNews.items = activeNews.items.filter((news) => now - news.timestamp < NEWS_DURATION_MS);
+  activeNews.items = activeNews.items.filter(
+    (news) => simElapsedMs(news.timestamp, gameState.speed) < NEWS_DURATION_MS
+  );
 
   if (Math.random() < NEWS_GENERATION_PROBABILITY) {
     const stock = stocks[Math.floor(Math.random() * stocks.length)];

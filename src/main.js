@@ -29,6 +29,8 @@ import { isMarketOpen } from './engine/market-hours.js';
 import {
   bindRenderCallbacks,
   renderStocks,
+  updateStockPrices,
+  bindStockListEvents,
   renderPortfolio,
   renderPendingOrders,
   updateStats,
@@ -51,15 +53,20 @@ import { startTour, attachTourListeners, maybeAutoStart } from './ui/tour.js';
 import { recordPnlSnapshot, recordChallengeCompleted, recordSessionStart } from './engine/stats.js';
 
 function refreshAll() {
-  renderStocks();
+  // Incremental update (patches existing DOM nodes) instead of rebuilding
+  // the whole list every tick; renderStocks() is only needed when the set
+  // of displayed stocks or their labels change (filter, language).
+  updateStockPrices();
   renderPortfolio();
   renderPendingOrders();
   const { pnlPercent, totalValue } = updateStats();
-  const c1Before = gameState.challenge1Completed;
-  const c2Before = gameState.challenge2Completed;
-  updateChallenges({ pnlPercent, totalValue, showAlertFn: showAlert });
-  if (!c1Before && gameState.challenge1Completed) recordChallengeCompleted();
-  if (!c2Before && gameState.challenge2Completed) recordChallengeCompleted();
+  const { challenge1JustCompleted, challenge2JustCompleted } = updateChallenges({
+    pnlPercent,
+    totalValue,
+    showAlertFn: showAlert,
+  });
+  if (challenge1JustCompleted) recordChallengeCompleted();
+  if (challenge2JustCompleted) recordChallengeCompleted();
   const pnlAmount = totalValue - gameState.initialCapital;
   recordPnlSnapshot(pnlPercent, pnlAmount);
   updateTicker();
@@ -72,10 +79,16 @@ function startPriceUpdates() {
   if (session.updateInterval) clearInterval(session.updateInterval);
   session.updateInterval = setInterval(() => {
     updatePrices();
-    checkPendingOrders();
+    const { cancelled } = checkPendingOrders();
     refreshAll();
     saveGameState();
     savePriceState();
+    // Orders whose trigger fired but couldn't execute (e.g. two orders
+    // competing for the same shares) are dropped rather than retried forever;
+    // let the user know instead of a pending order silently vanishing.
+    if (cancelled.length > 0) {
+      showAlert(t('pendingOrdersAutoCancelled'));
+    }
   }, PRICE_UPDATE_INTERVAL_MS / gameState.speed);
 }
 
@@ -83,15 +96,17 @@ function startNewsUpdates() {
   if (session.newsUpdateInterval) clearInterval(session.newsUpdateInterval);
   generateNews();
   updateNewsTicker();
+  // Scaled by speed to match price ticks, so news appears proportionally
+  // more often in real time the faster the simulation runs.
   session.newsUpdateInterval = setInterval(() => {
     generateNews();
     updateNewsTicker();
-  }, NEWS_UPDATE_INTERVAL_MS);
+  }, NEWS_UPDATE_INTERVAL_MS / gameState.speed);
 }
 
 function selectStock(symbol) {
   session.selectedStock = symbol;
-  renderStocks();
+  updateStockPrices(); // toggles the .selected highlight without a full rebuild
   renderStockDetails(symbol);
   openStockModal();
 }
@@ -177,6 +192,7 @@ function handleSubmitOrder(input) {
 function setSpeed(speed) {
   gameState.speed = speed;
   startPriceUpdates();
+  startNewsUpdates();
   saveGameState();
 }
 
@@ -229,6 +245,7 @@ function rebuildStaticLabels() {
 function handleToggleLanguage() {
   toggleLang();
   rebuildStaticLabels();
+  renderStocks(); // full rebuild: stock names are language-dependent, unlike refreshAll()'s incremental price patch
   refreshAll();
   if (session.selectedStock) {
     renderStockDetails(session.selectedStock);
@@ -254,6 +271,7 @@ function switchTab(tab) {
 }
 
 function attachEventListeners() {
+  bindStockListEvents();
   document.getElementById('lang-toggle').addEventListener('click', handleToggleLanguage);
   document.getElementById('reset-btn').addEventListener('click', resetGame);
   document.getElementById('export-csv-btn').addEventListener('click', () => {
@@ -338,6 +356,7 @@ function init() {
   document.getElementById('allow-24-7').checked = !!gameState.allow24Trading;
 
   rebuildStaticLabels();
+  renderStocks(); // full build; refreshAll()'s incremental update needs these nodes to exist
   refreshAll();
   startPriceUpdates();
   startNewsUpdates();

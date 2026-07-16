@@ -1,10 +1,4 @@
-import {
-  CHALLENGE_1_THRESHOLD,
-  CHALLENGE_1_REWARD,
-  CHALLENGE_2_THRESHOLD,
-  CHALLENGE_2_REWARD,
-  COMMISSION,
-} from '../config.js';
+import { CHALLENGE_1_THRESHOLD, CHALLENGE_2_THRESHOLD, COMMISSION } from '../config.js';
 import { stocks, findStock } from '../data/stocks.js';
 import { financialTips } from '../data/tips.js';
 import { gameState, stockPrices, activeNews, session } from '../state.js';
@@ -13,6 +7,7 @@ import { formatCurrency } from '../utils/numbers.js';
 import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
+import { evaluateChallenges } from '../engine/challenges.js';
 
 let onSelectStock = () => {};
 let onCancelOrder = () => {};
@@ -28,68 +23,114 @@ function clearChildren(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
 }
 
+// symbol -> { container, priceEl, changeEl }, rebuilt whenever renderStocks()
+// does a full rebuild. Lets updateStockPrices() patch text on every price
+// tick without recreating 90+ DOM nodes (and their listeners) each time.
+const stockItemRefs = new Map();
+
+function buildStockItem(stock, lang) {
+  const div = document.createElement('div');
+  div.className = 'stock-item';
+  div.dataset.symbol = stock.symbol;
+  div.setAttribute('role', 'button');
+  div.setAttribute('tabindex', '0');
+  div.setAttribute('aria-label', `${lang === 'ar' ? stock.name : stock.nameEn} ${stock.symbol}`);
+
+  const header = document.createElement('div');
+  header.className = 'stock-header';
+
+  const left = document.createElement('div');
+  const nameDiv = document.createElement('div');
+  nameDiv.className = 'stock-name';
+  nameDiv.textContent = lang === 'ar' ? stock.name : stock.nameEn;
+  if (stock.isShariaCompliant) {
+    const badge = document.createElement('span');
+    badge.className = 'sharia-badge';
+    badge.title = t('shariaCompliant');
+    badge.textContent = ' 🕌';
+    nameDiv.appendChild(badge);
+  }
+  const symbolDiv = document.createElement('div');
+  symbolDiv.className = 'stock-symbol';
+  symbolDiv.textContent = stock.symbol;
+  left.appendChild(nameDiv);
+  left.appendChild(symbolDiv);
+
+  const right = document.createElement('div');
+  right.style.textAlign = 'left';
+  const priceDiv = document.createElement('div');
+  priceDiv.className = 'stock-price';
+  const changeDiv = document.createElement('div');
+  changeDiv.className = 'stock-change';
+  right.appendChild(priceDiv);
+  right.appendChild(changeDiv);
+
+  header.appendChild(left);
+  header.appendChild(right);
+  div.appendChild(header);
+
+  return { container: div, priceEl: priceDiv, changeEl: changeDiv };
+}
+
+/**
+ * Full rebuild of the stock list: needed whenever which stocks are shown or
+ * how they're labeled changes (Sharia filter, language). Call updateStockPrices()
+ * instead for a plain price tick or selection change.
+ */
 export function renderStocks() {
   const listEl = document.getElementById('stock-list');
   if (!listEl) return;
   clearChildren(listEl);
+  stockItemRefs.clear();
   const lang = getLang();
   const filtered = gameState.shariaFilter
     ? stocks.filter((s) => s.isShariaCompliant)
     : stocks;
 
   filtered.forEach((stock) => {
-    const price = stockPrices[stock.symbol];
+    const refs = buildStockItem(stock, lang);
+    stockItemRefs.set(stock.symbol, refs);
+    listEl.appendChild(refs.container);
+  });
+  updateStockPrices();
+}
+
+/**
+ * Patch price/change text and the selected-item highlight on the existing
+ * stock-list DOM nodes, without rebuilding them. Safe to call every price
+ * tick; a no-op for any symbol not currently rendered (e.g. filtered out).
+ */
+export function updateStockPrices() {
+  stockItemRefs.forEach((refs, symbol) => {
+    const stock = findStock(symbol);
+    if (!stock) return;
+    const price = stockPrices[symbol];
     const change = ((price - stock.basePrice) / stock.basePrice) * 100;
-    const changeClass = change >= 0 ? 'positive' : 'negative';
+    refs.priceEl.textContent = `${price.toFixed(2)} ${t('sar')}`;
+    refs.changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+    refs.changeEl.className = `stock-change ${change >= 0 ? 'positive' : 'negative'}`;
+    refs.container.classList.toggle('selected', session.selectedStock === symbol);
+  });
+}
 
-    const div = document.createElement('div');
-    div.className = 'stock-item' + (session.selectedStock === stock.symbol ? ' selected' : '');
-    div.setAttribute('role', 'button');
-    div.setAttribute('tabindex', '0');
-    div.setAttribute('aria-label', `${lang === 'ar' ? stock.name : stock.nameEn} ${stock.symbol}`);
-    div.addEventListener('click', () => onSelectStock(stock.symbol));
-    div.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        onSelectStock(stock.symbol);
-      }
-    });
-
-    const header = document.createElement('div');
-    header.className = 'stock-header';
-
-    const left = document.createElement('div');
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'stock-name';
-    nameDiv.textContent = lang === 'ar' ? stock.name : stock.nameEn;
-    if (stock.isShariaCompliant) {
-      const badge = document.createElement('span');
-      badge.className = 'sharia-badge';
-      badge.title = t('shariaCompliant');
-      badge.textContent = ' 🕌';
-      nameDiv.appendChild(badge);
+/**
+ * Bind a single delegated click/keydown listener on the stock list container.
+ * Call once (the container itself is never replaced, only its children).
+ */
+export function bindStockListEvents() {
+  const listEl = document.getElementById('stock-list');
+  if (!listEl) return;
+  listEl.addEventListener('click', (e) => {
+    const item = e.target.closest('.stock-item');
+    if (item?.dataset.symbol) onSelectStock(item.dataset.symbol);
+  });
+  listEl.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const item = e.target.closest('.stock-item');
+    if (item?.dataset.symbol) {
+      e.preventDefault();
+      onSelectStock(item.dataset.symbol);
     }
-    const symbolDiv = document.createElement('div');
-    symbolDiv.className = 'stock-symbol';
-    symbolDiv.textContent = stock.symbol;
-    left.appendChild(nameDiv);
-    left.appendChild(symbolDiv);
-
-    const right = document.createElement('div');
-    right.style.textAlign = 'left';
-    const priceDiv = document.createElement('div');
-    priceDiv.className = 'stock-price';
-    priceDiv.textContent = `${price.toFixed(2)} ${t('sar')}`;
-    const changeDiv = document.createElement('div');
-    changeDiv.className = `stock-change ${changeClass}`;
-    changeDiv.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
-    right.appendChild(priceDiv);
-    right.appendChild(changeDiv);
-
-    header.appendChild(left);
-    header.appendChild(right);
-    div.appendChild(header);
-    listEl.appendChild(div);
   });
 }
 
@@ -233,29 +274,24 @@ export function updateStats() {
   return { pnlPercent, totalValue };
 }
 
+/**
+ * Update the challenge progress bars and grant any newly-earned rewards.
+ * @returns {{challenge1JustCompleted: boolean, challenge2JustCompleted: boolean}}
+ */
 export function updateChallenges({ pnlPercent, totalValue, showAlertFn }) {
   const progress1 = Math.min((pnlPercent / CHALLENGE_1_THRESHOLD) * 100, 100);
   const progress2 = Math.min((pnlPercent / CHALLENGE_2_THRESHOLD) * 100, 100);
   document.getElementById('challenge1-progress').style.width = `${progress1}%`;
   document.getElementById('challenge2-progress').style.width = `${progress2}%`;
 
-  // The reward is capital support, not profit: the new baseline must include it,
-  // otherwise the next tick reports the reward as P&L and cascades into the next challenge.
-  let rewardedBaseline = totalValue;
-  if (pnlPercent >= CHALLENGE_1_THRESHOLD && !gameState.challenge1Completed) {
-    gameState.challenge1Completed = true;
-    gameState.cash += CHALLENGE_1_REWARD;
-    rewardedBaseline += CHALLENGE_1_REWARD;
-    gameState.initialCapital = rewardedBaseline;
-    if (showAlertFn) showAlertFn(t('challenge1Complete'));
-  }
-  if (pnlPercent >= CHALLENGE_2_THRESHOLD && !gameState.challenge2Completed) {
-    gameState.challenge2Completed = true;
-    gameState.cash += CHALLENGE_2_REWARD;
-    rewardedBaseline += CHALLENGE_2_REWARD;
-    gameState.initialCapital = rewardedBaseline;
-    if (showAlertFn) showAlertFn(t('challenge2Complete'));
-  }
+  const { challenge1JustCompleted, challenge2JustCompleted } = evaluateChallenges({
+    pnlPercent,
+    totalValue,
+  });
+  if (challenge1JustCompleted && showAlertFn) showAlertFn(t('challenge1Complete'));
+  if (challenge2JustCompleted && showAlertFn) showAlertFn(t('challenge2Complete'));
+
+  return { challenge1JustCompleted, challenge2JustCompleted };
 }
 
 export function updateTicker() {

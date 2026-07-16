@@ -3,6 +3,28 @@ import { stocks } from '../data/stocks.js';
 import { gameState, stockPrices, priceHistory, activeNews } from '../state.js';
 import { isMarketOpen } from './market-hours.js';
 import { getScenarioMultipliers } from './scenarios.js';
+import { simElapsedMs } from './sim-time.js';
+
+/**
+ * One decay step for a temporary trade price-impact displacement.
+ * Reverts a `rate` fraction of the outstanding impact back toward neutral
+ * and shrinks `impact.value` by the same amount, mutating it in place.
+ *
+ * This must NOT re-add the full `impact.value` to drift every tick (the
+ * previous implementation did): since impact.value only shrinks 5%/tick,
+ * doing so summed a geometric series to ~20x the original impact instead of
+ * fading it out. Reverting a fraction each tick telescopes the total drift
+ * contribution back to roughly -impact.value as it decays to ~0.
+ *
+ * @param {{value: number}} impact
+ * @param {number} rate - fraction reverted per call, e.g. IMPACT_DECAY_RATE
+ * @returns {number} the drift correction to apply this tick
+ */
+export function decayPriceImpact(impact, rate) {
+  const reversion = impact.value * rate;
+  impact.value -= reversion;
+  return -reversion;
+}
 
 /**
  * Simulate a single Geometric Brownian Motion step for one stock.
@@ -20,7 +42,7 @@ function gbmStep(stock, currentPrice) {
 
   const relevantNews = activeNews.items.filter((n) => n.symbol === stock.symbol);
   relevantNews.forEach((news) => {
-    const elapsed = (Date.now() - news.timestamp) / 60000;
+    const elapsed = simElapsedMs(news.timestamp, gameState.speed) / 60000;
     if (elapsed < news.duration) {
       const remaining = news.impact - news.appliedImpact;
       const step = remaining / (news.duration - elapsed);
@@ -31,8 +53,7 @@ function gbmStep(stock, currentPrice) {
 
   const impact = gameState.priceImpacts[stock.symbol];
   if (impact) {
-    drift += impact.value;
-    impact.value *= 1 - IMPACT_DECAY_RATE;
+    drift += decayPriceImpact(impact, IMPACT_DECAY_RATE);
     if (Math.abs(impact.value) < 0.0001) {
       delete gameState.priceImpacts[stock.symbol];
     }

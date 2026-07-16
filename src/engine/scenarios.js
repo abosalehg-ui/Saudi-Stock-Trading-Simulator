@@ -2,6 +2,7 @@ import { gameState, stockPrices, saveGameState, savePriceState } from '../state.
 import { stocks } from '../data/stocks.js';
 import { findScenario } from '../data/scenarios.js';
 import { MIN_PRICE_RATIO, MAX_PRICE_RATIO } from '../config.js';
+import { simElapsedMs } from './sim-time.js';
 
 /**
  * Apply a scenario's initial shocks to current prices.
@@ -45,7 +46,7 @@ export function stopScenario() {
 export function getActiveScenario() {
   if (!gameState.activeScenario) return null;
   const { startedAt, durationMs } = gameState.activeScenario;
-  if (Date.now() - startedAt > durationMs) {
+  if (simElapsedMs(startedAt, gameState.speed) > durationMs) {
     gameState.activeScenario = null;
     saveGameState();
     return null;
