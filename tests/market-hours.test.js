@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { isMarketOpen, describeNextOpen } from '../src/engine/market-hours.js';
 
 function riyadhDate(year, month, day, hour, minute = 0) {
-  return new Date(`${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+03:00`);
+  return new Date(
+    `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+03:00`
+  );
 }
 
 describe('isMarketOpen', () => {

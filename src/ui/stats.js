@@ -36,12 +36,24 @@ export function renderStatsContent() {
   const grid = document.createElement('div');
   grid.className = 'stats-grid';
   const cards = [
-    { label: t('statsBestPnl'), value: `${personalStats.bestPnlPct.toFixed(2)}% (${personalStats.bestPnlAmount.toFixed(0)} ${sar})` },
-    { label: t('statsBestTrade'), value: `${personalStats.bestTradeProfit.toFixed(2)} ${sar}\n${symbolDisplay(personalStats.bestTradeSymbol)}` },
-    { label: t('statsWorstTrade'), value: `${personalStats.worstTradeLoss.toFixed(2)} ${sar}\n${symbolDisplay(personalStats.worstTradeSymbol)}` },
+    {
+      label: t('statsBestPnl'),
+      value: `${personalStats.bestPnlPct.toFixed(2)}% (${personalStats.bestPnlAmount.toFixed(0)} ${sar})`,
+    },
+    {
+      label: t('statsBestTrade'),
+      value: `${personalStats.bestTradeProfit.toFixed(2)} ${sar}\n${symbolDisplay(personalStats.bestTradeSymbol)}`,
+    },
+    {
+      label: t('statsWorstTrade'),
+      value: `${personalStats.worstTradeLoss.toFixed(2)} ${sar}\n${symbolDisplay(personalStats.worstTradeSymbol)}`,
+    },
     { label: t('statsTotalTrades'), value: String(personalStats.totalTrades) },
     { label: t('statsChallengesDone'), value: String(personalStats.challengesCompleted) },
-    { label: t('statsLifetimeCommission'), value: `${personalStats.lifetimeCommission.toFixed(2)} ${sar}` },
+    {
+      label: t('statsLifetimeCommission'),
+      value: `${personalStats.lifetimeCommission.toFixed(2)} ${sar}`,
+    },
     { label: t('statsSessionsPlayed'), value: String(personalStats.sessionsPlayed) },
   ];
   cards.forEach((c) => {

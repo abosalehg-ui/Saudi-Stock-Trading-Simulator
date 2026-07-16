@@ -156,6 +156,8 @@ function errorMessageFor(error) {
 function handleSubmitOrder(input) {
   const validation = validateOrder(input);
   if (!validation.ok) {
+    // @ts-expect-error tsc doesn't narrow this OrderValidationResult union in
+    // this call context; the discriminant check above makes it safe at runtime.
     showAlert(errorMessageFor(validation.error));
     return;
   }
@@ -222,7 +224,13 @@ function rebuildStaticLabels() {
   document.querySelectorAll('.stat-label').forEach((el, i) => {
     if (i < labels.length) el.textContent = labels[i];
   });
-  const panelTitles = [t('stockList'), t('myPortfolio'), t('pendingOrders'), t('financialTips'), t('challenges')];
+  const panelTitles = [
+    t('stockList'),
+    t('myPortfolio'),
+    t('pendingOrders'),
+    t('financialTips'),
+    t('challenges'),
+  ];
   document.querySelectorAll('.panel-title').forEach((el, i) => {
     if (i < panelTitles.length) el.textContent = panelTitles[i];
   });

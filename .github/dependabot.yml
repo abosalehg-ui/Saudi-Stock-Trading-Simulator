@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Runtime dependency (chart.js): kept separate from dev tooling so a
+  # user-facing library bump is never silently bundled with build-tool noise.
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    groups:
+      dev-dependencies:
+        dependency-type: 'development'
+    ignore:
+      - dependency-name: 'chart.js'
+        update-types: ['version-update:semver-major']
+
+  # GitHub Actions: the workflows currently pin action versions by major tag
+  # (e.g. actions/checkout@v4) rather than commit SHA, so Dependabot is the
+  # main defense against drifting silently out of date.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'

@@ -11,20 +11,24 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint \"src/**/*.js\" \"tests/**/*.js\"",
     "lint:fix": "eslint \"src/**/*.js\" \"tests/**/*.js\" --fix",
     "format": "prettier --write \"src/**/*.{js,css}\" \"tests/**/*.js\" \"index.html\""
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^1.6.0",
-    "eslint": "^8.57.0",
-    "jsdom": "^24.0.0",
-    "prettier": "^3.2.5",
-    "vite": "^5.2.0",
-    "vitest": "^1.6.0"
+    "@eslint/js": "^10.0.1",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.9.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
-    "chart.js": "^3.9.1"
+    "chart.js": "^4.5.1"
   },
   "engines": {
     "node": ">=18"

@@ -1,0 +1,32 @@
+{
+  // Type-checks the existing JSDoc annotations (no build output, no runtime
+  // change) — catches stale/incomplete type docs and real shape mismatches
+  // at near-zero cost on top of the JSDoc investment already in the codebase.
+  //
+  // Scope is deliberately the business-logic layer (engine/state/data/utils),
+  // the same boundary vitest.config.js already draws for coverage. The
+  // excluded UI/DOM-orchestration layer is all `document.getElementById(...)`
+  // against a static, known index.html — TypeScript's generic `HTMLElement`
+  // return type doesn't know the concrete subtype (input vs canvas vs...),
+  // so checking it here would mean dozens of casts with no real bug-catching
+  // value, not "near zero cost". Loosened flags (non-strict, no null checks)
+  // for the same reason: this is JSDoc validation, not a strict-TS migration.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "noUnusedLocals": false,
+    "resolveJsonModule": true,
+    "isolatedModules": true
+  },
+  "include": ["src/**/*.js"],
+  "exclude": ["node_modules", "dist", "src/main.js", "src/ui/**"]
+}

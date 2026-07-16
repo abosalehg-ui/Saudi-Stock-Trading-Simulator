@@ -52,7 +52,9 @@ describe('loadGameState', () => {
     localStorage.setItem(
       STORAGE_KEY,
       JSON.stringify({
-        pendingOrders: [{ symbol: '1180', type: 'buy', kind: 'limit', quantity: 5, limitPrice: 80 }],
+        pendingOrders: [
+          { symbol: '1180', type: 'buy', kind: 'limit', quantity: 5, limitPrice: 80 },
+        ],
       })
     );
     loadGameState();

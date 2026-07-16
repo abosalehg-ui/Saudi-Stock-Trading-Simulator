@@ -6,7 +6,7 @@ import { simElapsedMs } from './sim-time.js';
 
 /**
  * Apply a scenario's initial shocks to current prices.
- * @param {object} scenario
+ * @param {import('../data/scenarios.js').Scenario} scenario
  */
 function applyInitialShocks(scenario) {
   if (!scenario.initialShocks) return;

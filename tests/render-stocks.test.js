@@ -53,15 +53,15 @@ describe('updateStockPrices', () => {
     const symbol = stocks[0].symbol;
     session.selectedStock = symbol;
     updateStockPrices();
-    expect(document.querySelector(`.stock-item[data-symbol="${symbol}"]`).classList.contains('selected')).toBe(
-      true
-    );
+    expect(
+      document.querySelector(`.stock-item[data-symbol="${symbol}"]`).classList.contains('selected')
+    ).toBe(true);
 
     session.selectedStock = null;
     updateStockPrices();
-    expect(document.querySelector(`.stock-item[data-symbol="${symbol}"]`).classList.contains('selected')).toBe(
-      false
-    );
+    expect(
+      document.querySelector(`.stock-item[data-symbol="${symbol}"]`).classList.contains('selected')
+    ).toBe(false);
   });
 
   it('is a no-op for stocks not currently rendered (filtered out)', () => {

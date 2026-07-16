@@ -103,7 +103,8 @@ export function attachTourListeners() {
   document.addEventListener('keydown', (e) => {
     if (document.getElementById('tour-overlay').style.display !== 'block') return;
     if (e.key === 'Escape') endTour();
-    else if (e.key === 'ArrowRight' || e.key === 'Enter') document.getElementById('tour-next').click();
+    else if (e.key === 'ArrowRight' || e.key === 'Enter')
+      document.getElementById('tour-next').click();
     else if (e.key === 'ArrowLeft') document.getElementById('tour-prev').click();
   });
 

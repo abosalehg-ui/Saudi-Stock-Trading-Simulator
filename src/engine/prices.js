@@ -1,4 +1,9 @@
-import { IMPACT_DECAY_RATE, MIN_PRICE_RATIO, MAX_PRICE_RATIO, PRICE_HISTORY_MAX_POINTS } from '../config.js';
+import {
+  IMPACT_DECAY_RATE,
+  MIN_PRICE_RATIO,
+  MAX_PRICE_RATIO,
+  PRICE_HISTORY_MAX_POINTS,
+} from '../config.js';
 import { stocks } from '../data/stocks.js';
 import { gameState, stockPrices, priceHistory, activeNews } from '../state.js';
 import { isMarketOpen } from './market-hours.js';
@@ -28,7 +33,7 @@ export function decayPriceImpact(impact, rate) {
 
 /**
  * Simulate a single Geometric Brownian Motion step for one stock.
- * @param {object} stock - Stock definition
+ * @param {import('../data/stocks.js').Stock} stock - Stock definition
  * @param {number} currentPrice - The previous price
  * @returns {number} Next price (bounded)
  */

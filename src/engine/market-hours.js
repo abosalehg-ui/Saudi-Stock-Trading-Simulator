@@ -60,9 +60,8 @@ export function describeNextOpen(now = new Date(), lang = 'ar') {
     return `${lang === 'ar' ? 'اليوم' : 'Today'} ${MARKET_OPEN_HOUR}:00`;
   }
 
-  let next = weekday;
   for (let i = 1; i <= 7; i++) {
-    next = (weekday + i) % 7;
+    const next = (weekday + i) % 7;
     if (MARKET_OPEN_DAYS.includes(next)) {
       return `${dayNames[next]} ${MARKET_OPEN_HOUR}:00`;
     }

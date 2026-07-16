@@ -89,9 +89,7 @@ export function macd(prices, fast = 12, slow = 26, signal = 9) {
   const macdValues = macdLine.filter((v) => v !== null);
   const signalRaw = ema(macdValues, signal);
   const offset = macdLine.length - macdValues.length;
-  const signalLine = macdLine.map((_, i) =>
-    i >= offset ? signalRaw[i - offset] ?? null : null
-  );
+  const signalLine = macdLine.map((_, i) => (i >= offset ? (signalRaw[i - offset] ?? null) : null));
   const histogram = macdLine.map((v, i) =>
     v !== null && signalLine[i] !== null ? v - signalLine[i] : null
   );
