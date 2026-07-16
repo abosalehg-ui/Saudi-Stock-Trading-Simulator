@@ -75,6 +75,7 @@ export function renderStockDetails(symbol) {
       <label><input type="checkbox" id="ind-sma20"> SMA 20</label>
       <label><input type="checkbox" id="ind-sma50"> SMA 50</label>
       <label><input type="checkbox" id="ind-rsi"> RSI</label>
+      <label><input type="checkbox" id="ind-macd"> MACD</label>
     </div>
   `;
 
@@ -108,6 +109,7 @@ export function renderStockDetails(symbol) {
       sma20: document.getElementById('ind-sma20').checked,
       sma50: document.getElementById('ind-sma50').checked,
       rsi: document.getElementById('ind-rsi').checked,
+      macd: document.getElementById('ind-macd').checked,
     };
     if (useCandles) {
       renderCandlestick('price-chart', symbol);
@@ -119,6 +121,7 @@ export function renderStockDetails(symbol) {
   document.getElementById('ind-sma20').addEventListener('change', rerender);
   document.getElementById('ind-sma50').addEventListener('change', rerender);
   document.getElementById('ind-rsi').addEventListener('change', rerender);
+  document.getElementById('ind-macd').addEventListener('change', rerender);
 
   renderChart(symbol);
 }

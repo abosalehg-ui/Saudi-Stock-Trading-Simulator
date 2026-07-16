@@ -571,14 +571,13 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 - [ ] **تنبيهات الأسعار**: إشعارات عند وصول السعر لحد معين
 
 ### مخطط له
-- [ ] **مؤشر MACD على الرسم البياني** (الخوارزمية جاهزة ومختبرة في `src/engine/indicators.js`)
 - [ ] **توزيعات الأرباح**: محاكاة توزيعات نقدية
 - [ ] **التقارير المالية**: ملخص شهري للأداء
 - [ ] **الوضع الفاتح**: Light Mode
 - [ ] **تعدد العملات**: دولار، يورو، الخ
 - [ ] **أسواق عالمية**: NYSE, NASDAQ
 
-> ملاحظة: وقف الخسارة، مؤشرات RSI/SMA، وتصدير CSV أصبحت ميزات منفَّذة منذ الإصدار 2.0.
+> ملاحظة: وقف الخسارة، مؤشرات RSI/SMA، تصدير CSV، ومؤشر MACD على الرسم البياني أصبحت جميعها ميزات منفَّذة.
 
 ---
 
@@ -1103,14 +1102,13 @@ Contributions are welcome! If you have suggestions or improvements:
 - [ ] **Price Alerts**: Notifications when price reaches limit
 
 ### Planned
-- [ ] **MACD on the chart** (the indicator itself is implemented and tested in `src/engine/indicators.js`)
 - [ ] **Dividends**: Cash distribution simulation
 - [ ] **Financial Reports**: Monthly performance summary
 - [ ] **Light Mode**: Light theme
 - [ ] **Multi-Currency**: Dollar, Euro, etc.
 - [ ] **Global Markets**: NYSE, NASDAQ
 
-> Note: stop-loss orders, RSI/SMA indicators, and CSV export shipped in v2.0.
+> Note: stop-loss orders, RSI/SMA indicators, CSV export, and MACD on the chart have all shipped.
 
 ---
 
