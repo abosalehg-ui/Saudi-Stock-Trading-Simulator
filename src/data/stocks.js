@@ -1,14 +1,18 @@
 /**
  * Saudi (Tadawul) stocks with simulation parameters.
  *
+ * الرموز والأسماء تقريبية لأغراض تعليمية وليست بديلاً عن بيانات تداول الرسمية.
+ * عند تغيير أو حذف رمز موجود يجب رفع PRICE_DATA_VERSION في src/state.js حتى
+ * لا تلتصق الأسعار المحفوظة برمز أعيد استخدامه لشركة مختلفة.
+ *
  * isShariaCompliant: تقدير مبدئي بناءً على القطاع — البنوك التقليدية والتأمين التقليدي
  * (Allianz, MedGulf...) وُضعت كـ false، والبنوك الإسلامية والشركات الأخرى وُضعت كـ true.
  * TODO: قبل أي استخدام إنتاجي، يجب مراجعة كل سهم وفقاً للمعايير الشرعية الرسمية
  * (مثل قائمة المؤشر الشرعي للسوق المالية السعودية أو AAOIFI).
  */
 export const stocks = [
-  { symbol: '1180', name: 'الراجحي', nameEn: 'Al Rajhi', sector: 'banking', basePrice: 85.5, mu: 0.0002, sigma: 0.015, isShariaCompliant: true },
-  { symbol: '1120', name: 'الأهلي', nameEn: 'Al Ahli', sector: 'banking', basePrice: 32.4, mu: 0.0001, sigma: 0.012, isShariaCompliant: false },
+  { symbol: '1120', name: 'الراجحي', nameEn: 'Al Rajhi', sector: 'banking', basePrice: 85.5, mu: 0.0002, sigma: 0.015, isShariaCompliant: true },
+  { symbol: '1180', name: 'الأهلي', nameEn: 'SNB (Al Ahli)', sector: 'banking', basePrice: 32.4, mu: 0.0001, sigma: 0.012, isShariaCompliant: false },
   { symbol: '1010', name: 'الرياض', nameEn: 'Riyad', sector: 'banking', basePrice: 28.3, mu: 0.0001, sigma: 0.013, isShariaCompliant: false },
   { symbol: '1050', name: 'الجزيرة', nameEn: 'Al Jazira', sector: 'banking', basePrice: 16.8, mu: 0.0001, sigma: 0.014, isShariaCompliant: true },
   { symbol: '1080', name: 'العربي', nameEn: 'Al Arabi', sector: 'banking', basePrice: 34.2, mu: 0.0001, sigma: 0.012, isShariaCompliant: false },
@@ -21,7 +25,7 @@ export const stocks = [
   { symbol: '2010', name: 'سابك', nameEn: 'Sabic', sector: 'petrochemical', basePrice: 98.2, mu: 0.0003, sigma: 0.018, isShariaCompliant: true },
   { symbol: '2020', name: 'سابك للمغذيات', nameEn: 'Sabic Nutrients', sector: 'petrochemical', basePrice: 124.5, mu: 0.0002, sigma: 0.02, isShariaCompliant: true },
   { symbol: '2170', name: 'اللجين', nameEn: 'Al Lujain', sector: 'petrochemical', basePrice: 42.8, mu: 0.0002, sigma: 0.019, isShariaCompliant: true },
-  { symbol: '2220', name: 'معادن', nameEn: 'Maaden', sector: 'petrochemical', basePrice: 47.3, mu: 0.0003, sigma: 0.021, isShariaCompliant: true },
+  { symbol: '2210', name: 'نماء للكيماويات', nameEn: 'Nama Chemicals', sector: 'petrochemical', basePrice: 47.3, mu: 0.0003, sigma: 0.021, isShariaCompliant: true },
   { symbol: '2090', name: 'الجبيل', nameEn: 'Al Jubail', sector: 'petrochemical', basePrice: 24.6, mu: 0.0001, sigma: 0.017, isShariaCompliant: true },
   { symbol: '2030', name: 'سافكو', nameEn: 'Safco', sector: 'petrochemical', basePrice: 112.8, mu: 0.0002, sigma: 0.018, isShariaCompliant: true },
   { symbol: '2350', name: 'كيمانول', nameEn: 'Chemanol', sector: 'petrochemical', basePrice: 15.4, mu: 0.0001, sigma: 0.016, isShariaCompliant: true },
@@ -40,7 +44,7 @@ export const stocks = [
   { symbol: '4190', name: 'جرير', nameEn: 'Jarir', sector: 'retail', basePrice: 142.6, mu: 0.0003, sigma: 0.015, isShariaCompliant: true },
   { symbol: '4191', name: 'أبو معطي', nameEn: 'Abu Muti', sector: 'retail', basePrice: 34.8, mu: 0.0001, sigma: 0.016, isShariaCompliant: true },
   { symbol: '4240', name: 'النهدي', nameEn: 'Al Nahdi', sector: 'retail', basePrice: 87.5, mu: 0.0004, sigma: 0.019, isShariaCompliant: true },
-  { symbol: '4280', name: 'المواساة', nameEn: 'Al Mouwasat', sector: 'retail', basePrice: 156.2, mu: 0.0003, sigma: 0.017, isShariaCompliant: true },
+  { symbol: '4002', name: 'المواساة', nameEn: 'Mouwasat', sector: 'healthcare', basePrice: 156.2, mu: 0.0003, sigma: 0.017, isShariaCompliant: true },
   { symbol: '4031', name: 'الدوائية', nameEn: 'Al Dawaeya', sector: 'retail', basePrice: 64.3, mu: 0.0002, sigma: 0.015, isShariaCompliant: true },
 
   { symbol: '8010', name: 'التعاونية', nameEn: 'Tawuniya', sector: 'insurance', basePrice: 42.1, mu: 0.0001, sigma: 0.016, isShariaCompliant: true },
@@ -62,9 +66,9 @@ export const stocks = [
   { symbol: '3091', name: 'أسمنت الجوف', nameEn: 'Jouf Cement', sector: 'cement', basePrice: 14.2, mu: 0.0001, sigma: 0.015, isShariaCompliant: true },
 
   { symbol: '2222', name: 'أرامكو', nameEn: 'Aramco', sector: 'energy', basePrice: 28.45, mu: 0.0002, sigma: 0.012, isShariaCompliant: true },
-  { symbol: '4030', name: 'الكهرباء', nameEn: 'Electricity', sector: 'energy', basePrice: 23.8, mu: 0.0001, sigma: 0.011, isShariaCompliant: true },
-  { symbol: '2082', name: 'أكوا باور', nameEn: 'Aqua Power', sector: 'energy', basePrice: 156.2, mu: 0.0003, sigma: 0.019, isShariaCompliant: true },
-  { symbol: '5110', name: 'الكابلات', nameEn: 'Cables', sector: 'energy', basePrice: 34.6, mu: 0.0001, sigma: 0.014, isShariaCompliant: true },
+  { symbol: '5110', name: 'الكهرباء', nameEn: 'Saudi Electricity', sector: 'energy', basePrice: 23.8, mu: 0.0001, sigma: 0.011, isShariaCompliant: true },
+  { symbol: '2082', name: 'أكوا باور', nameEn: 'ACWA Power', sector: 'energy', basePrice: 156.2, mu: 0.0003, sigma: 0.019, isShariaCompliant: true },
+  { symbol: '2110', name: 'الكابلات السعودية', nameEn: 'Saudi Cable', sector: 'industrial', basePrice: 34.6, mu: 0.0001, sigma: 0.014, isShariaCompliant: true },
 
   { symbol: '4300', name: 'دار الأركان', nameEn: 'Dar Al Arkan', sector: 'realestate', basePrice: 12.4, mu: 0.0002, sigma: 0.018, isShariaCompliant: true },
   { symbol: '4320', name: 'الأندلس', nameEn: 'Al Andalus', sector: 'realestate', basePrice: 28.7, mu: 0.0001, sigma: 0.016, isShariaCompliant: true },
@@ -75,13 +79,13 @@ export const stocks = [
   { symbol: '4250', name: 'جبل عمر', nameEn: 'Jabal Omar', sector: 'realestate', basePrice: 24.8, mu: 0.0002, sigma: 0.017, isShariaCompliant: true },
 
   { symbol: '4110', name: 'بدجت السعودية', nameEn: 'Budget', sector: 'transport', basePrice: 67.4, mu: 0.0002, sigma: 0.015, isShariaCompliant: true },
-  { symbol: '4260', name: 'بوبا العربية', nameEn: 'Bupa Arabia', sector: 'transport', basePrice: 134.8, mu: 0.0003, sigma: 0.016, isShariaCompliant: true },
+  { symbol: '8210', name: 'بوبا العربية', nameEn: 'Bupa Arabia', sector: 'insurance', basePrice: 134.8, mu: 0.0003, sigma: 0.016, isShariaCompliant: true },
   { symbol: '2190', name: 'سيسكو', nameEn: 'SISCO', sector: 'transport', basePrice: 42.3, mu: 0.0001, sigma: 0.014, isShariaCompliant: true },
   { symbol: '4261', name: 'ذيب', nameEn: 'Dheeb', sector: 'transport', basePrice: 58.9, mu: 0.0002, sigma: 0.017, isShariaCompliant: true },
 
   { symbol: '4210', name: 'أبحر', nameEn: 'Abhur', sector: 'media', basePrice: 26.4, mu: 0.0001, sigma: 0.015, isShariaCompliant: true },
   { symbol: '4070', name: 'الأبحاث', nameEn: 'Al Abhath', sector: 'media', basePrice: 189.2, mu: 0.0002, sigma: 0.014, isShariaCompliant: true },
-  { symbol: '4200', name: 'الدريس', nameEn: 'Al Drees', sector: 'media', basePrice: 92.7, mu: 0.0003, sigma: 0.016, isShariaCompliant: true },
+  { symbol: '4200', name: 'الدريس', nameEn: 'Aldrees', sector: 'retail', basePrice: 92.7, mu: 0.0003, sigma: 0.016, isShariaCompliant: true },
 
   { symbol: '4170', name: 'شمس', nameEn: 'Shams', sector: 'hotels', basePrice: 74.3, mu: 0.0002, sigma: 0.017, isShariaCompliant: true },
   { symbol: '4164', name: 'الشرقية', nameEn: 'Sharqiya', sector: 'hotels', basePrice: 38.5, mu: 0.0001, sigma: 0.016, isShariaCompliant: true },

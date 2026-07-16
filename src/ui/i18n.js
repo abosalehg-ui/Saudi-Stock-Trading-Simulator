@@ -1,3 +1,5 @@
+import { LANG_STORAGE_KEY } from '../config.js';
+
 export const translations = {
   ar: {
     sar: 'ريال',
@@ -51,6 +53,7 @@ export const translations = {
     insufficientShares: 'لا تمتلك عدداً كافياً من الأسهم',
     orderAdded: 'تم إضافة الأمر بنجاح! سيتم تنفيذه عند وصول السعر المحدد.',
     stopLossAdded: 'تم إضافة أمر وقف الخسارة بنجاح!',
+    pendingOrdersAutoCancelled: 'تعذر تنفيذ أمر معلق واحد أو أكثر (رصيد أو أسهم غير كافية) وتم إلغاؤه تلقائياً.',
     stopLossSellOnly: 'أوامر وقف الخسارة متاحة للبيع فقط، ويجب امتلاك السهم أولاً.',
     purchaseSuccess: 'تم الشراء بنجاح!',
     sellSuccess: 'تم البيع بنجاح!',
@@ -101,7 +104,7 @@ export const translations = {
     tourStep2Title: 'لوحة الإحصائيات',
     tourStep2Body: 'هنا تظهر رصيدك النقدي، قيمة محفظتك، إجمالي أصولك، والربح أو الخسارة المتراكمة.',
     tourStep3Title: 'قائمة الأسهم',
-    tourStep3Body: 'أكثر من 100 سهم سعودي حقيقي. انقر على أي سهم لرؤية تفاصيله ورسمه البياني وتنفيذ صفقة.',
+    tourStep3Body: 'أكثر من 90 سهماً سعودياً حقيقياً. انقر على أي سهم لرؤية تفاصيله ورسمه البياني وتنفيذ صفقة.',
     tourStep4Title: 'حالة السوق والمرشحات',
     tourStep4Body: 'ساعات تداول حقيقية (الأحد-الخميس 10ص-3م). يمكنك تفعيل وضع 24/7 للتدريب، وتصفية الأسهم الشرعية.',
     tourStep5Title: 'التحديات والتعلم',
@@ -180,6 +183,7 @@ export const translations = {
     insufficientShares: 'Insufficient shares',
     orderAdded: 'Order added successfully! It will be executed when price reaches the limit.',
     stopLossAdded: 'Stop-loss order added successfully!',
+    pendingOrdersAutoCancelled: 'One or more pending orders could not be executed (insufficient funds/shares) and were automatically cancelled.',
     stopLossSellOnly: 'Stop-loss orders are sell-only and require owning the stock first.',
     purchaseSuccess: 'Purchase successful!',
     sellSuccess: 'Sale successful!',
@@ -230,7 +234,7 @@ export const translations = {
     tourStep2Title: 'Stats dashboard',
     tourStep2Body: 'Here you see your cash, portfolio value, total assets, and running P&L.',
     tourStep3Title: 'Stock list',
-    tourStep3Body: 'Over 100 real Saudi stocks. Click any one to see details, the chart, and place a trade.',
+    tourStep3Body: 'Over 90 real Saudi stocks. Click any one to see details, the chart, and place a trade.',
     tourStep4Title: 'Market status & filters',
     tourStep4Body: 'Real Saudi market hours (Sun-Thu, 10:00-15:00). You can enable 24/7 mode for practice, and filter Sharia-compliant stocks.',
     tourStep5Title: 'Challenges & learning',
@@ -267,6 +271,22 @@ export function getLang() {
 
 export function setLang(lang) {
   currentLang = lang === 'en' ? 'en' : 'ar';
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+  } catch {
+    // localStorage unavailable; the preference just won't persist
+  }
+  return currentLang;
+}
+
+/** Restore the saved language preference (defaults to Arabic). */
+export function initLang() {
+  try {
+    const saved = localStorage.getItem(LANG_STORAGE_KEY);
+    if (saved === 'en' || saved === 'ar') currentLang = saved;
+  } catch {
+    // localStorage unavailable; keep the default
+  }
   return currentLang;
 }
 

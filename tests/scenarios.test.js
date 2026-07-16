@@ -47,4 +47,20 @@ describe('scenarios', () => {
     gameState.activeScenario.startedAt = Date.now() - 100 * 60 * 1000;
     expect(getActiveScenario()).toBeNull();
   });
+
+  it('expiry scales with sim speed: same elapsed real time expires sooner at higher speed', () => {
+    // oil_shock runs 8 minutes. 2 real minutes in: still active at 1x,
+    // but 20 sim-minutes have passed at 10x, so it should already be over.
+    startScenario('oil_shock');
+    const startedAt = Date.now() - 2 * 60 * 1000;
+
+    gameState.speed = 1;
+    gameState.activeScenario.startedAt = startedAt;
+    expect(getActiveScenario()).not.toBeNull();
+
+    startScenario('oil_shock');
+    gameState.speed = 10;
+    gameState.activeScenario.startedAt = startedAt;
+    expect(getActiveScenario()).toBeNull();
+  });
 });

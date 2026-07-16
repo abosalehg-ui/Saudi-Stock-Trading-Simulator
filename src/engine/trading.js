@@ -181,11 +181,21 @@ export function addPendingOrder(order) {
 
 /**
  * Check pending orders against current prices and execute matches.
- * @returns {number} count of executed orders
+ *
+ * An order whose trigger condition is met but whose execution then fails
+ * (e.g. two pending orders competing for the same unreserved cash or shares)
+ * is dropped rather than re-queued: retrying it every tick forever would
+ * leave a "pending" order the user believes is live but that can never
+ * actually fill. The caller is expected to surface `cancelled` to the user.
+ *
+ * @returns {{ executed: number, cancelled: Array<object> }}
  */
 export function checkPendingOrders() {
-  if (!gameState.pendingOrders || gameState.pendingOrders.length === 0) return 0;
+  if (!gameState.pendingOrders || gameState.pendingOrders.length === 0) {
+    return { executed: 0, cancelled: [] };
+  }
   const remaining = [];
+  const cancelled = [];
   let executed = 0;
 
   for (const order of gameState.pendingOrders) {
@@ -211,12 +221,14 @@ export function checkPendingOrders() {
         executed += 1;
         continue;
       }
+      cancelled.push(order);
+      continue;
     }
     remaining.push(order);
   }
 
   gameState.pendingOrders = remaining;
-  return executed;
+  return { executed, cancelled };
 }
 
 /**
