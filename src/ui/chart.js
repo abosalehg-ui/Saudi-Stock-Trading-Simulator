@@ -2,13 +2,13 @@ import Chart from 'chart.js/auto';
 import { priceHistory, session } from '../state.js';
 import { getLang } from './i18n.js';
 import { formatTimeShort } from '../utils/dates.js';
-import { sma, rsi } from '../engine/indicators.js';
+import { sma, rsi, macd } from '../engine/indicators.js';
 
 /**
  * Render a price chart for a stock with optional indicator overlays.
  *
  * @param {string} symbol
- * @param {{ sma20?: boolean, sma50?: boolean, rsi?: boolean }} indicators
+ * @param {{ sma20?: boolean, sma50?: boolean, rsi?: boolean, macd?: boolean }} indicators
  */
 export function renderChart(symbol, indicators = {}) {
   const canvas = document.getElementById('price-chart');
@@ -70,6 +70,40 @@ export function renderChart(symbol, indicators = {}) {
       yAxisID: 'y2',
     });
   }
+  if (indicators.macd) {
+    const { macd: macdLine, signal, histogram } = macd(prices, 12, 26, 9);
+    datasets.push({
+      type: 'bar',
+      label: 'MACD Histogram',
+      data: histogram,
+      backgroundColor: histogram.map((v) => (v !== null && v >= 0 ? '#2ecc71' : '#e74c3c')),
+      yAxisID: 'y3',
+      order: 3,
+    });
+    datasets.push({
+      label: 'MACD',
+      data: macdLine,
+      borderColor: '#3498db',
+      backgroundColor: 'transparent',
+      pointRadius: 0,
+      borderWidth: 2,
+      fill: false,
+      yAxisID: 'y3',
+      order: 1,
+    });
+    datasets.push({
+      label: 'Signal',
+      data: signal,
+      borderColor: '#f1c40f',
+      backgroundColor: 'transparent',
+      pointRadius: 0,
+      borderWidth: 2,
+      borderDash: [4, 3],
+      fill: false,
+      yAxisID: 'y3',
+      order: 2,
+    });
+  }
 
   const scales = {
     y: {
@@ -92,6 +126,17 @@ export function renderChart(symbol, indicators = {}) {
       grid: { drawOnChartArea: false },
     };
   }
+  if (indicators.macd) {
+    // MACD/signal are unbounded (unlike RSI's fixed 0-100 range), so this gets
+    // its own axis rather than sharing y2 — Chart.js offsets stacked 'right'
+    // axes automatically when both are active at once.
+    scales.y3 = {
+      type: 'linear',
+      position: 'right',
+      ticks: { color: '#3498db' },
+      grid: { drawOnChartArea: false },
+    };
+  }
 
   session.chart = new Chart(canvas, {
     type: 'line',
@@ -102,7 +147,7 @@ export function renderChart(symbol, indicators = {}) {
       interaction: { intersect: false, mode: 'index' },
       plugins: {
         legend: {
-          display: indicators.sma20 || indicators.sma50 || indicators.rsi,
+          display: indicators.sma20 || indicators.sma50 || indicators.rsi || indicators.macd,
           labels: { color: '#e0e0e0' },
         },
       },
