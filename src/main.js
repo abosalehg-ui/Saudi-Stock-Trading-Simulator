@@ -71,6 +71,7 @@ import {
   syncBottomNav,
 } from './ui/responsive.js';
 import { listSectors } from './engine/stock-filter.js';
+import { initTheme, cycleThemeMode, getThemeMode } from './ui/theme.js';
 import { stocks } from './data/stocks.js';
 import { openGlossary, attachGlossaryListeners } from './ui/glossary.js';
 import { openStatsModal, closeStatsModal } from './ui/stats.js';
@@ -143,6 +144,15 @@ function selectStock(symbol) {
   // Above 1024px the details render into the always-visible side panel, so
   // there is no dialog to open — and none to trap focus in either.
   if (!isDesktopLayout()) openStockModal();
+}
+
+/**
+ * The charts draw onto a canvas, so unlike everything else on the page they
+ * don't re-theme when the CSS custom properties change — they have to be
+ * drawn again.
+ */
+function repaintThemedCanvases() {
+  if (session.selectedStock) renderStockDetails(session.selectedStock);
 }
 
 /**
@@ -329,6 +339,7 @@ function rebuildStaticLabels() {
 
   const search = document.getElementById('stock-search');
   if (search) search.placeholder = t('searchStocks');
+  syncThemeToggle();
   // The bottom-nav labels carry the emoji already, so strip the one baked into
   // the tab translations rather than showing it twice.
   ['market', 'portfolio', 'orders'].forEach((name) => {
@@ -336,6 +347,24 @@ function rebuildStaticLabels() {
     if (el) el.textContent = el.textContent.replace(/^\P{L}+/u, '');
   });
   buildListFilterOptions();
+}
+
+const THEME_ICONS = { system: '🌓', light: '☀️', dark: '🌙' };
+const THEME_LABEL_KEYS = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
+
+/**
+ * Mirror the current theme mode onto the toggle. The icon alone would leave
+ * the state unreadable to a screen reader, so the label carries it too.
+ */
+function syncThemeToggle() {
+  const btn = document.getElementById('theme-toggle');
+  if (!btn) return;
+  const mode = getThemeMode();
+  const label = t(THEME_LABEL_KEYS[mode]);
+  const icon = document.getElementById('theme-toggle-icon');
+  if (icon) icon.textContent = THEME_ICONS[mode];
+  btn.setAttribute('aria-label', label);
+  btn.setAttribute('title', label);
 }
 
 /**
@@ -416,6 +445,11 @@ const SECONDARY_MODAL_IDS = ['glossary-modal', 'stats-modal', 'learning-modal', 
 function attachEventListeners() {
   bindStockListEvents();
   document.getElementById('lang-toggle').addEventListener('click', handleToggleLanguage);
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    cycleThemeMode();
+    syncThemeToggle();
+    repaintThemedCanvases();
+  });
   document.getElementById('reset-btn').addEventListener('click', resetGame);
   document.getElementById('export-csv-btn').addEventListener('click', () => {
     if (gameState.transactions.length === 0) {
@@ -508,6 +542,7 @@ function attachEventListeners() {
 
 function init() {
   initLang();
+  initTheme({ onChange: repaintThemedCanvases });
   loadGameState();
   loadStats();
   loadPriceState();

@@ -9,14 +9,23 @@
          style.width / style.display programmatically. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"
     />
     <meta
       name="description"
       content="محاكي تداول الأسهم السعودية - تعلم سوق تداول دون مخاطر مالية"
     />
-    <!-- Colours the browser UI on mobile to match the page background. -->
+    <!-- Colours the browser UI on mobile to match the page background. Kept in
+         step with the active theme by src/ui/theme.js, which reads --bg back
+         rather than carrying a second copy of the value. -->
     <meta name="theme-color" content="#0b1220" />
+    <!-- Installable as a home-screen app. manifest-src had to be added to the
+         CSP above: it falls back to default-src, which is 'none' here, so the
+         manifest would otherwise be blocked. -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="تداول" />
     <title>تداول - محاكاة سوق الأسهم السعودي</title>
     <link
       rel="icon"
@@ -44,9 +53,19 @@
           <span class="brand-name">تداول</span>
           <span class="brand-tag" id="brand-tag">محاكي سوق الأسهم السعودي</span>
         </span>
-        <button id="lang-toggle" class="btn btn-ghost lang-btn" aria-label="Toggle language">
-          E
-        </button>
+        <div class="app-bar-actions">
+          <button
+            id="theme-toggle"
+            class="btn btn-ghost icon-btn"
+            aria-label="تبديل السمة"
+            title="تبديل السمة"
+          >
+            <span id="theme-toggle-icon" aria-hidden="true">🌓</span>
+          </button>
+          <button id="lang-toggle" class="btn btn-ghost icon-btn" aria-label="Toggle language">
+            E
+          </button>
+        </div>
       </div>
     </header>
 

@@ -147,6 +147,11 @@ export const translations = {
     candleHigh: 'الأعلى',
     candleLow: 'الأدنى',
     candleClose: 'الإغلاق',
+    // Theme
+    themeToggle: 'تبديل السمة',
+    themeSystem: 'السمة: حسب النظام',
+    themeLight: 'السمة: فاتحة',
+    themeDark: 'السمة: داكنة',
     // Stock list toolbar
     searchStocks: 'ابحث باسم السهم أو رمزه…',
     searchStocksLabel: 'بحث في قائمة الأسهم',
@@ -328,6 +333,11 @@ export const translations = {
     candleHigh: 'High',
     candleLow: 'Low',
     candleClose: 'Close',
+    // Theme
+    themeToggle: 'Toggle theme',
+    themeSystem: 'Theme: follow system',
+    themeLight: 'Theme: light',
+    themeDark: 'Theme: dark',
     // Stock list toolbar
     searchStocks: 'Search by name or symbol…',
     searchStocksLabel: 'Search the stock list',

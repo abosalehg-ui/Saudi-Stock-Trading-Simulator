@@ -9,6 +9,10 @@
    is intended to sit on, and all of them clear WCAG AA (4.5 for body text).
    ========================================================================== */
 :root {
+  /* Tells the browser to render form controls, scrollbars and the caret in the
+     matching scheme. Overridden per theme below. */
+  color-scheme: dark;
+
   /* Surfaces — elevation rises with the ramp. The old palette went
      page #1a1a2e -> panel #0f3460 -> item #1a1a2e, i.e. nested content fell
      back to the page colour (1.36:1 against its own panel), so cards read as
@@ -18,7 +22,11 @@
   --surface-2: #18253c;
   --surface-3: #22314d;
   --border: #24344d;
-  --border-strong: #33455f;
+  /* Carries the visual boundary of inputs, selects and the switch track, so it
+     has to clear 3.0 against the surfaces on both sides of that edge (WCAG
+     1.4.11). The previous #33455f measured 1.58 against --surface-2; this is
+     3.10 there and 3.47 against --surface-1. */
+  --border-strong: #5a7196;
 
   /* Text */
   --text: #e8eef7; /* 14.76 on --surface-1 */
@@ -67,7 +75,156 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45);
 
+  /* Scrim behind modals, sheets and the tour spotlight. Stays dark in both
+     themes — a light scrim over light content reads as a rendering glitch
+     rather than as "the layer beneath is inactive". */
+  --scrim: rgba(3, 7, 18, 0.6);
+  --scrim-strong: rgba(3, 7, 18, 0.75);
+
   --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ==========================================================================
+   Light theme
+   --------------------------------------------------------------------------
+   Declared twice on purpose: once for "the OS asks for light and the user has
+   not overridden it", once for an explicit choice. Plain CSS has no way to
+   share one block across a media query and a selector, and the alternatives
+   both cost more than the repetition — light-dark() leaves custom properties
+   unresolved for getComputedStyle (which is how the canvas charts read the
+   palette), and resolving the scheme in JS would flash dark before the script
+   runs, since the strict CSP rules out an inline head script.
+
+   Keep the two blocks in sync. Ratios are measured, and the values differ
+   from the dark set because a hue that clears AA on #111b2e rarely does on
+   #ffffff: --gain #3ddc91 measures 1.72 on white.
+   ========================================================================== */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+
+    --bg: #f4f6fa;
+    --surface-1: #ffffff;
+    --surface-2: #f0f3f9;
+    --surface-3: #e2e8f2;
+    --border: #d3dae6;
+    /* Dark enough to clear 3.0 against white (3.59): on a light theme the
+       input fill matches its panel, so the border is the only thing marking
+       the control's boundary. */
+    --border-strong: #7a889f;
+
+    --text: #0e1726; /* 17.96 on --surface-1 */
+    --text-2: #44546e; /*  7.67 on --surface-1, 6.23 on --surface-3 */
+    --text-muted: #526074; /*  6.39 on --surface-1, 5.19 on --surface-3 */
+
+    --gain: #0a6b3d; /*  6.60 on --surface-1, 5.36 on --surface-3 */
+    --loss: #b52528; /*  6.44 on --surface-1, 5.23 on --surface-3 */
+
+    --brand: #1257c4; /*  6.59 on --surface-1, 5.35 on --surface-3 */
+    --brand-strong: #0b3f94;
+    --warning: #8a5a05; /*  5.92 on --surface-1, 4.81 on --surface-3 */
+
+    /* The fills are unchanged: they are dark, so white text still measures
+       4.63 / 5.02 / 6.47 on them, and each clears 3.0 against the light page
+       so the control's own edge stays visible. */
+
+    --tint-loss: rgba(181, 37, 40, 0.1);
+    --tint-brand: rgba(18, 87, 196, 0.1);
+    --tint-warning: rgba(138, 90, 5, 0.12);
+
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.08);
+    --shadow-2: 0 8px 24px rgba(15, 23, 42, 0.15);
+  }
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: #f4f6fa;
+  --surface-1: #ffffff;
+  --surface-2: #f0f3f9;
+  --surface-3: #e2e8f2;
+  --border: #d3dae6;
+  --border-strong: #7a889f;
+
+  --text: #0e1726;
+  --text-2: #44546e;
+  --text-muted: #526074;
+
+  --gain: #0a6b3d;
+  --loss: #b52528;
+
+  --brand: #1257c4;
+  --brand-strong: #0b3f94;
+  --warning: #8a5a05;
+
+  --tint-loss: rgba(181, 37, 40, 0.1);
+  --tint-brand: rgba(18, 87, 196, 0.1);
+  --tint-warning: rgba(138, 90, 5, 0.12);
+
+  --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --shadow-2: 0 8px 24px rgba(15, 23, 42, 0.15);
+}
+
+/* ==========================================================================
+   Increased contrast
+   --------------------------------------------------------------------------
+   For users who have asked their OS for more contrast. Secondary text stops
+   being secondary, hairline borders become visible ones, and the tinted
+   status blocks lose their wash in favour of a solid edge.
+   ========================================================================== */
+@media (prefers-contrast: more) {
+  :root {
+    --text-2: #d7e0ec; /* 12.92 on --surface-1 */
+    --text-muted: #c6d2e1; /* 11.23 on --surface-1, 8.49 on --surface-3 */
+    --border: #4a5f80;
+    --border-strong: #7d92b3;
+    --tint-loss: transparent;
+    --tint-brand: transparent;
+    --tint-warning: transparent;
+  }
+
+  :root[data-theme='light'] {
+    --text-2: #1f2a38; /* 14.52 on --surface-1 */
+    --text-muted: #2b3849; /* 11.90 on --surface-1, 9.67 on --surface-3 */
+    --border: #8794a8;
+    --border-strong: #4a5568;
+  }
+
+  /* Every panel, card and control gets a real edge rather than a surface
+     difference, which is what low-vision users lose first. */
+  .panel,
+  .stat-card,
+  .stock-item,
+  .portfolio-item,
+  .order-item,
+  .tip-item,
+  .challenge-item,
+  .scenario-card,
+  .stats-card,
+  .glossary-item,
+  .lesson-path-card,
+  .lesson-content,
+  .btn {
+    border: 1px solid var(--border-strong);
+  }
+
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible,
+  .switch-input:focus-visible + .switch-track {
+    outline-width: 4px;
+  }
+}
+
+@media (prefers-contrast: more) and (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --text-2: #1f2a38;
+    --text-muted: #2b3849;
+    --border: #8794a8;
+    --border-strong: #4a5568;
+  }
 }
 
 *,
@@ -162,7 +319,17 @@ input:focus-visible,
   white-space: nowrap;
 }
 
-.lang-btn {
+.app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: var(--tap-min);
   height: var(--tap-min);
   padding: 0;
@@ -859,7 +1026,7 @@ input[type='text']:focus {
   position: fixed;
   z-index: 1000;
   inset: 0;
-  background-color: rgba(3, 7, 18, 0.75);
+  background-color: var(--scrim-strong);
   animation: fadeIn 0.2s;
 }
 
@@ -1175,7 +1342,7 @@ input[type='text']:focus {
 .tour-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(3, 7, 18, 0.6);
+  background: var(--scrim);
   z-index: 1500;
   display: none;
 }
@@ -1184,7 +1351,7 @@ input[type='text']:focus {
   position: absolute;
   border: 2px solid var(--brand);
   border-radius: var(--radius-sm);
-  box-shadow: 0 0 0 9999px rgba(3, 7, 18, 0.6);
+  box-shadow: 0 0 0 9999px var(--scrim);
   pointer-events: none;
   transition: all 0.3s;
 }
@@ -1632,7 +1799,7 @@ input[type='text']:focus {
     position: fixed;
     inset: 0;
     z-index: 1200;
-    background: rgba(3, 7, 18, 0.6);
+    background: var(--scrim);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
