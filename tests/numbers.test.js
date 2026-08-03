@@ -46,3 +46,20 @@ describe('formatCurrency', () => {
     expect(out).toContain('ريال');
   });
 });
+
+describe('formatCurrency digit style', () => {
+  it('uses Western digits in Arabic so it matches toFixed elsewhere in the UI', () => {
+    const out = formatCurrency(12345.67, 'ar', 'ريال');
+    expect(out).toContain('12');
+    expect(out).toContain('345');
+    expect(out).toContain('ريال');
+    // No Arabic-Indic digits (U+0660-U+0669).
+    expect(/[٠-٩]/.test(out)).toBe(false);
+  });
+
+  it('renders the same numeric value in both languages', () => {
+    const ar = formatCurrency(1000, 'ar', 'ريال').replace(/[^\d.,]/g, '');
+    const en = formatCurrency(1000, 'en', 'SAR').replace(/[^\d.,]/g, '');
+    expect(ar).toBe(en);
+  });
+});

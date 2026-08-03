@@ -1,19 +1,22 @@
 import { glossary } from '../data/glossary.js';
 import { getLang, t } from './i18n.js';
+import { openModal, closeModal } from './modal.js';
+import { clearChildren } from './dom.js';
 
 let searchTerm = '';
 
 export function openGlossary() {
-  const modal = document.getElementById('glossary-modal');
   searchTerm = '';
   renderGlossary();
-  modal.style.display = 'block';
+  openModal('glossary-modal');
+  // trapFocus() lands on the close button; the search field is the useful
+  // starting point for this modal specifically.
   const search = document.getElementById('glossary-search');
   if (search) search.focus();
 }
 
 export function closeGlossary() {
-  document.getElementById('glossary-modal').style.display = 'none';
+  closeModal('glossary-modal');
 }
 
 export function renderGlossary() {
@@ -29,12 +32,12 @@ export function renderGlossary() {
       )
     : entries;
 
-  while (list.firstChild) list.removeChild(list.firstChild);
+  clearChildren(list);
 
   if (filtered.length === 0) {
     const empty = document.createElement('p');
-    empty.style.cssText = 'text-align:center;color:#95a5a6;padding:20px;';
-    empty.textContent = lang === 'ar' ? 'لا توجد نتائج' : 'No results';
+    empty.className = 'empty-state';
+    empty.textContent = t('noResults');
     list.appendChild(empty);
   } else {
     filtered.forEach((entry) => {
@@ -53,7 +56,7 @@ export function renderGlossary() {
   }
 
   if (search) {
-    search.placeholder = lang === 'ar' ? 'بحث عن مصطلح…' : 'Search a term…';
+    search.placeholder = t('glossarySearchPlaceholder');
   }
   const title = document.getElementById('glossary-title');
   if (title) title.textContent = t('glossaryTitle');

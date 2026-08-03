@@ -3,11 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The app bundles everything it needs and makes no network requests at
+         runtime, so it can afford the strictest policy expressible in a meta
+         tag. 'unsafe-inline' is required for styles only, because the UI sets
+         style.width / style.display programmatically. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"
+    />
     <meta
       name="description"
       content="محاكي تداول الأسهم السعودية - تعلم سوق تداول دون مخاطر مالية"
     />
     <title>تداول - محاكاة سوق الأسهم السعودي</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f3460'/%3E%3Cpath d='M6 22l6-7 5 4 9-11' stroke='%2316a085' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
   </head>
   <body>
     <div class="lang-switch">
@@ -21,6 +33,8 @@
     <div class="news-ticker" aria-hidden="true">
       <div class="news-ticker-content" id="news-ticker"></div>
     </div>
+    <!-- The marquee above is aria-hidden; headlines reach assistive tech here. -->
+    <div id="news-live" class="sr-only" role="status" aria-live="polite"></div>
 
     <div class="container">
       <div class="market-status-bar">
@@ -38,19 +52,19 @@
 
       <div class="stats">
         <div class="stat-card">
-          <div class="stat-label">الرصيد النقدي</div>
+          <div class="stat-label" id="stat-label-cash">الرصيد النقدي</div>
           <div class="stat-value" id="cash">50,000 ريال</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">قيمة المحفظة</div>
+          <div class="stat-label" id="stat-label-portfolio">قيمة المحفظة</div>
           <div class="stat-value" id="portfolio-value">0 ريال</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">إجمالي الأصول</div>
+          <div class="stat-label" id="stat-label-total">إجمالي الأصول</div>
           <div class="stat-value" id="total-value">50,000 ريال</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">الربح/الخسارة</div>
+          <div class="stat-label" id="stat-label-pnl">الربح/الخسارة</div>
           <div class="stat-value" id="pnl">0 ريال (0%)</div>
         </div>
       </div>
@@ -64,60 +78,92 @@
       </div>
 
       <nav class="tabs" role="tablist">
-        <button class="tab active" id="tab-market" role="tab" aria-controls="market-tab">
+        <button
+          class="tab active"
+          id="tab-market"
+          role="tab"
+          aria-controls="market-tab"
+          aria-selected="true"
+        >
           📊 السوق
         </button>
-        <button class="tab" id="tab-portfolio" role="tab" aria-controls="portfolio-tab">
+        <button
+          class="tab"
+          id="tab-portfolio"
+          role="tab"
+          aria-controls="portfolio-tab"
+          aria-selected="false"
+        >
           💼 المحفظة
         </button>
-        <button class="tab" id="tab-orders" role="tab" aria-controls="orders-tab">
+        <button
+          class="tab"
+          id="tab-orders"
+          role="tab"
+          aria-controls="orders-tab"
+          aria-selected="false"
+        >
           📋 الأوامر
         </button>
       </nav>
 
-      <div id="market-tab" class="tab-content active" role="tabpanel">
+      <div id="market-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-market" tabindex="0">
         <div class="panel">
-          <h2 class="panel-title">قائمة الأسهم</h2>
+          <h2 class="panel-title" id="panel-title-stocks">قائمة الأسهم</h2>
           <div class="stock-list" id="stock-list"></div>
         </div>
       </div>
 
-      <div id="portfolio-tab" class="tab-content" role="tabpanel">
+      <div id="portfolio-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-portfolio" tabindex="0">
         <div class="panel">
-          <h2 class="panel-title">محفظتي</h2>
+          <h2 class="panel-title" id="panel-title-portfolio">محفظتي</h2>
           <div id="portfolio"></div>
         </div>
       </div>
 
-      <div id="orders-tab" class="tab-content" role="tabpanel">
+      <div id="orders-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-orders" tabindex="0">
         <div class="panel">
-          <h2 class="panel-title">الأوامر المعلقة</h2>
+          <h2 class="panel-title" id="panel-title-orders">الأوامر المعلقة</h2>
           <div id="pending-orders"></div>
         </div>
       </div>
 
       <div class="tips-container">
         <div class="panel">
-          <h2 class="panel-title">💡 نصائح مالية</h2>
+          <h2 class="panel-title" id="panel-title-tips">💡 نصائح مالية</h2>
           <div id="tips-list"></div>
         </div>
       </div>
 
       <div class="challenges">
         <div class="panel">
-          <h2 class="panel-title">🎯 التحديات</h2>
+          <h2 class="panel-title" id="panel-title-challenges">🎯 التحديات</h2>
           <div class="challenge-item">
-            <div><strong>التحدي 1:</strong> ربح 10% من رأس المال</div>
-            <div style="color: #f39c12; margin-top: 5px">المكافأة: دعم 100,000 ريال</div>
-            <div class="challenge-progress">
-              <div class="challenge-progress-bar" id="challenge1-progress" style="width: 0%"></div>
+            <div><strong id="challenge1-title">التحدي 1</strong>:
+              <span id="challenge1-goal">ربح 10% من رأس المال</span></div>
+            <div class="challenge-reward" id="challenge1-reward">المكافأة: دعم 100,000 ريال</div>
+            <div
+              class="challenge-progress"
+              role="progressbar"
+              aria-labelledby="challenge1-title"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div class="challenge-progress-bar" id="challenge1-progress"></div>
             </div>
           </div>
           <div class="challenge-item">
-            <div><strong>التحدي 2:</strong> ربح 20% من رأس المال</div>
-            <div style="color: #f39c12; margin-top: 5px">المكافأة: دعم 300,000 ريال</div>
-            <div class="challenge-progress">
-              <div class="challenge-progress-bar" id="challenge2-progress" style="width: 0%"></div>
+            <div><strong id="challenge2-title">التحدي 2</strong>:
+              <span id="challenge2-goal">ربح 20% من رأس المال</span></div>
+            <div class="challenge-reward" id="challenge2-reward">المكافأة: دعم 300,000 ريال</div>
+            <div
+              class="challenge-progress"
+              role="progressbar"
+              aria-labelledby="challenge2-title"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            >
+              <div class="challenge-progress-bar" id="challenge2-progress"></div>
             </div>
           </div>
           <button id="export-csv-btn" class="btn btn-secondary csv-export-btn">
@@ -126,7 +172,7 @@
         </div>
       </div>
 
-      <div style="text-align: center; margin: 20px 0">
+      <div class="session-controls">
         <button class="btn btn-danger" id="reset-btn">إعادة تعيين</button>
         <div class="controls">
           <button class="btn btn-primary" id="speed-1">1x</button>
