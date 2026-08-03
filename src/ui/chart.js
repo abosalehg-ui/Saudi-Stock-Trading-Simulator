@@ -31,6 +31,7 @@ import { priceHistory, session } from '../state.js';
 import { getLang } from './i18n.js';
 import { formatTimeShort } from '../utils/dates.js';
 import { sma, rsi, macd } from '../engine/indicators.js';
+import { themeColor, themeColorAlpha } from './theme.js';
 
 /**
  * Render a price chart for a stock with optional indicator overlays.
@@ -54,8 +55,8 @@ export function renderChart(symbol, indicators = {}) {
     {
       label: lang === 'ar' ? 'السعر' : 'Price',
       data: prices,
-      borderColor: '#16a085',
-      backgroundColor: 'rgba(22, 160, 133, 0.1)',
+      borderColor: themeColor('--brand'),
+      backgroundColor: themeColorAlpha('--brand', 0.12),
       tension: 0.4,
       fill: true,
       yAxisID: 'y',
@@ -66,7 +67,7 @@ export function renderChart(symbol, indicators = {}) {
     datasets.push({
       label: 'SMA 20',
       data: sma(prices, 20),
-      borderColor: '#f39c12',
+      borderColor: themeColor('--warning'),
       backgroundColor: 'transparent',
       pointRadius: 0,
       borderWidth: 2,
@@ -78,7 +79,7 @@ export function renderChart(symbol, indicators = {}) {
     datasets.push({
       label: 'SMA 50',
       data: sma(prices, 50),
-      borderColor: '#9b59b6',
+      borderColor: themeColor('--brand-strong'),
       backgroundColor: 'transparent',
       pointRadius: 0,
       borderWidth: 2,
@@ -90,7 +91,7 @@ export function renderChart(symbol, indicators = {}) {
     datasets.push({
       label: 'RSI 14',
       data: rsi(prices, 14),
-      borderColor: '#e74c3c',
+      borderColor: themeColor('--loss'),
       backgroundColor: 'transparent',
       pointRadius: 0,
       borderWidth: 2,
@@ -104,14 +105,16 @@ export function renderChart(symbol, indicators = {}) {
       type: 'bar',
       label: 'MACD Histogram',
       data: histogram,
-      backgroundColor: histogram.map((v) => (v !== null && v >= 0 ? '#2ecc71' : '#e74c3c')),
+      backgroundColor: histogram.map((v) =>
+        v !== null && v >= 0 ? themeColor('--gain') : themeColor('--loss')
+      ),
       yAxisID: 'y3',
       order: 3,
     });
     datasets.push({
       label: 'MACD',
       data: macdLine,
-      borderColor: '#3498db',
+      borderColor: themeColor('--brand'),
       backgroundColor: 'transparent',
       pointRadius: 0,
       borderWidth: 2,
@@ -122,7 +125,7 @@ export function renderChart(symbol, indicators = {}) {
     datasets.push({
       label: 'Signal',
       data: signal,
-      borderColor: '#f1c40f',
+      borderColor: themeColor('--warning'),
       backgroundColor: 'transparent',
       pointRadius: 0,
       borderWidth: 2,
@@ -135,13 +138,13 @@ export function renderChart(symbol, indicators = {}) {
 
   const scales = {
     y: {
-      ticks: { color: '#e0e0e0' },
-      grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      ticks: { color: themeColor('--text-2') },
+      grid: { color: themeColorAlpha('--border', 0.9) },
       position: 'left',
     },
     x: {
-      ticks: { color: '#e0e0e0', maxTicksLimit: 8 },
-      grid: { color: 'rgba(255, 255, 255, 0.1)' },
+      ticks: { color: themeColor('--text-2'), maxTicksLimit: 8 },
+      grid: { color: themeColorAlpha('--border', 0.9) },
     },
   };
   if (indicators.rsi) {
@@ -150,7 +153,7 @@ export function renderChart(symbol, indicators = {}) {
       position: 'right',
       min: 0,
       max: 100,
-      ticks: { color: '#e74c3c' },
+      ticks: { color: themeColor('--loss') },
       grid: { drawOnChartArea: false },
     };
   }
@@ -161,7 +164,7 @@ export function renderChart(symbol, indicators = {}) {
     scales.y3 = {
       type: 'linear',
       position: 'right',
-      ticks: { color: '#3498db' },
+      ticks: { color: themeColor('--brand') },
       grid: { drawOnChartArea: false },
     };
   }
@@ -176,7 +179,7 @@ export function renderChart(symbol, indicators = {}) {
       plugins: {
         legend: {
           display: indicators.sma20 || indicators.sma50 || indicators.rsi || indicators.macd,
-          labels: { color: '#e0e0e0' },
+          labels: { color: themeColor('--text-2') },
         },
       },
       scales,

@@ -6,10 +6,33 @@ const steps = [
   { target: '.stats', titleKey: 'tourStep2Title', bodyKey: 'tourStep2Body' },
   { target: '#stock-list', titleKey: 'tourStep3Title', bodyKey: 'tourStep3Body' },
   { target: '.market-status-bar', titleKey: 'tourStep4Title', bodyKey: 'tourStep4Body' },
-  { target: '.action-bar', titleKey: 'tourStep5Title', bodyKey: 'tourStep5Body' },
+  // Two candidates: the action bar sits above the tabs on desktop, but on a
+  // phone it lives inside the closed "more" sheet, where it has no box to
+  // highlight — the bottom-nav button that opens it is the visible stand-in.
+  { target: ['.action-bar', '#nav-more'], titleKey: 'tourStep5Title', bodyKey: 'tourStep5Body' },
 ];
 
 let currentStep = 0;
+
+/**
+ * First candidate that is actually laid out. A `display:none` ancestor still
+ * yields an element from querySelector, but a 0x0 rect, which would draw the
+ * highlight ring in the page corner.
+ *
+ * @param {string | string[] | null} target
+ * @returns {Element | null}
+ */
+function resolveTarget(target) {
+  if (!target) return null;
+  const selectors = Array.isArray(target) ? target : [target];
+  for (const selector of selectors) {
+    const el = document.querySelector(selector);
+    if (!el) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) return el;
+  }
+  return null;
+}
 
 function positionHighlight(target) {
   const highlight = document.getElementById('tour-highlight');
@@ -24,9 +47,14 @@ function positionHighlight(target) {
     return;
   }
 
-  const el = document.querySelector(target);
+  const el = resolveTarget(target);
   if (!el) {
+    // Nothing visible to point at: fall back to the centred, un-highlighted
+    // presentation rather than framing an empty rectangle.
     highlight.style.display = 'none';
+    tooltip.style.top = '50%';
+    tooltip.style.left = '50%';
+    tooltip.style.transform = 'translate(-50%, -50%)';
     return;
   }
   const rect = el.getBoundingClientRect();

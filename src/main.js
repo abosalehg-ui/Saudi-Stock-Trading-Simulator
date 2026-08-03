@@ -1,3 +1,13 @@
+// Self-hosted so the strict CSP (font-src 'self') holds and the UI looks the
+// same on every OS. The previous stack fell back to Tahoma on Windows and to
+// whatever the system Arabic face was elsewhere. Only the three weights the
+// design actually uses are loaded; latin covers the digits and English mode.
+import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
+import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
+import '@fontsource/ibm-plex-sans-arabic/arabic-700.css';
+import '@fontsource/ibm-plex-sans-arabic/latin-400.css';
+import '@fontsource/ibm-plex-sans-arabic/latin-600.css';
+import '@fontsource/ibm-plex-sans-arabic/latin-700.css';
 import './styles/main.css';
 import {
   PRICE_UPDATE_INTERVAL_MS,
@@ -29,6 +39,7 @@ import { isMarketOpen } from './engine/market-hours.js';
 import {
   bindRenderCallbacks,
   renderStocks,
+  setStockListFilters,
   updateStockPrices,
   bindStockListEvents,
   renderPortfolio,
@@ -51,7 +62,16 @@ import {
   isModalOpen,
 } from './ui/modal.js';
 import { downloadTransactionsCsv } from './ui/csv-export.js';
-import { getLang, initLang, toggleLang, t } from './ui/i18n.js';
+import { getLang, initLang, toggleLang, t, sectorName } from './ui/i18n.js';
+import {
+  initResponsiveLayout,
+  isDesktopLayout,
+  toggleMoreSheet,
+  isMoreSheetOpen,
+  syncBottomNav,
+} from './ui/responsive.js';
+import { listSectors } from './engine/stock-filter.js';
+import { stocks } from './data/stocks.js';
 import { openGlossary, attachGlossaryListeners } from './ui/glossary.js';
 import { openStatsModal, closeStatsModal } from './ui/stats.js';
 import { openLearningModal, closeLearningModal } from './ui/learning.js';
@@ -120,7 +140,19 @@ function selectStock(symbol) {
   session.selectedStock = symbol;
   updateStockPrices(); // toggles the .selected highlight without a full rebuild
   renderStockDetails(symbol);
-  openStockModal();
+  // Above 1024px the details render into the always-visible side panel, so
+  // there is no dialog to open — and none to trap focus in either.
+  if (!isDesktopLayout()) openStockModal();
+}
+
+/**
+ * Re-home the stock details after a breakpoint crossing. The node itself is
+ * moved by responsive.js; this re-renders it so Chart.js picks up the new
+ * canvas size, and dismisses the modal if the side panel just took over.
+ */
+function handleLayoutChange(desktop) {
+  if (desktop && isModalOpen('stock-modal')) closeStockModal();
+  if (session.selectedStock) renderStockDetails(session.selectedStock);
 }
 
 function handleQuickTrade(symbol, type) {
@@ -265,6 +297,15 @@ function rebuildStaticLabels() {
     'stats-title': t('statsTitle'),
     'learning-title': t('learningTitle'),
     'scenarios-title': t('scenariosTitle'),
+    'nav-market-label': t('marketTab'),
+    'nav-portfolio-label': t('portfolioTab'),
+    'nav-orders-label': t('ordersTab'),
+    'nav-more-label': t('moreTitle'),
+    'more-sheet-title': t('moreTitle'),
+    'stock-search-label': t('searchStocksLabel'),
+    'stock-sector-label': t('sectorLabel'),
+    'stock-sort-label': t('sortLabel'),
+    'stock-panel-hint': t('selectStockHint'),
   };
   Object.entries(textById).forEach(([id, text]) => {
     const el = document.getElementById(id);
@@ -285,6 +326,52 @@ function rebuildStaticLabels() {
   document.getElementById('learning-btn').textContent = t('learningPathsBtn');
   document.getElementById('scenarios-btn').textContent = t('scenariosBtn');
   document.getElementById('tour-btn').textContent = t('tourStartBtn');
+
+  const search = document.getElementById('stock-search');
+  if (search) search.placeholder = t('searchStocks');
+  // The bottom-nav labels carry the emoji already, so strip the one baked into
+  // the tab translations rather than showing it twice.
+  ['market', 'portfolio', 'orders'].forEach((name) => {
+    const el = document.getElementById(`nav-${name}-label`);
+    if (el) el.textContent = el.textContent.replace(/^\P{L}+/u, '');
+  });
+  buildListFilterOptions();
+}
+
+/**
+ * (Re)fill the sector and sort selects, preserving the current choice. Called
+ * on load and on every language switch, since the option labels are localised.
+ */
+function buildListFilterOptions() {
+  const sectorEl = /** @type {HTMLSelectElement | null} */ (
+    document.getElementById('stock-sector')
+  );
+  const sortEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('stock-sort'));
+  if (!sectorEl || !sortEl) return;
+
+  const fill = (select, options) => {
+    const previous = select.value;
+    select.replaceChildren(
+      ...options.map(([value, label]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = label;
+        return option;
+      })
+    );
+    if (previous && options.some(([value]) => value === previous)) select.value = previous;
+  };
+
+  fill(sectorEl, [
+    ['all', t('allSectors')],
+    ...listSectors(stocks).map((sector) => [sector, sectorName(sector)]),
+  ]);
+  fill(sortEl, [
+    ['default', t('sortDefault')],
+    ['gainers', t('sortTopGainers')],
+    ['losers', t('sortTopLosers')],
+    ['name', t('sortName')],
+  ]);
 }
 
 function handleToggleLanguage() {
@@ -318,6 +405,7 @@ function switchTab(tab) {
     tabEl.setAttribute('aria-selected', String(isActive));
     panelEl.classList.toggle('active', isActive);
   });
+  syncBottomNav(tab);
   if (tab === 'orders') renderPendingOrders();
 }
 
@@ -356,6 +444,40 @@ function attachEventListeners() {
 
   document.getElementById('close-stock-modal').addEventListener('click', () => closeStockModal());
 
+  // Stock list toolbar. The search is debounced so a rebuild of up to 91 rows
+  // doesn't run on every keystroke.
+  let searchTimer = null;
+  document.getElementById('stock-search').addEventListener('input', (e) => {
+    const value = e.target.value;
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => setStockListFilters({ query: value }), 120);
+  });
+  document.getElementById('stock-sector').addEventListener('change', (e) => {
+    setStockListFilters({ sector: e.target.value });
+  });
+  document.getElementById('stock-sort').addEventListener('change', (e) => {
+    setStockListFilters({ sort: e.target.value });
+  });
+
+  // Bottom navigation (phones).
+  document.querySelectorAll('.bottom-nav-btn[data-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      switchTab(btn.dataset.tab);
+      toggleMoreSheet(false);
+      document.querySelector('.main-content')?.scrollIntoView({ block: 'start' });
+    });
+  });
+  document.getElementById('nav-more').addEventListener('click', () => {
+    toggleMoreSheet(!isMoreSheetOpen());
+  });
+  document
+    .getElementById('close-more-sheet')
+    .addEventListener('click', () => toggleMoreSheet(false));
+  document.getElementById('more-sheet').addEventListener('click', (event) => {
+    // Backdrop only: clicks on the panel itself must not dismiss it.
+    if (event.target === event.currentTarget) toggleMoreSheet(false);
+  });
+
   document.getElementById('glossary-btn').addEventListener('click', openGlossary);
   document.getElementById('stats-btn').addEventListener('click', openStatsModal);
   document.getElementById('learning-btn').addEventListener('click', openLearningModal);
@@ -378,6 +500,7 @@ function attachEventListeners() {
   });
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
+    if (isMoreSheetOpen()) toggleMoreSheet(false);
     if (isModalOpen('stock-modal')) closeStockModal();
     SECONDARY_MODAL_IDS.filter(isModalOpen).forEach((id) => closeModal(id));
   });
@@ -397,6 +520,10 @@ function init() {
     onQuickTrade: handleQuickTrade,
   });
   bindStockDetailsCallbacks({ onSubmitOrder: handleSubmitOrder });
+
+  // Before attachEventListeners(), so the action bar is already in its host and
+  // its buttons are bound wherever they end up.
+  initResponsiveLayout({ onChange: handleLayoutChange });
 
   attachEventListeners();
 

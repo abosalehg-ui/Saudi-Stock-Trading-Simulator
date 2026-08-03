@@ -8,6 +8,7 @@ import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
 import { evaluateChallenges } from '../engine/challenges.js';
+import { selectStocks } from '../engine/stock-filter.js';
 import { clearChildren, escapeHtml } from './dom.js';
 
 /** @type {(symbol: string) => void} */
@@ -60,7 +61,7 @@ function buildStockItem(stock, lang) {
   left.appendChild(symbolDiv);
 
   const right = document.createElement('div');
-  right.style.textAlign = 'end';
+  right.className = 'stock-figures';
   const priceDiv = document.createElement('div');
   priceDiv.className = 'stock-price';
   const changeDiv = document.createElement('div');
@@ -76,9 +77,31 @@ function buildStockItem(stock, lang) {
 }
 
 /**
+ * Search / sector / sort state for the list. Deliberately not persisted: it is
+ * a view of the catalogue, not part of the player's saved game.
+ *
+ * @type {{query: string, sector: string, sort: import('../engine/stock-filter.js').StockSort}}
+ */
+const listFilters = { query: '', sector: 'all', sort: 'default' };
+
+/**
+ * Merge in a filter change and rebuild the list.
+ * @param {Partial<typeof listFilters>} patch
+ */
+export function setStockListFilters(patch) {
+  Object.assign(listFilters, patch);
+  renderStocks();
+}
+
+/** @returns {typeof listFilters} a copy, so callers can't mutate the state behind renderStocks() */
+export function getStockListFilters() {
+  return { ...listFilters };
+}
+
+/**
  * Full rebuild of the stock list: needed whenever which stocks are shown or
- * how they're labeled changes (Sharia filter, language). Call updateStockPrices()
- * instead for a plain price tick or selection change.
+ * how they're labeled changes (Sharia filter, search, sector, sort, language).
+ * Call updateStockPrices() instead for a plain price tick or selection change.
  */
 export function renderStocks() {
   const listEl = document.getElementById('stock-list');
@@ -86,13 +109,31 @@ export function renderStocks() {
   clearChildren(listEl);
   stockItemRefs.clear();
   const lang = getLang();
-  const filtered = gameState.shariaFilter ? stocks.filter((s) => s.isShariaCompliant) : stocks;
-
-  filtered.forEach((stock) => {
-    const refs = buildStockItem(stock, lang);
-    stockItemRefs.set(stock.symbol, refs);
-    listEl.appendChild(refs.container);
+  const filtered = selectStocks({
+    stocks,
+    prices: stockPrices,
+    shariaOnly: !!gameState.shariaFilter,
+    query: listFilters.query,
+    sector: listFilters.sector,
+    sort: listFilters.sort,
+    lang,
   });
+
+  if (filtered.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'empty-state';
+    p.textContent = t('noStocksMatch');
+    listEl.appendChild(p);
+  } else {
+    filtered.forEach((stock) => {
+      const refs = buildStockItem(stock, lang);
+      stockItemRefs.set(stock.symbol, refs);
+      listEl.appendChild(refs.container);
+    });
+  }
+
+  const countEl = document.getElementById('stock-count');
+  if (countEl) countEl.textContent = `${filtered.length} ${t('stocksShown')}`;
   updateStockPrices();
 }
 
@@ -108,7 +149,9 @@ export function updateStockPrices() {
     const price = stockPrices[symbol];
     const change = ((price - stock.basePrice) / stock.basePrice) * 100;
     refs.priceEl.textContent = `${price.toFixed(2)} ${t('sar')}`;
-    refs.changeEl.textContent = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
+    // Arrow rather than a bare sign, matching the ticker: direction should not
+    // depend on colour alone, and the glyph is faster to scan down a list.
+    refs.changeEl.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%`;
     refs.changeEl.className = `stock-change ${change >= 0 ? 'positive' : 'negative'}`;
     refs.container.classList.toggle('selected', session.selectedStock === symbol);
   });
@@ -174,14 +217,14 @@ export function renderPortfolio() {
         <div class="detail-item"><span>${t('totalCost')}:</span><strong>${costBasis.toFixed(2)} ${sar}</strong></div>
         <div class="detail-item"><span>${t('marketValue')}:</span><strong>${marketValue.toFixed(2)} ${sar}</strong></div>
         <div class="detail-item"><span>${t('valueAfterSell')}:</span><strong>${valueAfterSell.toFixed(2)} ${sar}</strong></div>
-        <div class="detail-item"><span>${t('pnlAfterSell')}:</span><strong class="${profitAfterSell >= 0 ? 'positive' : 'negative'}">${profitAfterSell >= 0 ? '+' : ''}${profitAfterSell.toFixed(2)} ${sar} (${profitAfterSell >= 0 ? '+' : ''}${((profitAfterSell / costBasis) * 100).toFixed(2)}%)</strong></div>
+        <div class="detail-item"><span>${t('pnlAfterSell')}:</span><strong class="${profitAfterSell >= 0 ? 'positive' : 'negative'}">${profitAfterSell >= 0 ? '▲' : '▼'} ${Math.abs(profitAfterSell).toFixed(2)} ${sar} (${Math.abs((profitAfterSell / costBasis) * 100).toFixed(2)}%)</strong></div>
       </div>
     `;
 
     const actions = document.createElement('div');
     actions.className = 'portfolio-actions';
     const buyBtn = document.createElement('button');
-    buyBtn.className = 'btn btn-primary portfolio-action-btn';
+    buyBtn.className = 'btn btn-buy portfolio-action-btn';
     buyBtn.textContent = t('buyMore');
     buyBtn.addEventListener('click', () => onQuickTrade(symbol, 'buy'));
     const sellBtn = document.createElement('button');
@@ -225,7 +268,7 @@ export function renderPendingOrders() {
           <strong class="order-stock-name">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)}</strong>
           <span class="order-stock-symbol">(${escapeHtml(order.symbol)})</span>
         </div>
-        <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-primary' : 'btn-danger'}">
+        <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-buy' : 'btn-danger'}">
           ${order.type === 'buy' ? t('buy') : t('sell')} · ${order.kind === 'stop-loss' ? t('orderKindStopLoss') : t('orderKindLimit')}
         </span>
       </div>
@@ -233,7 +276,7 @@ export function renderPendingOrders() {
         <div>${t('quantity')}: <strong>${order.quantity}</strong></div>
         <div>${order.kind === 'stop-loss' ? t('stopPrice') : t('limitPrice')}: <strong>${refPrice.toFixed(2)} ${sar}</strong></div>
         <div>${t('currentPrice')}: <strong>${currentPrice.toFixed(2)} ${sar}</strong></div>
-        <div>${t('difference')}: <span class="${priceDiff >= 0 ? 'positive' : 'negative'}">${priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(2)}%</span></div>
+        <div>${t('difference')}: <span class="${priceDiff >= 0 ? 'positive' : 'negative'}">${priceDiff >= 0 ? '▲' : '▼'} ${Math.abs(priceDiff).toFixed(2)}%</span></div>
         <div class="order-date-row">${escapeHtml(t('date'))}: ${escapeHtml(formatDateBilingual(order.timestamp, lang))}</div>
       </div>
     `;
@@ -268,7 +311,7 @@ export function updateStats() {
   document.getElementById('total-value').textContent = formatCurrency(totalValue, lang, t('sar'));
 
   const pnlEl = document.getElementById('pnl');
-  pnlEl.textContent = `${pnl >= 0 ? '+' : ''}${pnl.toFixed(2)} ${t('sar')} (${pnl >= 0 ? '+' : ''}${pnlPercent.toFixed(2)}%)`;
+  pnlEl.textContent = `${pnl >= 0 ? '▲' : '▼'} ${Math.abs(pnl).toFixed(2)} ${t('sar')} (${Math.abs(pnlPercent).toFixed(2)}%)`;
   pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
 
   return { pnlPercent, totalValue };

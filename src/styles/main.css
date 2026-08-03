@@ -1,42 +1,94 @@
+/* ==========================================================================
+   Design tokens
+   --------------------------------------------------------------------------
+   Every colour in this file comes from here. The previous revision declared
+   18 tokens but used var() only 21 times against 123 hardcoded hex values,
+   so the token layer existed without actually controlling anything.
+
+   Contrast ratios in the comments are computed against the surface the token
+   is intended to sit on, and all of them clear WCAG AA (4.5 for body text).
+   ========================================================================== */
 :root {
-  /* Surfaces */
-  --surface: #0f3460;
-  --surface-alt: #1a1a2e;
-  --surface-deep: #16213e;
-  --border-muted: #34495e;
-
-  /* Brand */
-  --primary: #16a085;
-  --primary-light: #1abc9c;
-  --primary-strong: #0e6655;
-  --accent: #9b59b6;
-  --accent-light: #c39bd3;
-  --warning: #f39c12;
-  --highlight: #f1c40f;
-
-  /* Semantic */
-  --positive: #2ecc71;
-  --negative: #e74c3c;
-  --negative-strong: #a93226;
-  --negative-light: #f1948a;
+  /* Surfaces — elevation rises with the ramp. The old palette went
+     page #1a1a2e -> panel #0f3460 -> item #1a1a2e, i.e. nested content fell
+     back to the page colour (1.36:1 against its own panel), so cards read as
+     holes and every edge needed a 2px border to be visible at all. */
+  --bg: #0b1220;
+  --surface-1: #111b2e;
+  --surface-2: #18253c;
+  --surface-3: #22314d;
+  --border: #24344d;
+  --border-strong: #33455f;
 
   /* Text */
-  --text: #e0e0e0;
-  --text-dim: #bdc3c7;
-  --text-muted: #95a5a6;
+  --text: #e8eef7; /* 14.76 on --surface-1 */
+  --text-2: #a9b8cc; /*  8.54 on --surface-1, 6.45 on --surface-3 */
+  --text-muted: #8194ab; /*  5.54 on --surface-1, 4.94 on --surface-2 */
+
+  /* Price direction — reserved. No chrome may use these two hues, otherwise
+     the eye stops reading them as "up" and "down". */
+  --gain: #3ddc91; /*  9.71 on --surface-1 */
+  --loss: #ff6b6b; /*  6.20 on --surface-1 */
+
+  /* Brand — blue, so green and red stay exclusively semantic. */
+  --brand: #4c9aff; /*  6.04 on --surface-1 */
+  --brand-strong: #7fb5ff;
+  --warning: #fbbf24; /* 10.31 on --surface-1 */
+
+  /* Text and knobs that sit on top of a filled control. Every fill below is
+     measured against this value. */
+  --on-fill: #ffffff;
+
+  /* Button fills, all measured against --on-fill */
+  --fill-primary: #1f6feb; /* 4.63 */
+  --fill-primary-hover: #3b82f6;
+  --fill-buy: #15803d; /* 5.02 */
+  --fill-buy-hover: #16a34a;
+  --fill-sell: #b91c1c; /* 6.47 */
+  --fill-sell-hover: #dc2626;
+
+  /* Tinted backgrounds for status blocks */
+  --tint-loss: rgba(255, 107, 107, 0.12);
+  --tint-brand: rgba(76, 154, 255, 0.12);
+  --tint-warning: rgba(251, 191, 36, 0.12);
+
+  /* Layout. The sticky stack is derived from these two values rather than
+     re-typed as literals; the previous revision hardcoded top:104px against
+     tickers that ended at 72px, leaving a 32px window content scrolled
+     through. */
+  --ticker-h: 36px;
+  --news-h: 36px;
+  --sticky-offset: calc(var(--ticker-h) + var(--news-h));
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --tap-min: 44px;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45);
+
+  --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
-* {
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  color: #e0e0e0;
-  min-height: 100vh;
+  font-family: var(--font);
+  /* Arabic needs more leading than Latin: dots, descenders and diacritics all
+     sit outside the x-height band. The previous revision set none at all. */
+  line-height: 1.7;
+  background: var(--bg);
+  color: var(--text);
+  /* dvh, not vh: vh is measured against the largest viewport, so the page
+     jumps by the height of the browser chrome as it hides on scroll. */
+  min-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .sr-only {
@@ -53,25 +105,112 @@ body {
 
 button:focus-visible,
 input:focus-visible,
-[tabindex]:focus-visible {
-  outline: 3px solid #f1c40f;
+[tabindex]:focus-visible,
+.switch-input:focus-visible + .switch-track {
+  outline: 3px solid var(--brand-strong);
   outline-offset: 2px;
 }
 
-.ticker {
-  background: #0f3460;
-  padding: 8px 0;
+/* ==========================================================================
+   App bar
+   --------------------------------------------------------------------------
+   New. The page previously opened straight onto two marquees with no title,
+   logo or anchor of any kind, while the language button floated over them at
+   position:fixed (measured: overlapping both tickers).
+   ========================================================================== */
+.app-bar {
+  background: var(--surface-1);
+  border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
+}
+
+.app-bar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  min-height: 56px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.brand-mark {
+  display: flex;
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+
+.brand-name {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.brand-tag {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.lang-btn {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  padding: 0;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* ==========================================================================
+   Marquees
+   ========================================================================== */
+.ticker,
+.news-ticker {
+  background: var(--surface-1);
+  height: var(--ticker-h);
+  display: flex;
+  align-items: center;
   overflow: hidden;
   white-space: nowrap;
-  border-bottom: 2px solid #6b16a0;
   position: sticky;
+  z-index: 40;
+  font-size: 13px;
+}
+
+.ticker {
   top: 0;
-  z-index: 999;
+  border-bottom: 1px solid var(--border);
+}
+
+.news-ticker {
+  height: var(--news-h);
+  top: var(--ticker-h);
+  border-bottom: 1px solid var(--border);
+  z-index: 39;
+}
+
+.ticker-content,
+.news-ticker-content {
+  display: inline-block;
 }
 
 .ticker-content {
-  display: inline-block;
   animation: scrollTicker 400s linear infinite;
+}
+
+.news-ticker-content {
+  animation: scrollNews 50s linear infinite;
 }
 
 @keyframes scrollTicker {
@@ -83,28 +222,6 @@ input:focus-visible,
   }
 }
 
-.ticker-item {
-  display: inline-block;
-  margin: 0 30px;
-  font-size: 14px;
-}
-
-.news-ticker {
-  background: #0f3460;
-  padding: 8px 0;
-  overflow: hidden;
-  white-space: nowrap;
-  border-bottom: 2px solid #16a085;
-  position: sticky;
-  top: 36px;
-  z-index: 998;
-}
-
-.news-ticker-content {
-  display: inline-block;
-  animation: scrollNews 50s linear infinite;
-}
-
 @keyframes scrollNews {
   0% {
     transform: translateX(-100%);
@@ -114,195 +231,281 @@ input:focus-visible,
   }
 }
 
+.ticker-item {
+  display: inline-block;
+  margin: 0 26px;
+  color: var(--text-2);
+}
+
+.ticker-item strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .news-item {
   display: inline-block;
-  margin: 0 40px;
-  font-size: 14px;
+  margin: 0 36px;
 }
 
 .news-positive {
-  color: #2ecc71;
+  color: var(--gain);
 }
+
+/* Was #e74c3c, which measured 3.27 on the ticker background. */
 .news-negative {
-  color: #e74c3c;
+  color: var(--loss);
 }
 
-.header {
-  background: #0f3460;
-  padding: 2px 10px;
-  text-align: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-}
-
-.header h1 {
-  color: #16a085;
-  font-size: 2em;
-  margin-bottom: 10px;
-}
-
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 15px;
-}
-
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
 .btn {
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  font-family: inherit;
   font-size: 14px;
-  font-weight: bold;
-  transition: all 0.3s;
-  min-height: 44px;
+  font-weight: 600;
+  line-height: 1.2;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+  min-height: var(--tap-min);
 }
 
-/* White on #16a085 measured 3.28 and on #e74c3c 3.82 — both fail AA for 14px
-   bold button text. The darker fills give 6.88 and 6.62. */
 .btn-primary {
-  background: var(--primary-strong);
-  color: white;
+  background: var(--fill-primary);
+  color: var(--on-fill);
 }
 .btn-primary:hover {
-  background: var(--primary);
-  transform: translateY(-2px);
-}
-.btn-danger {
-  background: var(--negative-strong);
-  color: white;
-}
-.btn-danger:hover {
-  background: #922b21;
-}
-.btn-secondary {
-  background: #34495e;
-  color: white;
-}
-.btn-secondary:hover {
-  background: #2c3e50;
+  background: var(--fill-primary-hover);
 }
 
+/* Buy and sell keep the semantic pair; both fills clear AA against white. */
+.btn-buy {
+  background: var(--fill-buy);
+  color: var(--on-fill);
+}
+.btn-buy:hover {
+  background: var(--fill-buy-hover);
+}
+
+.btn-danger {
+  background: var(--fill-sell);
+  color: var(--on-fill);
+}
+.btn-danger:hover {
+  background: var(--fill-sell-hover);
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border);
+}
+.btn-secondary:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.btn-ghost:hover {
+  background: var(--surface-2);
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
 .container {
   max-width: 1400px;
-  margin: 20px auto;
-  padding: 0 20px;
+  margin: 0 auto;
+  padding: 16px 20px 24px;
 }
 
 .market-status-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  background: #0f3460;
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin-bottom: 10px;
-  border: 2px solid #16a085;
+  gap: 8px 20px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 14px;
+  margin-bottom: 12px;
   font-size: 13px;
 }
 
 .market-status {
-  font-weight: bold;
+  font-weight: 600;
+  margin-inline-end: auto;
 }
 .market-status.open {
-  color: var(--positive);
+  color: var(--gain);
 }
-/* #e74c3c and #9b59b6 on --surface measured 3.27 and 2.68 — both below the
-   4.5 AA threshold for this 13px text. These land at 5.56 and 5.33. */
 .market-status.closed {
-  color: var(--negative-light);
+  color: var(--loss);
 }
 .market-status.override {
-  color: var(--accent-light);
+  color: var(--brand);
 }
 
 .hijri-date {
-  color: #f1c40f;
+  color: var(--text-2);
   font-size: 12px;
 }
 
-.market-status-bar label {
-  cursor: pointer;
+/* --- Switches -------------------------------------------------------------
+   Replaces two bare checkboxes that measured 13x13px inside 15px-tall labels
+   — the two smallest hit targets on the page, one of which is the Sharia
+   filter. The whole row is now the target.
+   ------------------------------------------------------------------------ */
+.switch-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  min-height: var(--tap-min);
+  cursor: pointer;
+  user-select: none;
+}
+
+.switch-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  inset-inline-start: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--text-2);
+  transition:
+    transform 0.2s,
+    background-color 0.2s;
+}
+
+.switch-input:checked + .switch-track {
+  background: var(--fill-primary);
+  border-color: var(--fill-primary);
+}
+
+.switch-input:checked + .switch-track .switch-thumb {
+  background: var(--on-fill);
+  transform: translateX(18px);
+}
+
+/* Logical properties can't express the thumb travel here, because the track
+   is a fixed-width box rather than a flow-relative one. */
+[dir='rtl'] .switch-input:checked + .switch-track .switch-thumb {
+  transform: translateX(-18px);
 }
 
 .market-warning {
-  background: rgba(231, 76, 60, 0.15);
-  border: 1px solid #e74c3c;
-  color: #e74c3c;
-  padding: 8px;
-  border-radius: 5px;
-  margin: 10px 0;
+  background: var(--tint-loss);
+  border: 1px solid var(--loss);
+  color: var(--loss);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  margin: 12px 0;
   font-size: 13px;
 }
 
-/* Grid, not a 4-up flex row: the flex version had no wrap, so on a ~360px
-   phone each card squeezed to ~80px and the formatted currency overflowed. */
+/* ==========================================================================
+   Stats
+   ========================================================================== */
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .stat-card {
-  background: #0f3460;
-  padding: 6px;
-  border-radius: 5px;
-  border: 2px solid var(--primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: var(--radius);
   text-align: center;
 }
 
 .stat-label {
-  color: #bdc3c7;
+  color: var(--text-muted);
   font-size: 12px;
-  margin-bottom: 3px;
+  line-height: 1.4;
 }
+
 .stat-value {
   font-size: 18px;
-  font-weight: bold;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
 }
 
+/* Price direction, everywhere it appears. */
 .positive {
-  color: var(--positive);
+  color: var(--gain);
 }
-/* #e74c3c on --surface-alt measured 4.46, just under AA; this gives 5.86. */
 .negative {
-  color: var(--negative-light);
+  color: var(--loss);
 }
 
+/* ==========================================================================
+   Tabs
+   ========================================================================== */
 .tabs {
   display: flex;
-  gap: 5px;
-  margin-bottom: 5px;
-  border-bottom: 2px solid #16a085;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .tab {
-  padding: 10px 10px;
-  background: #0f3460;
-  border: 2px solid transparent;
-  border-bottom: none;
-  color: #e0e0e0;
-  font-size: 16px;
-  font-weight: bold;
+  padding: 10px 16px;
+  min-height: var(--tap-min);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
-  border-radius: 10px 10px 0 0;
-  transition: all 0.3s;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .tab:hover {
-  background: #16213e;
+  background: var(--surface-2);
+  color: var(--text);
 }
+
+/* White on the old #16a085 measured 3.28; this fill measures 4.63. */
 .tab.active {
-  background: #16a085;
-  color: white;
-  border-color: #16a085;
+  background: var(--fill-primary);
+  border-color: var(--fill-primary);
+  color: var(--on-fill);
 }
 
 .tab-content {
@@ -312,16 +515,352 @@ input:focus-visible,
   display: block;
 }
 
+/* ==========================================================================
+   Panels and cards
+   --------------------------------------------------------------------------
+   Separation now comes from the surface ramp, so panels carry a 1px neutral
+   border instead of a 2px teal one and nested cards carry none at all.
+   ========================================================================== */
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.panel-title {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* A title with a counter beside it. The rule moves to the wrapper so the
+   underline still spans the full panel width. */
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-head .panel-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.panel-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- Stock list toolbar --------------------------------------------------- */
+/* Search on its own row, the two selects sharing the next one: three stacked
+   full-width controls cost ~150px of a 740px phone before the first row. */
+.list-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.list-search {
+  /* inherits the shared input rules */
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.list-select {
+  min-height: var(--tap-min);
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.list-select:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+@media (min-width: 640px) {
+  .list-toolbar {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .list-search {
+    grid-column: auto;
+  }
+}
+
+.stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.stock-item {
+  background: var(--surface-2);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  border-inline-start: 3px solid transparent;
+}
+
+.stock-item:hover {
+  background: var(--surface-3);
+  border-inline-start-color: var(--brand);
+}
+
+.stock-item.selected {
+  background: var(--surface-3);
+  border-inline-start-color: var(--brand);
+}
+
+.stock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.stock-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* --text-2 rather than --text-muted: muted measures 4.19 against the
+   surface-3 hover state, which is below AA. */
+.stock-symbol {
+  color: var(--text-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-price {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-change {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stock-figures {
+  text-align: end;
+}
+
+.sharia-badge {
+  font-size: 13px;
+}
+
+.portfolio-item,
+.order-item {
+  background: var(--surface-2);
+  padding: 14px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-sm);
+}
+
+.portfolio-details,
+.order-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 6px 20px;
+  margin: 10px 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.portfolio-details strong,
+.order-details strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.portfolio-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.order-actions {
+  margin-top: 10px;
+}
+
+/* ==========================================================================
+   Forms
+   ========================================================================== */
+input[type='number'],
+input[type='text'] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  min-height: var(--tap-min);
+}
+
+input[type='number']:focus,
+input[type='text']:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+.order-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.order-type {
+  display: flex;
+  gap: 8px;
+}
+
+.order-type label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-min);
+  padding: 8px 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+.order-type label:hover {
+  background: var(--surface-3);
+}
+
+.order-type input[type='radio'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+/* The checked state now recolours the whole label rather than painting a pill
+   inside it, so the tap target and the selected affordance are the same box. */
+.order-type label:has(input[type='radio']:checked) {
+  background: var(--fill-primary);
+  border-color: var(--fill-primary);
+  color: var(--on-fill);
+  font-weight: 600;
+}
+
+.order-type input[type='radio']:focus-visible + span {
+  outline: 3px solid var(--brand-strong);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+
+.order-submit-row {
+  display: flex;
+  gap: 10px;
+}
+
+.order-submit-btn,
+.portfolio-action-btn {
+  flex: 1;
+}
+
+.cancel-order-btn {
+  width: 100%;
+}
+
+.chart-container {
+  position: relative;
+  height: 300px;
+  margin: 8px 0;
+}
+
+.indicator-controls {
+  margin-top: 12px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+/* Indicator toggles are chips: the bare checkboxes wrapped onto two lines and
+   gave "SMA 20" a 13px target. */
+.indicator-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.indicator-controls label:hover {
+  background: var(--surface-3);
+}
+
+.indicator-controls input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--fill-primary);
+  margin: 0;
+}
+
+/* ==========================================================================
+   Modals
+   ========================================================================== */
 .modal {
   display: none;
   position: fixed;
   z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
-  animation: fadeIn 0.3s;
+  inset: 0;
+  background-color: rgba(3, 7, 18, 0.75);
+  animation: fadeIn 0.2s;
 }
 
 @keyframes fadeIn {
@@ -334,22 +873,23 @@ input:focus-visible,
 }
 
 .modal-content {
-  background: #0f3460;
-  margin: 5% auto;
-  padding: 30px;
-  border: 2px solid #16a085;
-  border-radius: 15px;
-  width: 90%;
-  max-width: 900px;
-  max-height: 80vh;
+  background: var(--surface-1);
+  margin: 5vh auto;
+  padding: 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  width: min(920px, calc(100% - 32px));
+  max-height: 90vh;
+  max-height: 90dvh;
   overflow-y: auto;
-  animation: slideDown 0.3s;
+  animation: slideDown 0.2s;
   position: relative;
 }
 
 @keyframes slideDown {
   from {
-    transform: translateY(-50px);
+    transform: translateY(-24px);
     opacity: 0;
   }
   to {
@@ -360,648 +900,419 @@ input:focus-visible,
 
 .close-modal {
   position: absolute;
-  top: 15px;
-  /* Logical, so the button sits top-left in RTL and top-right in LTR rather
-     than staying pinned to the left in both. */
-  inset-inline-end: 15px;
-  font-size: 28px;
-  font-weight: bold;
-  color: #e74c3c;
+  top: 12px;
+  inset-inline-end: 12px;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--text-2);
   cursor: pointer;
   background: none;
   border: none;
-  padding: 0;
-  line-height: 1;
-  transition: all 0.3s;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.15s,
+    background-color 0.15s;
 }
 
 .close-modal:hover {
-  color: #c0392b;
-  transform: scale(1.2);
+  color: var(--text);
+  background: var(--surface-2);
 }
 
 .alert-modal .modal-content {
-  max-width: 500px;
+  max-width: 480px;
   text-align: center;
 }
 
 .alert-modal-body {
-  padding: 20px 0;
-  font-size: 16px;
-  color: #e0e0e0;
-  line-height: 1.6;
+  padding: 12px 0;
+  font-size: 15px;
+  color: var(--text);
 }
 
 .alert-modal-footer {
-  margin-top: 20px;
+  margin-top: 16px;
   display: flex;
   gap: 10px;
   justify-content: center;
 }
 
-.main-content {
+/* Reserve room for the close button so the title never runs under it. */
+#stock-details h3 {
+  font-size: 19px;
+  padding-inline-end: 44px;
+}
+
+.stock-detail-price {
+  margin: 8px 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* --------------------------------------------------------------------------
+   The chart/order split.
+
+   This rule previously appeared AFTER the max-width:768px block with the same
+   specificity, so it also won on phones: the measured result at 360px was
+   "221.672px 56.3281px" and a 56px-wide chart. auto-fit removes the need for
+   a breakpoint to be right at all — the second column only exists once there
+   is room for it.
+   -------------------------------------------------------------------------- */
+.stock-details-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 20px;
 }
 
-.panel {
-  background: #0f3460;
-  border-radius: 10px;
-  padding: 10px;
-  border: 2px solid #16a085;
+/* Name, price and any market warning always run the full width; the chart and
+   the order form pair up only when there is room for both. */
+.stock-details-header {
+  grid-column: 1 / -1;
 }
 
-.panel-title {
-  color: #16a085;
-  font-size: 20px;
-  margin-bottom: 10px;
-  border-bottom: 2px solid #16a085;
-  padding-bottom: 10px;
-}
-
-.stock-list {
-  max-height: 400px;
-  overflow-y: auto;
-}
-
-.stock-item {
-  background: #1a1a2e;
-  padding: 10px;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.3s;
-  border-inline-start: 4px solid transparent;
-}
-
-.stock-item:hover {
-  background: var(--surface-deep);
-  border-inline-start-color: var(--primary);
-  transform: translateX(-5px);
-}
-
-.stock-item.selected {
-  border-inline-start-color: var(--primary);
-  background: var(--surface-deep);
-}
-
-.stock-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.stock-name {
-  font-weight: bold;
-  font-size: 15px;
-}
-.stock-symbol {
-  color: #bdc3c7;
-  font-size: 12px;
-}
-.stock-price {
-  font-size: 15px;
-  font-weight: bold;
-}
-.stock-change {
-  font-size: 14px;
-}
-
-.sharia-badge {
-  font-size: 13px;
-}
-
-.portfolio-item {
-  background: #1a1a2e;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 5px;
-}
-
-.portfolio-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 10px 0;
-  font-size: 13px;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-}
-
-.portfolio-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-input[type='number'] {
-  width: 100%;
-  padding: 10px;
-  border: 2px solid #34495e;
-  border-radius: 5px;
-  background: #1a1a2e;
-  color: #e0e0e0;
-  font-size: 14px;
-  margin-bottom: 10px;
-  min-height: 44px;
-}
-
-input[type='number']:focus {
-  outline: none;
-  border-color: #16a085;
-}
-
-.order-form {
-  display: grid;
-  gap: 15px;
-}
-
-.order-type {
-  display: flex;
-  gap: 10px;
-}
-
-.order-type label {
-  flex: 1;
-  padding: 10px;
-  background: #1a1a2e;
-  border: 2px solid #34495e;
-  border-radius: 5px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.order-type input[type='radio'] {
+/* Hidden as soon as a stock has been rendered into the panel. Doing it in CSS
+   keeps the placeholder out of the render path entirely. */
+#stock-panel-body:has(#stock-details > *) #stock-panel-hint {
   display: none;
 }
-.order-type input[type='radio']:checked + span {
-  background: #16a085;
-  border-color: #16a085;
-  padding: 4px 8px;
-  border-radius: 3px;
-  display: inline-block;
-}
 
-.chart-container {
-  position: relative;
-  height: 300px;
-  margin: 10px 0;
-}
-
-.indicator-controls label {
-  cursor: pointer;
-}
-
-.tips-container {
-  margin-top: 10px;
-  margin-bottom: 10px;
+/* ==========================================================================
+   Tips, challenges, orders
+   ========================================================================== */
+.tips-container,
+.challenges {
+  margin-top: 12px;
 }
 
 .tip-item {
-  background: #1a1a2e;
-  padding: 10px;
-  margin-bottom: 5px;
-  border-radius: 5px;
-  border-inline-start: 4px solid var(--primary);
+  background: var(--surface-2);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
-  color: var(--text);
+  color: var(--text-2);
 }
 
-.challenges {
-  margin-top: 10px;
-}
-
+/* The accent edge is kept only where it carries meaning — an open challenge,
+   a pending order — instead of on every card in the app. */
 .challenge-item {
-  background: #1a1a2e;
-  padding: 10px;
+  background: var(--surface-2);
+  padding: 12px;
   margin-bottom: 10px;
-  border-radius: 5px;
-  border-inline-start: 4px solid var(--warning);
+  border-radius: var(--radius-sm);
+  border-inline-start: 3px solid var(--warning);
+}
+
+.challenge-reward {
+  color: var(--warning);
+  font-size: 13px;
 }
 
 .challenge-progress {
   width: 100%;
-  height: 20px;
-  background: #34495e;
-  border-radius: 10px;
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 999px;
   margin-top: 10px;
   overflow: hidden;
 }
 
 .challenge-progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #16a085, #1abc9c);
+  background: var(--brand);
   transition: width 0.5s;
 }
 
 .order-item {
-  background: #1a1a2e;
-  padding: 15px;
-  margin-bottom: 10px;
-  border-radius: 5px;
-  border-inline-start: 4px solid var(--warning);
-}
-
-.order-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.order-details {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  font-size: 13px;
-  color: #bdc3c7;
-}
-
-.order-actions {
-  margin-top: 10px;
-}
-
-.footer {
-  text-align: center;
-  padding: 20px;
-  margin-top: 40px;
-  border-top: 2px solid #16a085;
-  color: #bdc3c7;
-  font-size: 14px;
-}
-
-.lang-switch {
-  position: fixed;
-  top: 20px;
-  inset-inline-end: 20px;
-  z-index: 1000;
-}
-
-.lang-switch .btn {
-  width: 45px;
-  height: 45px;
-  padding: 0;
-  font-size: 20px;
-  font-weight: bold;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.csv-export-btn {
-  display: block;
-  margin: 15px auto 0;
-}
-
-@media (max-width: 768px) {
-  .main-content {
-    grid-template-columns: 1fr;
-  }
-  .stats {
-    position: sticky;
-    top: 104px;
-    z-index: 997;
-    background: #1a1a2e;
-    padding: 8px 10px;
-    margin: -16px -20px 15px -20px;
-    border-bottom: 2px solid #16a085;
-    gap: 8px;
-  }
-  .stat-card {
-    padding: 8px;
-    border-radius: 8px;
-    border-width: 1px;
-  }
-  .stat-label {
-    font-size: 10px;
-    margin-bottom: 3px;
-  }
-  .stat-value {
-    font-size: 13px;
-  }
-  .header h1 {
-    font-size: 1.8em;
-  }
-  .modal-content {
-    width: 95%;
-    margin: 10% auto;
-    padding: 20px;
-  }
-  .tabs {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-  .tab {
-    border-radius: 10px;
-    border: 2px solid #34495e;
-    white-space: nowrap;
-  }
-  .tab.active {
-    border-color: #16a085;
-  }
-  .portfolio-details,
-  .order-details,
-  .stock-details-grid {
-    grid-template-columns: 1fr;
-  }
-  .indicator-controls {
-    font-size: 14px;
-  }
-}
-
-/* Shared helpers for nodes built in JS (previously inline style strings) */
-.empty-state {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 20px 0;
-}
-
-.ticker-price {
-  font-variant-numeric: tabular-nums;
-}
-
-.challenge-reward {
-  color: var(--warning);
-  margin-top: 5px;
-}
-
-.session-controls {
-  text-align: center;
-  margin: 20px 0;
-}
-
-.portfolio-action-btn {
-  flex: 1;
-}
-
-.cancel-order-btn {
-  width: 100%;
+  border-inline-start: 3px solid var(--warning);
 }
 
 .order-stock-name {
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .order-stock-symbol {
-  color: var(--text-muted);
-  margin-inline-start: 10px;
+  color: var(--text-2);
+  margin-inline-start: 8px;
 }
 
 .order-kind-badge {
-  padding: 5px 15px;
+  padding: 4px 12px;
   font-size: 12px;
   min-height: auto;
+  cursor: default;
 }
 
 .order-date-row {
   grid-column: 1 / -1;
 }
 
-.stock-details-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px 0;
 }
 
-.stock-detail-price {
-  margin: 10px 0;
+.ticker-price {
+  font-variant-numeric: tabular-nums;
 }
 
-.order-form {
-  margin-top: 20px;
-}
-
-.order-submit-row {
+.session-controls {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 24px 0 8px;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+}
+
+.csv-export-btn {
+  display: block;
+  margin: 14px auto 0;
+}
+
+.action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.action-bar .btn {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+/* ==========================================================================
+   Bottom navigation and the "more" sheet — phones only
+   --------------------------------------------------------------------------
+   Hidden by default and enabled in the max-width block, so nothing here
+   applies to desktop even for a frame during load.
+   ========================================================================== */
+.bottom-nav {
+  display: none;
+}
+
+.sheet {
+  display: none;
+}
+
+.stock-panel {
+  display: none;
+}
+
+/* ==========================================================================
+   Glossary
+   ========================================================================== */
+.glossary-search {
+  margin-bottom: 12px;
+}
+
+.glossary-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-inline-end: 6px;
+}
+
+.glossary-item {
+  background: var(--surface-2);
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.glossary-term {
+  font-weight: 700;
+  color: var(--brand);
+  margin-bottom: 2px;
+}
+
+.glossary-definition {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ==========================================================================
+   Personal stats
+   ========================================================================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 10px;
 }
 
-.order-submit-btn {
-  flex: 1;
+.stats-card {
+  background: var(--surface-2);
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  text-align: center;
 }
 
-.indicator-controls {
-  margin-top: 10px;
+.stats-card-label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.stats-card-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* ==========================================================================
+   Tour
+   ========================================================================== */
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 18, 0.6);
+  z-index: 1500;
+  display: none;
+}
+
+.tour-highlight {
+  position: absolute;
+  border: 2px solid var(--brand);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 0 9999px rgba(3, 7, 18, 0.6);
+  pointer-events: none;
+  transition: all 0.3s;
+}
+
+.tour-tooltip {
+  position: absolute;
+  background: var(--surface-1);
+  color: var(--text);
+  padding: 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  max-width: 320px;
+  z-index: 1501;
+  box-shadow: var(--shadow-2);
+}
+
+.tour-tooltip h3 {
+  color: var(--brand);
+  margin-bottom: 6px;
+  font-size: 16px;
+}
+
+.tour-tooltip p {
+  font-size: 13px;
+}
+
+.tour-tooltip-actions {
   display: flex;
   gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
   flex-wrap: wrap;
-  font-size: 13px;
+}
+
+/* ==========================================================================
+   Lessons
+   ========================================================================== */
+.lesson-paths {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.lesson-path-card {
+  background: var(--surface-2);
+  padding: 14px;
+  border-radius: var(--radius-sm);
+}
+
+.lesson-path-title {
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  font-size: 15px;
 }
 
 .lesson-path-progress-label {
   font-size: 12px;
   color: var(--text-muted);
-  margin-bottom: 6px;
+}
+
+.lesson-path-progress-bar {
+  height: 6px;
+  background: var(--surface-3);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 6px 0 10px;
+}
+
+.lesson-path-progress-fill {
+  height: 100%;
+  background: var(--brand);
+  transition: width 0.3s;
+}
+
+.lesson-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lesson-list-item {
+  padding: 8px 10px;
+  background: var(--surface-1);
+  border-radius: 6px;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.lesson-list-item.completed {
+  color: var(--gain);
 }
 
 .lesson-list-item-status {
   font-size: 11px;
 }
 
-/* Glossary */
-.glossary-search {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 6px;
-  border: 2px solid #34495e;
-  background: #1a1a2e;
-  color: #e0e0e0;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-.glossary-search:focus {
-  outline: none;
-  border-color: #16a085;
-}
-.glossary-list {
-  max-height: 60vh;
-  overflow-y: auto;
-  padding-inline-end: 6px;
-}
-.glossary-item {
-  background: #1a1a2e;
-  padding: 12px;
-  margin-bottom: 8px;
-  border-radius: 6px;
-  border-inline-start: 4px solid #16a085;
-}
-.glossary-term {
-  font-weight: bold;
-  color: #1abc9c;
-  margin-bottom: 4px;
-}
-.glossary-definition {
-  font-size: 13px;
-  line-height: 1.6;
-  color: #e0e0e0;
-}
-
-/* Personal stats */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-.stats-card {
-  background: #1a1a2e;
-  padding: 14px;
-  border-radius: 8px;
-  border: 2px solid #34495e;
-  text-align: center;
-}
-.stats-card-label {
-  color: #95a5a6;
-  font-size: 12px;
-  margin-bottom: 6px;
-}
-.stats-card-value {
-  font-size: 20px;
-  font-weight: bold;
-  color: #1abc9c;
-}
-
-/* Tour overlay */
-.tour-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 1500;
-  display: none;
-  pointer-events: auto;
-}
-.tour-highlight {
-  position: absolute;
-  border: 3px solid #f1c40f;
-  border-radius: 8px;
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
-  pointer-events: none;
-  transition: all 0.3s;
-}
-.tour-tooltip {
-  position: absolute;
-  background: #0f3460;
-  color: #e0e0e0;
-  padding: 16px;
-  border-radius: 8px;
-  border: 2px solid #16a085;
-  max-width: 320px;
-  z-index: 1501;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-}
-.tour-tooltip h3 {
-  color: #1abc9c;
-  margin-bottom: 6px;
-  font-size: 16px;
-}
-.tour-tooltip p {
-  font-size: 13px;
-  line-height: 1.5;
-}
-.tour-tooltip-actions {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-/* Action bar (extra feature buttons) */
-.action-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  margin: 10px 0 15px;
-}
-/* Keeps the 44px target the base .btn rule establishes; `min-height: auto`
-   here shrank five adjacent buttons to ~33px. */
-.action-bar .btn {
-  font-size: 13px;
-  padding: 8px 12px;
-}
-
-/* Lessons */
-.lesson-paths {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-}
-.lesson-path-card {
-  background: #1a1a2e;
-  padding: 14px;
-  border-radius: 8px;
-  border-inline-start: 4px solid #16a085;
-}
-.lesson-path-title {
-  font-weight: bold;
-  color: #1abc9c;
-  margin-bottom: 6px;
-  font-size: 15px;
-}
-.lesson-path-progress-bar {
-  height: 8px;
-  background: #34495e;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 6px 0 10px;
-}
-.lesson-path-progress-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #16a085, #1abc9c);
-  transition: width 0.3s;
-}
-.lesson-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.lesson-list-item {
-  padding: 6px 8px;
-  background: #0f3460;
-  border-radius: 4px;
-  font-size: 13px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.lesson-list-item.completed {
-  color: #2ecc71;
-}
 .lesson-content {
-  background: #1a1a2e;
+  background: var(--surface-2);
   padding: 16px;
-  border-radius: 8px;
-  margin-top: 10px;
-  border-inline-start: 4px solid #f39c12;
+  border-radius: var(--radius-sm);
+  margin-top: 12px;
+  border-inline-start: 3px solid var(--brand);
 }
+
 .lesson-content h3 {
-  color: #1abc9c;
+  color: var(--text);
   margin-bottom: 10px;
 }
-.lesson-content p {
-  line-height: 1.7;
-  margin-bottom: 10px;
+
+.lesson-content p,
+.lesson-content li {
   font-size: 14px;
+  color: var(--text-2);
+  margin-bottom: 8px;
 }
+
 .lesson-content ul {
   padding-inline-start: 20px;
-  margin-bottom: 10px;
 }
-.lesson-content li {
-  margin-bottom: 4px;
-  font-size: 14px;
-  line-height: 1.6;
-}
+
 .lesson-content strong {
-  color: #f1c40f;
+  color: var(--text);
 }
+
 .lesson-actions {
   display: flex;
   gap: 8px;
@@ -1010,57 +1321,380 @@ input[type='number']:focus {
   flex-wrap: wrap;
 }
 
-/* Scenarios */
+/* ==========================================================================
+   Scenarios — the purple accent is gone; it was a sixth hue carrying no
+   meaning the brand colour couldn't carry.
+   ========================================================================== */
 .scenario-card {
-  background: #1a1a2e;
-  padding: 12px;
-  border-radius: 6px;
-  border-inline-start: 4px solid #9b59b6;
+  background: var(--surface-2);
+  padding: 14px;
+  border-radius: var(--radius-sm);
   margin-bottom: 10px;
 }
+
 .scenario-title {
-  font-weight: bold;
-  color: #1abc9c;
-  margin-bottom: 4px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 2px;
 }
+
 .scenario-description {
   font-size: 13px;
-  color: #e0e0e0;
-  line-height: 1.6;
+  color: var(--text-2);
   margin-bottom: 10px;
 }
+
 .scenario-badge {
   display: inline-block;
-  background: #9b59b6;
-  color: white;
-  padding: 3px 10px;
-  border-radius: 4px;
+  background: var(--tint-brand);
+  color: var(--brand);
+  border: 1px solid var(--brand);
+  padding: 2px 10px;
+  border-radius: 999px;
   font-size: 12px;
   margin-inline-start: 6px;
 }
+
 .scenario-active-banner {
-  background: linear-gradient(90deg, #9b59b6, #8e44ad);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
+  background: var(--tint-brand);
+  border: 1px solid var(--brand);
+  color: var(--brand);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
   text-align: center;
-  font-weight: bold;
-  margin-bottom: 10px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+/* ==========================================================================
+   Footer
+   ========================================================================== */
+.footer {
+  text-align: center;
+  padding: 24px 20px;
+  margin-top: 32px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
   font-size: 13px;
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #1a1a2e;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #16a085;
-  border-radius: 4px;
+  background: var(--border-strong);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #1abc9c;
+  background: var(--text-muted);
+}
+
+/* ==========================================================================
+   Desktop
+   --------------------------------------------------------------------------
+   .main-content was declared in CSS but matched no element, so every screen
+   size got the same single stacked column and a 1440px viewport spent ~1360px
+   of width rendering a stock name and a price.
+   ========================================================================== */
+@media (min-width: 1024px) {
+  .main-content {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .stock-list {
+    max-height: 620px;
+  }
+
+  .action-bar {
+    justify-content: flex-start;
+  }
+
+  /* The side panel replaces the modal at this width: chart and order form sit
+     beside the list, which is how every real trading terminal is laid out. */
+  .stock-panel {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  /* One column inside the side panel — it is already the narrow half of the
+     page, so the chart/form split would give each ~200px. */
+  .stock-panel .stock-details-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .stock-panel #stock-details h3 {
+    padding-inline-end: 0;
+  }
+
+  /* The aside tracks the list instead of scrolling away from it. */
+  .main-content > aside {
+    position: sticky;
+    top: var(--sticky-offset);
+  }
+}
+
+/* Wide desktop: the list column stops growing so rows don't stretch a stock
+   name across the full width, and the chart column takes the surplus. */
+@media (min-width: 1400px) {
+  .main-content {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .stock-list {
+    max-height: 720px;
+  }
+}
+
+/* ==========================================================================
+   Mobile
+   --------------------------------------------------------------------------
+   Measured on 360x740 before this change: 226px (30.5% of the viewport) was
+   permanently occupied by the two marquees, a 32px dead gap and a 122px
+   sticky stats block, before a single stock was visible.
+   ========================================================================== */
+@media (max-width: 767px) {
+  :root {
+    /* Collapses the sticky stack to one bar. The price marquee is decorative
+       (aria-hidden) and repeats the stock list immediately below it verbatim,
+       so it is the one to drop; the news marquee carries information that
+       appears nowhere else on screen. Zeroing the token also re-seats
+       .news-ticker at top:0 and the stats bar right beneath it. */
+    --ticker-h: 0px;
+  }
+
+  .ticker {
+    display: none;
+  }
+
+  .app-bar-inner {
+    min-height: 52px;
+    padding: 0 12px;
+  }
+
+  .brand-tag {
+    display: none;
+  }
+
+  .container {
+    padding: 12px 12px 20px;
+  }
+
+  .market-status-bar {
+    gap: 0 16px;
+    padding: 4px 12px;
+  }
+
+  .market-status {
+    flex-basis: 100%;
+    margin-inline-end: 0;
+  }
+
+  .stats {
+    position: sticky;
+    top: var(--sticky-offset);
+    z-index: 38;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 8px 12px;
+    margin: 0 -12px 12px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Compact rather than inline: the label and value do share a card, but
+     "50,000.00 ريال" next to its label overflows a 165px half-width card and
+     wraps to two lines, which costs more height than it saves. Tightening the
+     type and the padding takes the block from a measured 122px to ~88px with
+     nothing truncated. */
+  .stat-card {
+    padding: 5px 8px;
+    line-height: 1.25;
+    text-align: start;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stat-value {
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tab {
+    white-space: nowrap;
+    flex: 1;
+    padding: 10px 12px;
+  }
+
+  .stock-list {
+    /* A 400px scroll box inside a scrolling page meant two competing scroll
+       surfaces under one thumb. The page is the only scroller now. */
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .panel {
+    padding: 12px;
+  }
+
+  .modal-content {
+    width: calc(100% - 16px);
+    margin: 2vh auto;
+    padding: 16px;
+    max-height: 96dvh;
+  }
+
+  .detail-item {
+    font-size: 13px;
+  }
+
+  .order-type label {
+    font-size: 13px;
+    padding: 8px 4px;
+  }
+
+  /* --- Bottom navigation ------------------------------------------------
+     The tabs and the five secondary buttons all sat at the top of the page,
+     the furthest point from the thumb on a phone. Both move down here. */
+  .tabs {
+    display: none;
+  }
+
+  .bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 900;
+    background: var(--surface-1);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 6px 4px;
+    background: none;
+    border: none;
+    border-top: 2px solid transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .bottom-nav-btn.active {
+    color: var(--brand);
+    border-top-color: var(--brand);
+  }
+
+  .bottom-nav-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .bottom-nav-label {
+    line-height: 1.2;
+  }
+
+  /* Clears the fixed bar so the footer and the reset controls stay reachable. */
+  body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
+  /* --- "More" sheet ------------------------------------------------------ */
+  .sheet {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(3, 7, 18, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .sheet.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sheet-panel {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    background: var(--surface-1);
+    border-top: 1px solid var(--border-strong);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 0.25s;
+    max-height: 80dvh;
+    overflow-y: auto;
+  }
+
+  .sheet.open .sheet-panel {
+    transform: translateY(0);
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .sheet-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .sheet-head .close-modal {
+    position: static;
+  }
+
+  /* Inside the sheet the action bar is a full-width stack, not a scrolling
+     row: there is room for it here, which is the point of moving it. */
+  .sheet-body .action-bar {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow: visible;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sheet-body .action-bar .btn {
+    width: 100%;
+    font-size: 15px;
+    justify-content: flex-start;
+    text-align: start;
+  }
 }
 
 /* Two infinite marquees plus modal/hover transforms make this page hostile to
