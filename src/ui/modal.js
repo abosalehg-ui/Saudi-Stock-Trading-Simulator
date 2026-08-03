@@ -104,6 +104,42 @@ export function showConfirm(message) {
   });
 }
 
+/**
+ * Open any modal by id with the same focus handling the stock/alert modals get:
+ * remember what was focused, move focus inside, trap Tab, wire Escape.
+ *
+ * Exists so the glossary/stats/learning/scenarios modals stop hand-rolling
+ * `style.display = 'block'`, which skipped the trap entirely.
+ *
+ * @param {string} id
+ * @param {() => void} [onClose] - run after the modal is hidden, before focus returns
+ */
+export function openModal(id, onClose) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  lastFocused = document.activeElement;
+  modal.style.display = 'block';
+  trapFocus(modal, () => closeModal(id, onClose));
+}
+
+/**
+ * @param {string} id
+ * @param {() => void} [onClose]
+ */
+export function closeModal(id, onClose) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.style.display = 'none';
+  releaseTrap(modal);
+  if (typeof onClose === 'function') onClose();
+  restoreFocus();
+}
+
+export function isModalOpen(id) {
+  const modal = document.getElementById(id);
+  return !!modal && modal.style.display === 'block';
+}
+
 export function openStockModal() {
   const modal = document.getElementById('stock-modal');
   lastFocused = document.activeElement;

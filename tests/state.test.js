@@ -8,6 +8,9 @@ import {
   priceHistory,
   savePriceState,
   loadPriceState,
+  loadStats,
+  resetStats,
+  personalStats,
 } from '../src/state.js';
 import { STORAGE_KEY, PRICES_STORAGE_KEY } from '../src/config.js';
 
@@ -160,5 +163,84 @@ describe('price persistence', () => {
     loadPriceState();
     expect(stockPrices['2222']).toBe(before2222);
     expect(stockPrices['1120']).toBe(before1120);
+  });
+});
+
+describe('loadStats sanitisation', () => {
+  beforeEach(() => {
+    resetStats();
+  });
+
+  it('keeps valid values', () => {
+    localStorage.setItem(
+      'tadawulStats',
+      JSON.stringify({ totalTrades: 7, bestPnlPct: 12.5, bestTradeSymbol: '1180' })
+    );
+    loadStats();
+    expect(personalStats.totalTrades).toBe(7);
+    expect(personalStats.bestPnlPct).toBe(12.5);
+    expect(personalStats.bestTradeSymbol).toBe('1180');
+  });
+
+  it('falls back to defaults for non-finite numbers instead of poisoning the UI', () => {
+    // Written as raw JSON: an overflowing literal parses to Infinity, which is
+    // exactly the value that used to reach personalStats and render as "∞".
+    localStorage.setItem(
+      'tadawulStats',
+      '{"bestPnlPct": null, "totalTrades": "many", "lifetimeCommission": 1e999}'
+    );
+    loadStats();
+    expect(personalStats.bestPnlPct).toBe(0);
+    expect(personalStats.totalTrades).toBe(0);
+    expect(Number.isFinite(personalStats.lifetimeCommission)).toBe(true);
+    // The stats modal calls .toFixed() on every one of these.
+    expect(() => personalStats.bestPnlPct.toFixed(2)).not.toThrow();
+  });
+
+  it('rejects negative counters', () => {
+    localStorage.setItem(
+      'tadawulStats',
+      JSON.stringify({ totalTrades: -5, sessionsPlayed: -1, challengesCompleted: -3 })
+    );
+    loadStats();
+    expect(personalStats.totalTrades).toBe(0);
+    expect(personalStats.sessionsPlayed).toBe(0);
+    expect(personalStats.challengesCompleted).toBe(0);
+  });
+
+  it('drops symbols that are not real stocks', () => {
+    localStorage.setItem(
+      'tadawulStats',
+      JSON.stringify({ bestTradeSymbol: 'NOPE', worstTradeSymbol: 42 })
+    );
+    loadStats();
+    expect(personalStats.bestTradeSymbol).toBeNull();
+    expect(personalStats.worstTradeSymbol).toBeNull();
+  });
+
+  it('ignores unknown keys rather than copying them onto the stats object', () => {
+    localStorage.setItem('tadawulStats', JSON.stringify({ totalTrades: 2, injected: 'x' }));
+    loadStats();
+    expect(personalStats.totalTrades).toBe(2);
+    expect('injected' in personalStats).toBe(false);
+  });
+
+  it('survives malformed JSON', () => {
+    localStorage.setItem('tadawulStats', '{broken');
+    expect(() => loadStats()).not.toThrow();
+    expect(personalStats.totalTrades).toBe(0);
+  });
+});
+
+describe('completedLessons sanitisation', () => {
+  it('keeps only string ids mapped to finite timestamps', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        completedLessons: { 'lesson-a': 1234, 'lesson-b': 'yesterday', 'lesson-c': null },
+      })
+    );
+    loadGameState();
+    expect(gameState.completedLessons).toEqual({ 'lesson-a': 1234 });
   });
 });

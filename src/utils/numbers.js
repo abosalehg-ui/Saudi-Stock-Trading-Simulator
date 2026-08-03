@@ -29,7 +29,11 @@ export function safeParseNumber(raw, opts = {}) {
  * @returns {string}
  */
 export function formatCurrency(value, lang, suffix, digits = 2) {
-  const locale = lang === 'ar' ? 'ar-SA' : 'en-US';
+  // -u-nu-latn keeps Arabic grouping/decimal separators but forces Western
+  // digits. Plain 'ar-SA' resolves to the `arab` numbering system, which put
+  // ١٢٬٣٤٥٫٦٧ in three stat cards while the adjacent P&L card, built with
+  // toFixed, showed 12345.67.
+  const locale = lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US';
   const formatted = Number(value).toLocaleString(locale, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

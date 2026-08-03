@@ -78,13 +78,53 @@ const STATS_KEY = 'tadawulStats';
 
 export const personalStats = defaultStats();
 
+/**
+ * Validate a loaded stats blob field by field, the same way
+ * sanitizeLoadedState() treats the game save. A blanket Object.assign let a
+ * corrupt value (NaN, a string, an unknown key) through to
+ * `personalStats.bestPnlPct.toFixed(2)` in the stats modal.
+ *
+ * @param {any} loaded - parsed, untrusted JSON from storage
+ * @returns {PersonalStats}
+ */
+function sanitizeLoadedStats(loaded) {
+  const clean = defaultStats();
+
+  /**
+   * @param {any} value
+   * @param {number} fallback
+   * @param {number} [min] - counters can never be negative; a tampered save
+   *   shouldn't render "-3 trades"
+   */
+  const num = (value, fallback, min = -Infinity) =>
+    Number.isFinite(value) && value >= min ? value : fallback;
+
+  clean.bestPnlPct = num(loaded.bestPnlPct, clean.bestPnlPct);
+  clean.bestPnlAmount = num(loaded.bestPnlAmount, clean.bestPnlAmount);
+  clean.bestTradeProfit = num(loaded.bestTradeProfit, clean.bestTradeProfit, 0);
+  clean.worstTradeLoss = Math.min(0, num(loaded.worstTradeLoss, clean.worstTradeLoss));
+  clean.totalTrades = num(loaded.totalTrades, clean.totalTrades, 0);
+  clean.challengesCompleted = num(loaded.challengesCompleted, clean.challengesCompleted, 0);
+  clean.lifetimeCommission = num(loaded.lifetimeCommission, clean.lifetimeCommission, 0);
+  clean.sessionsPlayed = num(loaded.sessionsPlayed, clean.sessionsPlayed, 0);
+
+  if (typeof loaded.bestTradeSymbol === 'string' && findStock(loaded.bestTradeSymbol)) {
+    clean.bestTradeSymbol = loaded.bestTradeSymbol;
+  }
+  if (typeof loaded.worstTradeSymbol === 'string' && findStock(loaded.worstTradeSymbol)) {
+    clean.worstTradeSymbol = loaded.worstTradeSymbol;
+  }
+
+  return clean;
+}
+
 export function loadStats() {
   try {
     const raw = localStorage.getItem(STATS_KEY);
     if (!raw) return;
     const loaded = JSON.parse(raw);
     if (loaded && typeof loaded === 'object') {
-      Object.assign(personalStats, defaultStats(), loaded);
+      Object.assign(personalStats, sanitizeLoadedStats(loaded));
     }
   } catch (e) {
     console.error('Failed to load stats:', e);
@@ -209,7 +249,13 @@ function sanitizeLoadedState(loaded) {
   }
 
   if (loaded.completedLessons && typeof loaded.completedLessons === 'object') {
-    clean.completedLessons = { ...loaded.completedLessons };
+    // lessonId -> completion timestamp; keep only entries that actually look
+    // like that, rather than spreading whatever was in storage.
+    Object.entries(loaded.completedLessons).forEach(([lessonId, completedAt]) => {
+      if (typeof lessonId === 'string' && lessonId && Number.isFinite(completedAt)) {
+        clean.completedLessons[lessonId] = completedAt;
+      }
+    });
   }
 
   const scenario = loaded.activeScenario;

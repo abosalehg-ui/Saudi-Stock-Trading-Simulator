@@ -1,7 +1,8 @@
 import { historicalScenarios } from '../data/scenarios.js';
 import { startScenario, stopScenario, getActiveScenario } from '../engine/scenarios.js';
 import { getLang, t } from './i18n.js';
-import { showConfirm } from './modal.js';
+import { showConfirm, openModal, closeModal } from './modal.js';
+import { clearChildren } from './dom.js';
 
 let onChange = () => {};
 
@@ -10,12 +11,13 @@ export function bindScenariosCallbacks(callbacks) {
 }
 
 export function openScenariosModal() {
+  document.getElementById('scenarios-title').textContent = t('scenariosTitle');
   renderScenariosContent();
-  document.getElementById('scenarios-modal').style.display = 'block';
+  openModal('scenarios-modal');
 }
 
 export function closeScenariosModal() {
-  document.getElementById('scenarios-modal').style.display = 'none';
+  closeModal('scenarios-modal');
 }
 
 function renderScenariosContent() {
@@ -23,7 +25,7 @@ function renderScenariosContent() {
   if (!root) return;
   const lang = getLang();
   const active = getActiveScenario();
-  while (root.firstChild) root.removeChild(root.firstChild);
+  clearChildren(root);
 
   if (active) {
     const banner = document.createElement('div');
@@ -42,7 +44,7 @@ function renderScenariosContent() {
     titleRow.appendChild(title);
     const badge = document.createElement('span');
     badge.className = 'scenario-badge';
-    badge.textContent = `${scenario.durationMinutes} ${lang === 'ar' ? 'د' : 'min'}`;
+    badge.textContent = `${scenario.durationMinutes} ${t('scenarioMinutesShort')}`;
     titleRow.appendChild(badge);
     card.appendChild(titleRow);
 
@@ -60,11 +62,7 @@ function renderScenariosContent() {
         stopScenario();
       } else {
         if (active) {
-          const ok = await showConfirm(
-            lang === 'ar'
-              ? 'سيناريو آخر نشط. هل تريد استبداله؟'
-              : 'Another scenario is active. Replace it?'
-          );
+          const ok = await showConfirm(t('confirmReplaceScenario'));
           if (!ok) return;
         }
         startScenario(scenario.id);

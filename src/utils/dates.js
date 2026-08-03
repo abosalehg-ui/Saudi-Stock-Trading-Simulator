@@ -8,9 +8,12 @@
 export function formatDateBilingual(input, lang) {
   const date = input instanceof Date ? input : new Date(input);
   if (lang === 'ar') {
-    const gregorian = date.toLocaleString('ar-SA', { dateStyle: 'short', timeStyle: 'short' });
+    const gregorian = date.toLocaleString('ar-SA-u-nu-latn', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+    });
     try {
-      const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {
+      const hijri = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-nu-latn', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
@@ -25,7 +28,7 @@ export function formatDateBilingual(input, lang) {
 
 export function formatTimeShort(input, lang) {
   const date = input instanceof Date ? input : new Date(input);
-  return date.toLocaleTimeString(lang === 'ar' ? 'ar-SA' : 'en-US', {
+  return date.toLocaleTimeString(lang === 'ar' ? 'ar-SA-u-nu-latn' : 'en-US', {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -34,7 +37,7 @@ export function formatTimeShort(input, lang) {
 export function formatHijriToday(lang) {
   if (lang !== 'ar') return '';
   try {
-    return new Intl.DateTimeFormat('ar-SA-u-ca-islamic', {
+    return new Intl.DateTimeFormat('ar-SA-u-ca-islamic-nu-latn', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

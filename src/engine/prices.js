@@ -3,6 +3,8 @@ import {
   MIN_PRICE_RATIO,
   MAX_PRICE_RATIO,
   PRICE_HISTORY_MAX_POINTS,
+  SHOCK_PROBABILITY,
+  SHOCK_MAGNITUDE,
 } from '../config.js';
 import { stocks } from '../data/stocks.js';
 import { gameState, stockPrices, priceHistory, activeNews } from '../state.js';
@@ -64,8 +66,8 @@ function gbmStep(stock, currentPrice) {
     }
   }
 
-  if (Math.random() < 0.05 && Math.random() < 0.3) {
-    randomShock += (Math.random() - 0.5) * 0.05;
+  if (Math.random() < SHOCK_PROBABILITY) {
+    randomShock += (Math.random() - 0.5) * SHOCK_MAGNITUDE;
   }
 
   let newPrice = currentPrice * (1 + drift + randomShock);

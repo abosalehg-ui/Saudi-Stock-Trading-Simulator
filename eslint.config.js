@@ -7,6 +7,14 @@ const sharedRules = {
   eqeqeq: ['error', 'always'],
   'no-var': 'error',
   'no-console': ['warn', { allow: ['warn', 'error'] }],
+  // `t` (the translator) was being shadowed by a `forEach((t) => ...)` param.
+  'no-shadow': 'error',
+  // Every innerHTML sink must go through escapeHtml(); flag raw assignment so
+  // a future one can't quietly skip it.
+  'no-restricted-properties': [
+    'warn',
+    { object: 'element', property: 'innerHTML', message: 'Build nodes or escape via escapeHtml().' },
+  ],
 };
 
 export default [

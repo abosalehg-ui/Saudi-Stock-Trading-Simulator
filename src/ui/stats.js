@@ -1,14 +1,17 @@
 import { personalStats } from '../state.js';
 import { findStock } from '../data/stocks.js';
 import { getLang, t } from './i18n.js';
+import { openModal, closeModal } from './modal.js';
+import { clearChildren } from './dom.js';
 
 export function openStatsModal() {
+  document.getElementById('stats-title').textContent = t('statsTitle');
   renderStatsContent();
-  document.getElementById('stats-modal').style.display = 'block';
+  openModal('stats-modal');
 }
 
 export function closeStatsModal() {
-  document.getElementById('stats-modal').style.display = 'none';
+  closeModal('stats-modal');
 }
 
 function symbolDisplay(symbol) {
@@ -23,11 +26,11 @@ export function renderStatsContent() {
   const root = document.getElementById('stats-content');
   if (!root) return;
   const sar = t('sar');
-  while (root.firstChild) root.removeChild(root.firstChild);
+  clearChildren(root);
 
   if (personalStats.totalTrades === 0) {
     const empty = document.createElement('p');
-    empty.style.cssText = 'text-align:center;color:#95a5a6;padding:20px;';
+    empty.className = 'empty-state';
     empty.textContent = t('statsNoData');
     root.appendChild(empty);
     return;

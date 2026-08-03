@@ -10,6 +10,11 @@ export const NEWS_UPDATE_INTERVAL_MS = 60000;
 export const NEWS_DURATION_MS = 300000;
 export const NEWS_GENERATION_PROBABILITY = 0.3;
 
+// Occasional extra jolt on top of the usual per-tick noise, so the chart shows
+// the odd sharp move rather than uniformly smooth drift.
+export const SHOCK_PROBABILITY = 0.015;
+export const SHOCK_MAGNITUDE = 0.05;
+
 export const MIN_PRICE_RATIO = 0.3;
 export const MAX_PRICE_RATIO = 3;
 

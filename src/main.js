@@ -42,7 +42,14 @@ import {
   updateHijriDate,
 } from './ui/render.js';
 import { bindStockDetailsCallbacks, renderStockDetails } from './ui/stock-details.js';
-import { showAlert, showConfirm, openStockModal, closeStockModal } from './ui/modal.js';
+import {
+  showAlert,
+  showConfirm,
+  openStockModal,
+  closeStockModal,
+  closeModal,
+  isModalOpen,
+} from './ui/modal.js';
 import { downloadTransactionsCsv } from './ui/csv-export.js';
 import { getLang, initLang, toggleLang, t } from './ui/i18n.js';
 import { openGlossary, attachGlossaryListeners } from './ui/glossary.js';
@@ -79,7 +86,12 @@ function startPriceUpdates() {
   if (session.updateInterval) clearInterval(session.updateInterval);
   session.updateInterval = setInterval(() => {
     updatePrices();
-    const { cancelled } = checkPendingOrders();
+    // Pending orders match against the same live market as a market order:
+    // while the market is closed, prices are frozen (updatePrices returns
+    // early) and market orders are refused, so filling a limit/stop order
+    // here would contradict the block in handleSubmitOrder.
+    const marketLive = gameState.allow24Trading || isMarketOpen();
+    const { cancelled } = marketLive ? checkPendingOrders() : { cancelled: [] };
     refreshAll();
     saveGameState();
     savePriceState();
@@ -112,12 +124,13 @@ function selectStock(symbol) {
 }
 
 function handleQuickTrade(symbol, type) {
+  // selectStock() -> renderStockDetails() builds the form synchronously, so the
+  // quantity field already exists here; the old setTimeout(100) was guarding
+  // against nothing.
   selectStock(symbol);
   if (type === 'sell' && gameState.portfolio[symbol]) {
-    setTimeout(() => {
-      const qty = document.getElementById('order-quantity');
-      if (qty) qty.value = gameState.portfolio[symbol].quantity;
-    }, 100);
+    const qty = document.getElementById('order-quantity');
+    if (qty) qty.value = String(gameState.portfolio[symbol].quantity);
   }
 }
 
@@ -180,14 +193,14 @@ function handleSubmitOrder(input) {
     // now instead of waiting for the next interval tick, or a reload right after a
     // trade would show the price snapping back.
     savePriceState();
+    closeStockModal();
     showAlert(msg);
-    setTimeout(() => closeStockModal(), 100);
   } else {
     addPendingOrder(order);
     renderPendingOrders();
     saveGameState();
+    closeStockModal();
     showAlert(order.kind === 'stop-loss' ? t('stopLossAdded') : t('orderAdded'));
-    setTimeout(() => closeStockModal(), 100);
   }
 }
 
@@ -208,6 +221,11 @@ function resetGame() {
       console.error('Failed to clear localStorage:', e);
     }
     resetGameState();
+    // resetGameState() puts speed back to 1, but the running intervals were
+    // built with the *old* divisor — rebuild them or the sim keeps ticking at
+    // the previous speed while the UI reports 1x.
+    startPriceUpdates();
+    startNewsUpdates();
     refreshAll();
     closeStockModal();
     displayRandomTips();
@@ -220,23 +238,42 @@ function rebuildStaticLabels() {
   document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
   document.getElementById('lang-toggle').textContent = t('languageButton');
 
-  const labels = [t('cashBalance'), t('portfolioValue'), t('totalAssets'), t('profitLoss')];
-  document.querySelectorAll('.stat-label').forEach((el, i) => {
-    if (i < labels.length) el.textContent = labels[i];
+  // Keyed by element id rather than by querySelectorAll order: the previous
+  // positional mapping silently mislabelled everything if a card, panel or tab
+  // were ever reordered, and it depended on the modal .panel-title nodes
+  // happening to sort after the in-page ones.
+  const textById = {
+    'stat-label-cash': t('cashBalance'),
+    'stat-label-portfolio': t('portfolioValue'),
+    'stat-label-total': t('totalAssets'),
+    'stat-label-pnl': t('profitLoss'),
+    'panel-title-stocks': t('stockList'),
+    'panel-title-portfolio': t('myPortfolio'),
+    'panel-title-orders': t('pendingOrders'),
+    'panel-title-tips': t('financialTips'),
+    'panel-title-challenges': t('challenges'),
+    'tab-market': t('marketTab'),
+    'tab-portfolio': t('portfolioTab'),
+    'tab-orders': t('ordersTab'),
+    'challenge1-title': t('challenge1Title'),
+    'challenge1-goal': t('challenge1Goal'),
+    'challenge1-reward': t('challenge1Reward'),
+    'challenge2-title': t('challenge2Title'),
+    'challenge2-goal': t('challenge2Goal'),
+    'challenge2-reward': t('challenge2Reward'),
+    'glossary-title': t('glossaryTitle'),
+    'stats-title': t('statsTitle'),
+    'learning-title': t('learningTitle'),
+    'scenarios-title': t('scenariosTitle'),
+  };
+  Object.entries(textById).forEach(([id, text]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
   });
-  const panelTitles = [
-    t('stockList'),
-    t('myPortfolio'),
-    t('pendingOrders'),
-    t('financialTips'),
-    t('challenges'),
-  ];
-  document.querySelectorAll('.panel-title').forEach((el, i) => {
-    if (i < panelTitles.length) el.textContent = panelTitles[i];
-  });
-  const tabLabels = [t('marketTab'), t('portfolioTab'), t('ordersTab')];
-  document.querySelectorAll('.tab').forEach((el, i) => {
-    if (i < tabLabels.length) el.textContent = tabLabels[i];
+
+  // Close buttons carried a hardcoded Arabic aria-label even in English mode.
+  document.querySelectorAll('.close-modal').forEach((el) => {
+    el.setAttribute('aria-label', t('closeBtn'));
   });
 
   document.getElementById('reset-btn').textContent = t('reset');
@@ -262,21 +299,31 @@ function handleToggleLanguage() {
   saveGameState();
 }
 
+const TABS = ['market', 'portfolio', 'orders'];
+
+/**
+ * Activate a tab by id rather than by DOM position: the old
+ * `.tab:nth-child(n)` lookups broke silently if anything was inserted into the
+ * tab bar. Also keeps aria-selected in sync, without which the declared
+ * role="tab" told screen readers nothing about which tab was current.
+ *
+ * @param {'market'|'portfolio'|'orders'} tab
+ */
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach((c) => c.classList.remove('active'));
-  if (tab === 'market') {
-    document.querySelector('.tab:nth-child(1)').classList.add('active');
-    document.getElementById('market-tab').classList.add('active');
-  } else if (tab === 'portfolio') {
-    document.querySelector('.tab:nth-child(2)').classList.add('active');
-    document.getElementById('portfolio-tab').classList.add('active');
-  } else if (tab === 'orders') {
-    document.querySelector('.tab:nth-child(3)').classList.add('active');
-    document.getElementById('orders-tab').classList.add('active');
-    renderPendingOrders();
-  }
+  TABS.forEach((name) => {
+    const isActive = name === tab;
+    const tabEl = document.getElementById(`tab-${name}`);
+    const panelEl = document.getElementById(`${name}-tab`);
+    tabEl.classList.toggle('active', isActive);
+    tabEl.setAttribute('aria-selected', String(isActive));
+    panelEl.classList.toggle('active', isActive);
+  });
+  if (tab === 'orders') renderPendingOrders();
 }
+
+// Backdrop-click and Escape both need this list; declared once so the two
+// handlers can't drift apart.
+const SECONDARY_MODAL_IDS = ['glossary-modal', 'stats-modal', 'learning-modal', 'scenarios-modal'];
 
 function attachEventListeners() {
   bindStockListEvents();
@@ -284,7 +331,7 @@ function attachEventListeners() {
   document.getElementById('reset-btn').addEventListener('click', resetGame);
   document.getElementById('export-csv-btn').addEventListener('click', () => {
     if (gameState.transactions.length === 0) {
-      showAlert(getLang() === 'ar' ? 'لا توجد معاملات للتصدير' : 'No transactions to export');
+      showAlert(t('noTransactionsToExport'));
       return;
     }
     downloadTransactionsCsv();
@@ -292,9 +339,9 @@ function attachEventListeners() {
   document.getElementById('speed-1').addEventListener('click', () => setSpeed(1));
   document.getElementById('speed-5').addEventListener('click', () => setSpeed(5));
   document.getElementById('speed-10').addEventListener('click', () => setSpeed(10));
-  document.getElementById('tab-market').addEventListener('click', () => switchTab('market'));
-  document.getElementById('tab-portfolio').addEventListener('click', () => switchTab('portfolio'));
-  document.getElementById('tab-orders').addEventListener('click', () => switchTab('orders'));
+  TABS.forEach((name) => {
+    document.getElementById(`tab-${name}`).addEventListener('click', () => switchTab(name));
+  });
 
   document.getElementById('sharia-filter').addEventListener('change', (e) => {
     gameState.shariaFilter = e.target.checked;
@@ -324,22 +371,15 @@ function attachEventListeners() {
   bindScenariosCallbacks({ onChange: refreshAll });
 
   window.addEventListener('click', (event) => {
-    const stockModal = document.getElementById('stock-modal');
-    if (event.target === stockModal) closeStockModal();
-    ['glossary-modal', 'stats-modal', 'learning-modal', 'scenarios-modal'].forEach((id) => {
-      const m = document.getElementById(id);
-      if (event.target === m) m.style.display = 'none';
+    if (event.target === document.getElementById('stock-modal')) closeStockModal();
+    SECONDARY_MODAL_IDS.forEach((id) => {
+      if (event.target === document.getElementById(id)) closeModal(id);
     });
   });
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      const stockModal = document.getElementById('stock-modal');
-      if (stockModal.style.display === 'block') closeStockModal();
-      ['glossary-modal', 'stats-modal', 'learning-modal', 'scenarios-modal'].forEach((id) => {
-        const m = document.getElementById(id);
-        if (m && m.style.display === 'block') m.style.display = 'none';
-      });
-    }
+    if (event.key !== 'Escape') return;
+    if (isModalOpen('stock-modal')) closeStockModal();
+    SECONDARY_MODAL_IDS.filter(isModalOpen).forEach((id) => closeModal(id));
   });
 }
 

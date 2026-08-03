@@ -4,6 +4,7 @@ import { getLang, t } from './i18n.js';
 import { renderChart } from './chart.js';
 import { renderCandlestick } from './candlestick.js';
 import { isMarketOpen } from '../engine/market-hours.js';
+import { escapeHtml } from './dom.js';
 
 let onSubmitOrder = () => {};
 
@@ -24,43 +25,42 @@ export function renderStockDetails(symbol) {
   detailsEl.innerHTML = '';
 
   const grid = document.createElement('div');
-  grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:20px;';
+  grid.className = 'stock-details-grid';
 
   const left = document.createElement('div');
   left.innerHTML = `
-    <h3 id="stock-title">${lang === 'ar' ? stock.name : stock.nameEn} (${symbol})${stock.isShariaCompliant ? ' 🕌' : ''}</h3>
-    <p style="margin:10px 0;">${t('currentPrice')}: <strong>${price.toFixed(2)} ${sar}</strong></p>
-    <p>${t('change')}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span></p>
-    ${marketOpen ? '' : `<p class="market-warning" role="alert">⚠️ ${t('marketClosedMessage')}</p>`}
+    <h3 id="stock-title">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)} (${escapeHtml(symbol)})${stock.isShariaCompliant ? ' 🕌' : ''}</h3>
+    <p class="stock-detail-price">${escapeHtml(t('currentPrice'))}: <strong>${price.toFixed(2)} ${escapeHtml(sar)}</strong></p>
+    <p>${escapeHtml(t('change'))}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span></p>
+    ${marketOpen ? '' : `<p class="market-warning" role="alert">⚠️ ${escapeHtml(t('marketClosedMessage'))}</p>`}
   `;
 
   const form = document.createElement('div');
   form.className = 'order-form';
-  form.style.marginTop = '20px';
   form.setAttribute('role', 'group');
   form.setAttribute('aria-labelledby', 'stock-title');
   form.innerHTML = `
-    <div class="order-type" role="radiogroup" aria-label="${t('orderKindLimit')}">
+    <div class="order-type" role="radiogroup" aria-label="${escapeHtml(t('orderKindLimit'))}">
       <label>
         <input type="radio" name="orderType" value="market" checked>
-        <span>${t('market')}</span>
+        <span>${escapeHtml(t('market'))}</span>
       </label>
       <label>
         <input type="radio" name="orderType" value="limit">
-        <span>${t('limit')}</span>
+        <span>${escapeHtml(t('limit'))}</span>
       </label>
       <label>
         <input type="radio" name="orderType" value="stop-loss">
-        <span>${t('stopLoss')}</span>
+        <span>${escapeHtml(t('stopLoss'))}</span>
       </label>
     </div>
-    <label for="order-quantity" class="sr-only">${t('quantity')}</label>
-    <input type="number" id="order-quantity" placeholder="${t('quantity')}" min="1" max="1000000" step="1" inputmode="numeric" aria-label="${t('quantity')}">
-    <label for="order-price" class="sr-only">${t('priceForLimitOrders')}</label>
-    <input type="number" id="order-price" placeholder="${t('priceForLimitOrders')}" min="0.01" step="0.01" inputmode="decimal" style="display:none;" aria-label="${t('priceForLimitOrders')}">
-    <div style="display:flex;gap:10px;">
-      <button class="btn btn-primary" id="order-buy" style="flex:1;" aria-label="${t('buy')}">${t('buy')}</button>
-      <button class="btn btn-danger" id="order-sell" style="flex:1;" aria-label="${t('sell')}">${t('sell')}</button>
+    <label for="order-quantity" class="sr-only">${escapeHtml(t('quantity'))}</label>
+    <input type="number" id="order-quantity" placeholder="${escapeHtml(t('quantity'))}" min="1" max="1000000" step="1" inputmode="numeric">
+    <label for="order-price" class="sr-only">${escapeHtml(t('priceForLimitOrders'))}</label>
+    <input type="number" id="order-price" placeholder="${escapeHtml(t('priceForLimitOrders'))}" min="0.01" step="0.01" inputmode="decimal" hidden>
+    <div class="order-submit-row">
+      <button class="btn btn-primary order-submit-btn" id="order-buy">${escapeHtml(t('buy'))}</button>
+      <button class="btn btn-danger order-submit-btn" id="order-sell">${escapeHtml(t('sell'))}</button>
     </div>
   `;
   left.appendChild(form);
@@ -68,10 +68,10 @@ export function renderStockDetails(symbol) {
   const right = document.createElement('div');
   right.innerHTML = `
     <div class="chart-container">
-      <canvas id="price-chart" aria-label="${t('currentPrice')}"></canvas>
+      <canvas id="price-chart" role="img" aria-label="${escapeHtml(t('currentPrice'))}"></canvas>
     </div>
-    <div class="indicator-controls" role="group" aria-label="${t('indicators')}" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;font-size:13px;">
-      <label><input type="checkbox" id="ind-candle"> ${t('candlestickToggle')}</label>
+    <div class="indicator-controls" role="group" aria-label="${escapeHtml(t('indicators'))}">
+      <label><input type="checkbox" id="ind-candle"> ${escapeHtml(t('candlestickToggle'))}</label>
       <label><input type="checkbox" id="ind-sma20"> SMA 20</label>
       <label><input type="checkbox" id="ind-sma50"> SMA 50</label>
       <label><input type="checkbox" id="ind-rsi"> RSI</label>
@@ -87,16 +87,9 @@ export function renderStockDetails(symbol) {
   document.querySelectorAll('input[name="orderType"]').forEach((radio) => {
     radio.addEventListener('change', (e) => {
       const val = e.target.value;
-      if (val === 'market') {
-        priceInput.style.display = 'none';
-        priceInput.placeholder = t('priceForLimitOrders');
-      } else if (val === 'limit') {
-        priceInput.style.display = 'block';
-        priceInput.placeholder = t('priceForLimitOrders');
-      } else if (val === 'stop-loss') {
-        priceInput.style.display = 'block';
-        priceInput.placeholder = t('stopPricePlaceholder');
-      }
+      priceInput.hidden = val === 'market';
+      priceInput.placeholder =
+        val === 'stop-loss' ? t('stopPricePlaceholder') : t('priceForLimitOrders');
     });
   });
 

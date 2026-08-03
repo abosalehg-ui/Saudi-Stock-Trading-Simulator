@@ -1,6 +1,8 @@
 import { learningPaths } from '../data/lessons.js';
 import { gameState, saveGameState } from '../state.js';
 import { getLang, t } from './i18n.js';
+import { openModal, closeModal } from './modal.js';
+import { clearChildren } from './dom.js';
 
 let activePathKey = null;
 let activeLessonIndex = 0;
@@ -8,12 +10,13 @@ let activeLessonIndex = 0;
 export function openLearningModal() {
   activePathKey = null;
   activeLessonIndex = 0;
+  document.getElementById('learning-title').textContent = t('learningTitle');
   renderPathList();
-  document.getElementById('learning-modal').style.display = 'block';
+  openModal('learning-modal');
 }
 
 export function closeLearningModal() {
-  document.getElementById('learning-modal').style.display = 'none';
+  closeModal('learning-modal');
 }
 
 function getCompletedSet() {
@@ -31,7 +34,7 @@ function renderPathList() {
   const root = document.getElementById('learning-content');
   if (!root) return;
   const lang = getLang();
-  while (root.firstChild) root.removeChild(root.firstChild);
+  clearChildren(root);
 
   const container = document.createElement('div');
   container.className = 'lesson-paths';
@@ -45,9 +48,7 @@ function renderPathList() {
 
     const { done, total } = pathProgress(key);
     const progress = document.createElement('div');
-    progress.style.fontSize = '12px';
-    progress.style.color = '#95a5a6';
-    progress.style.marginBottom = '6px';
+    progress.className = 'lesson-path-progress-label';
     progress.textContent = `${t('lessonProgress')}: ${done}/${total}`;
     card.appendChild(progress);
 
@@ -66,15 +67,11 @@ function renderPathList() {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'lesson-list-item' + (completed ? ' completed' : '');
-      item.style.border = 'none';
-      item.style.color = 'inherit';
-      item.style.cursor = 'pointer';
-      item.style.fontFamily = 'inherit';
-      item.style.textAlign = lang === 'ar' ? 'right' : 'left';
+      item.style.textAlign = 'start';
       const titleSpan = document.createElement('span');
       titleSpan.textContent = lesson.title[lang];
       const statusSpan = document.createElement('span');
-      statusSpan.style.fontSize = '11px';
+      statusSpan.className = 'lesson-list-item-status';
       statusSpan.textContent = completed ? t('lessonCompleted') : t('lessonStart');
       item.appendChild(titleSpan);
       item.appendChild(statusSpan);
@@ -99,7 +96,7 @@ function renderLesson() {
   const lang = getLang();
   const path = learningPaths[activePathKey];
   const lesson = path.lessons[activeLessonIndex];
-  while (root.firstChild) root.removeChild(root.firstChild);
+  clearChildren(root);
 
   const wrapper = document.createElement('div');
   wrapper.className = 'lesson-content';

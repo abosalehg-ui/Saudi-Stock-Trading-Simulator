@@ -102,6 +102,37 @@ function applySell(symbol, price, quantity) {
 }
 
 /**
+ * Check whether a market order could fill at the current spot price, without
+ * mutating anything.
+ *
+ * This runs *before* applyMarketImpact so a rejected order leaves no trace:
+ * applyMarketImpact permanently moves stockPrices and priceImpacts, and there
+ * is no rollback path, so validating afterwards let a repeatedly-failing order
+ * push the market around for free.
+ *
+ * The check uses the pre-slippage spot price while the fill uses the
+ * post-impact price, so an order sitting within a fraction of a percent of the
+ * cash balance can still fail at applyBuy. That residual case is handled
+ * normally (the order is rejected) and is not worth reserving cash for in a
+ * simulator.
+ *
+ * @param {OrderInput} order
+ * @returns {{ok: true} | {ok: false, error: 'INSUFFICIENT_FUNDS'|'INSUFFICIENT_SHARES'}}
+ */
+export function canFill(order) {
+  if (order.type === 'buy') {
+    const estimatedCost = stockPrices[order.symbol] * order.quantity * (1 + COMMISSION);
+    if (estimatedCost > gameState.cash) return { ok: false, error: 'INSUFFICIENT_FUNDS' };
+    return { ok: true };
+  }
+  const holding = gameState.portfolio[order.symbol];
+  if (!holding || holding.quantity < order.quantity) {
+    return { ok: false, error: 'INSUFFICIENT_SHARES' };
+  }
+  return { ok: true };
+}
+
+/**
  * Apply temporary price impact from a market trade and update spot price.
  * Mutates state. Returns final executed price.
  */
@@ -157,6 +188,10 @@ function recordExecution(order, executedPrice, avgCostBefore) {
  * Returns { ok: true } or { ok: false, error }.
  */
 export function executeMarketOrder(order) {
+  // Reject before touching the market: applyMarketImpact has no rollback.
+  const preCheck = canFill(order);
+  if (!preCheck.ok) return preCheck;
+
   const avgCostBefore = gameState.portfolio[order.symbol]?.avgCost;
   const price = applyMarketImpact(order.symbol, order.type, order.quantity);
   const result =

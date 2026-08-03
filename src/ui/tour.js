@@ -51,7 +51,8 @@ function positionHighlight(target) {
   tooltip.style.left = `${left}px`;
   tooltip.style.transform = 'none';
 
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
 }
 
 function renderCurrentStep() {

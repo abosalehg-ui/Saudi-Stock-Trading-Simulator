@@ -8,6 +8,7 @@ import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
 import { evaluateChallenges } from '../engine/challenges.js';
+import { clearChildren, escapeHtml } from './dom.js';
 
 /** @type {(symbol: string) => void} */
 let onSelectStock = () => {};
@@ -23,10 +24,6 @@ export function bindRenderCallbacks(callbacks) {
   onSelectStock = callbacks.onSelectStock ?? onSelectStock;
   onCancelOrder = callbacks.onCancelOrder ?? onCancelOrder;
   onQuickTrade = callbacks.onQuickTrade ?? onQuickTrade;
-}
-
-function clearChildren(el) {
-  while (el.firstChild) el.removeChild(el.firstChild);
 }
 
 // symbol -> { container, priceEl, changeEl }, rebuilt whenever renderStocks()
@@ -63,7 +60,7 @@ function buildStockItem(stock, lang) {
   left.appendChild(symbolDiv);
 
   const right = document.createElement('div');
-  right.style.textAlign = 'left';
+  right.style.textAlign = 'end';
   const priceDiv = document.createElement('div');
   priceDiv.className = 'stock-price';
   const changeDiv = document.createElement('div');
@@ -146,8 +143,7 @@ export function renderPortfolio() {
 
   if (Object.keys(gameState.portfolio).length === 0) {
     const p = document.createElement('p');
-    p.style.textAlign = 'center';
-    p.style.color = '#95a5a6';
+    p.className = 'empty-state';
     p.textContent = t('portfolioEmpty');
     portfolioEl.appendChild(p);
     return;
@@ -168,8 +164,8 @@ export function renderPortfolio() {
     div.innerHTML = `
       <div class="stock-header">
         <div>
-          <div class="stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</div>
-          <div class="stock-symbol">${symbol} - ${holding.quantity} ${t('shares')}</div>
+          <div class="stock-name">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)}</div>
+          <div class="stock-symbol">${escapeHtml(symbol)} - ${holding.quantity} ${escapeHtml(t('shares'))}</div>
         </div>
       </div>
       <div class="portfolio-details">
@@ -185,13 +181,11 @@ export function renderPortfolio() {
     const actions = document.createElement('div');
     actions.className = 'portfolio-actions';
     const buyBtn = document.createElement('button');
-    buyBtn.className = 'btn btn-primary';
-    buyBtn.style.flex = '1';
+    buyBtn.className = 'btn btn-primary portfolio-action-btn';
     buyBtn.textContent = t('buyMore');
     buyBtn.addEventListener('click', () => onQuickTrade(symbol, 'buy'));
     const sellBtn = document.createElement('button');
-    sellBtn.className = 'btn btn-danger';
-    sellBtn.style.flex = '1';
+    sellBtn.className = 'btn btn-danger portfolio-action-btn';
     sellBtn.textContent = t('sellAll');
     sellBtn.addEventListener('click', () => onQuickTrade(symbol, 'sell'));
     actions.appendChild(buyBtn);
@@ -210,8 +204,7 @@ export function renderPendingOrders() {
 
   if (orders.length === 0) {
     const p = document.createElement('p');
-    p.style.textAlign = 'center';
-    p.style.color = '#95a5a6';
+    p.className = 'empty-state';
     p.textContent = t('noPendingOrders');
     ordersEl.appendChild(p);
     return;
@@ -229,10 +222,10 @@ export function renderPendingOrders() {
     div.innerHTML = `
       <div class="order-header">
         <div>
-          <strong style="font-size: 16px;">${lang === 'ar' ? stock.name : stock.nameEn}</strong>
-          <span style="color:#95a5a6;margin-${lang === 'ar' ? 'right' : 'left'}:10px;">(${order.symbol})</span>
+          <strong class="order-stock-name">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)}</strong>
+          <span class="order-stock-symbol">(${escapeHtml(order.symbol)})</span>
         </div>
-        <span class="btn ${order.type === 'buy' ? 'btn-primary' : 'btn-danger'}" style="padding:5px 15px;font-size:12px;">
+        <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-primary' : 'btn-danger'}">
           ${order.type === 'buy' ? t('buy') : t('sell')} · ${order.kind === 'stop-loss' ? t('orderKindStopLoss') : t('orderKindLimit')}
         </span>
       </div>
@@ -241,14 +234,13 @@ export function renderPendingOrders() {
         <div>${order.kind === 'stop-loss' ? t('stopPrice') : t('limitPrice')}: <strong>${refPrice.toFixed(2)} ${sar}</strong></div>
         <div>${t('currentPrice')}: <strong>${currentPrice.toFixed(2)} ${sar}</strong></div>
         <div>${t('difference')}: <span class="${priceDiff >= 0 ? 'positive' : 'negative'}">${priceDiff >= 0 ? '+' : ''}${priceDiff.toFixed(2)}%</span></div>
-        <div style="grid-column:1/-1;">${t('date')}: ${formatDateBilingual(order.timestamp, lang)}</div>
+        <div class="order-date-row">${escapeHtml(t('date'))}: ${escapeHtml(formatDateBilingual(order.timestamp, lang))}</div>
       </div>
     `;
     const actions = document.createElement('div');
     actions.className = 'order-actions';
     const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn-danger';
-    cancelBtn.style.width = '100%';
+    cancelBtn.className = 'btn btn-danger cancel-order-btn';
     cancelBtn.textContent = t('cancelOrder');
     cancelBtn.addEventListener('click', () => onCancelOrder(order.id));
     actions.appendChild(cancelBtn);
@@ -283,14 +275,30 @@ export function updateStats() {
 }
 
 /**
+ * Set a progress bar's width and mirror it onto the wrapping role="progressbar"
+ * so the value is exposed to assistive tech, not just painted.
+ *
+ * @param {string} barId
+ * @param {number} percent - 0..100
+ */
+function setChallengeProgress(barId, percent) {
+  const bar = document.getElementById(barId);
+  if (!bar) return;
+  const clamped = Math.max(0, Math.min(100, percent));
+  bar.style.width = `${clamped}%`;
+  const wrapper = bar.closest('[role="progressbar"]');
+  if (wrapper) wrapper.setAttribute('aria-valuenow', String(Math.round(clamped)));
+}
+
+/**
  * Update the challenge progress bars and grant any newly-earned rewards.
  * @returns {{challenge1JustCompleted: boolean, challenge2JustCompleted: boolean}}
  */
 export function updateChallenges({ pnlPercent, totalValue, showAlertFn }) {
   const progress1 = Math.min((pnlPercent / CHALLENGE_1_THRESHOLD) * 100, 100);
   const progress2 = Math.min((pnlPercent / CHALLENGE_2_THRESHOLD) * 100, 100);
-  document.getElementById('challenge1-progress').style.width = `${progress1}%`;
-  document.getElementById('challenge2-progress').style.width = `${progress2}%`;
+  setChallengeProgress('challenge1-progress', progress1);
+  setChallengeProgress('challenge2-progress', progress2);
 
   const { challenge1JustCompleted, challenge2JustCompleted } = evaluateChallenges({
     pnlPercent,
@@ -302,50 +310,109 @@ export function updateChallenges({ pnlPercent, totalValue, showAlertFn }) {
   return { challenge1JustCompleted, challenge2JustCompleted };
 }
 
+// Two copies of the list are rendered back to back so the CSS marquee loops
+// seamlessly. Refs are kept for both copies so a price tick patches text in
+// place: replacing innerHTML every tick rebuilt 182 nodes *and* restarted the
+// scroll animation from zero, making the ticker visibly jump each minute.
+const tickerRefs = new Map();
+let tickerLang = null;
+
+function buildTicker(tickerEl, lang) {
+  clearChildren(tickerEl);
+  tickerRefs.clear();
+  for (let copy = 0; copy < 2; copy += 1) {
+    stocks.forEach((stock) => {
+      const item = document.createElement('span');
+      item.className = 'ticker-item';
+
+      const name = document.createElement('strong');
+      name.textContent = lang === 'ar' ? stock.name : stock.nameEn;
+      const priceEl = document.createElement('span');
+      priceEl.className = 'ticker-price';
+      const changeEl = document.createElement('span');
+
+      item.appendChild(name);
+      item.appendChild(document.createTextNode(' '));
+      item.appendChild(priceEl);
+      item.appendChild(document.createTextNode(' '));
+      item.appendChild(changeEl);
+      tickerEl.appendChild(item);
+
+      if (!tickerRefs.has(stock.symbol)) tickerRefs.set(stock.symbol, []);
+      tickerRefs.get(stock.symbol).push({ priceEl, changeEl });
+    });
+  }
+  tickerLang = lang;
+}
+
 export function updateTicker() {
   const tickerEl = document.getElementById('ticker');
   if (!tickerEl) return;
   const lang = getLang();
-  let html = '';
+  if (tickerLang !== lang || tickerRefs.size !== stocks.length || !tickerEl.firstChild) {
+    buildTicker(tickerEl, lang);
+  }
+
   stocks.forEach((stock) => {
     const price = stockPrices[stock.symbol];
     const change = ((price - stock.basePrice) / stock.basePrice) * 100;
-    const changeClass = change >= 0 ? 'positive' : 'negative';
-    html += `
-      <span class="ticker-item">
-        <strong>${lang === 'ar' ? stock.name : stock.nameEn}</strong>
-        ${price.toFixed(2)}
-        <span class="${changeClass}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span>
-      </span>
-    `;
+    const refs = tickerRefs.get(stock.symbol) || [];
+    refs.forEach(({ priceEl, changeEl }) => {
+      priceEl.textContent = price.toFixed(2);
+      changeEl.textContent = `${change >= 0 ? '\u25b2' : '\u25bc'} ${Math.abs(change).toFixed(2)}%`;
+      changeEl.className = change >= 0 ? 'positive' : 'negative';
+    });
   });
-  tickerEl.innerHTML = html + html;
+}
+
+// Rebuild only when the visible set of headlines actually changes, for the same
+// animation-restart reason as the price ticker above.
+let newsSignature = null;
+
+function buildNewsItem(news, lang) {
+  const item = document.createElement('span');
+  item.className = 'news-item';
+  if (!news) {
+    item.textContent = `\ud83d\udcf0 ${t('noNewNews')}`;
+    return item;
+  }
+  const inner = document.createElement('span');
+  inner.className = news.type === 'positive' ? 'news-positive' : 'news-negative';
+  const icon = news.type === 'positive' ? '\ud83d\udcc8' : '\ud83d\udcc9';
+  inner.textContent = `${icon} \ud83d\udcf0 ${newsText(news, lang)}`;
+  item.appendChild(inner);
+  return item;
+}
+
+/**
+ * The scrolling ticker is aria-hidden (a moving marquee is unusable with a
+ * screen reader), but the headlines are the only place this information
+ * appears. Mirror the newest one into a polite live region so it is announced
+ * once instead of being lost.
+ */
+function announceLatestNews(lang) {
+  const live = document.getElementById('news-live');
+  if (!live) return;
+  const latest = activeNews.items[activeNews.items.length - 1];
+  live.textContent = latest ? `${t('newsAnnouncement')}: ${newsText(latest, lang)}` : '';
 }
 
 export function updateNewsTicker() {
   const tickerEl = document.getElementById('news-ticker');
   if (!tickerEl) return;
   const lang = getLang();
-  let html = '';
-  if (activeNews.items.length === 0) {
-    const placeholder = `<span class="news-item">📰 ${lang === 'ar' ? 'لا توجد أخبار جديدة' : 'No new news'}</span>`;
-    html = placeholder.repeat(3);
-  } else {
-    activeNews.items.forEach((news) => {
-      const icon = news.type === 'positive' ? '📈' : '📉';
-      const className = news.type === 'positive' ? 'news-positive' : 'news-negative';
-      html += `<span class="news-item"><span class="${className}">${icon} 📰 ${escapeHtml(newsText(news, lang))}</span></span>`;
-    });
-  }
-  tickerEl.innerHTML = html + html;
-}
+  const signature = `${lang}|${activeNews.items
+    .map((n) => `${n.symbol}:${n.templateIndex}:${n.timestamp}`)
+    .join(',')}`;
+  if (signature === newsSignature && tickerEl.firstChild) return;
+  newsSignature = signature;
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  clearChildren(tickerEl);
+  const items = activeNews.items.length === 0 ? [null, null, null] : activeNews.items;
+  for (let copy = 0; copy < 2; copy += 1) {
+    items.forEach((news) => tickerEl.appendChild(buildNewsItem(news, lang)));
+  }
+  announceLatestNews(lang);
 }
 
 export function displayRandomTips() {

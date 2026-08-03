@@ -5,6 +5,7 @@ import {
   addPendingOrder,
   checkPendingOrders,
   cancelPendingOrder,
+  canFill,
 } from '../src/engine/trading.js';
 import {
   gameState,
@@ -267,5 +268,75 @@ describe('pending orders', () => {
     expect(cancelled[0].quantity).toBe(5);
     // Not re-queued: the failed order must not linger in pendingOrders forever.
     expect(gameState.pendingOrders).toHaveLength(0);
+  });
+});
+
+describe('canFill', () => {
+  it('accepts a buy the cash balance covers', () => {
+    expect(canFill({ symbol: '1180', type: 'buy', kind: 'market', quantity: 10 }).ok).toBe(true);
+  });
+
+  it('rejects a buy the cash balance cannot cover', () => {
+    gameState.cash = 1;
+    const r = canFill({ symbol: '1180', type: 'buy', kind: 'market', quantity: 100 });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('INSUFFICIENT_FUNDS');
+  });
+
+  it('rejects a sell without the shares', () => {
+    const r = canFill({ symbol: '1180', type: 'sell', kind: 'market', quantity: 5 });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('INSUFFICIENT_SHARES');
+  });
+
+  it('does not mutate price or impact state', () => {
+    gameState.cash = 1;
+    const priceBefore = stockPrices['1180'];
+    canFill({ symbol: '1180', type: 'buy', kind: 'market', quantity: 100000 });
+    expect(stockPrices['1180']).toBe(priceBefore);
+    expect(gameState.priceImpacts['1180']).toBeUndefined();
+  });
+});
+
+describe('rejected market orders leave the market untouched', () => {
+  it('a buy rejected for insufficient funds moves neither price nor impact', () => {
+    gameState.cash = 1;
+    const priceBefore = stockPrices['1180'];
+    const r = executeMarketOrder({
+      symbol: '1180',
+      type: 'buy',
+      kind: 'market',
+      quantity: 100000,
+    });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('INSUFFICIENT_FUNDS');
+    expect(stockPrices['1180']).toBe(priceBefore);
+    expect(gameState.priceImpacts['1180']).toBeUndefined();
+  });
+
+  it('a sell rejected for insufficient shares moves neither price nor impact', () => {
+    const priceBefore = stockPrices['1180'];
+    const r = executeMarketOrder({ symbol: '1180', type: 'sell', kind: 'market', quantity: 5 });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('INSUFFICIENT_SHARES');
+    expect(stockPrices['1180']).toBe(priceBefore);
+    expect(gameState.priceImpacts['1180']).toBeUndefined();
+  });
+
+  it('repeated failed buys cannot ratchet the price up', () => {
+    gameState.cash = 1;
+    const priceBefore = stockPrices['1180'];
+    for (let i = 0; i < 20; i += 1) {
+      executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 100000 });
+    }
+    expect(stockPrices['1180']).toBe(priceBefore);
+    expect(gameState.transactions).toHaveLength(0);
+  });
+
+  it('an accepted order still applies impact', () => {
+    const priceBefore = stockPrices['1180'];
+    const r = executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 100 });
+    expect(r.ok).toBe(true);
+    expect(stockPrices['1180']).not.toBe(priceBefore);
   });
 });

@@ -3,8 +3,14 @@ import { gameState } from '../state.js';
 import { findStock } from '../data/stocks.js';
 import { getLang, t } from './i18n.js';
 
+/**
+ * Quote a CSV field, and neutralise anything a spreadsheet would evaluate as a
+ * formula. The exported file is opened outside this app, so the leading
+ * apostrophe is the difference between a cell of text and a cell Excel runs.
+ */
 function escapeCsvField(value) {
-  const str = String(value ?? '');
+  let str = String(value ?? '');
+  if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
   if (/[",\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`;
   }

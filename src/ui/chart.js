@@ -1,4 +1,32 @@
-import Chart from 'chart.js/auto';
+// Registering only what the charts use, instead of `chart.js/auto` which pulls
+// in every controller (doughnut, radar, polar area, scatter, bubble...) that
+// this app never renders.
+import {
+  Chart,
+  LineController,
+  BarController,
+  LineElement,
+  BarElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+
+Chart.register(
+  LineController,
+  BarController,
+  LineElement,
+  BarElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Tooltip,
+  Legend,
+  Filler
+);
 import { priceHistory, session } from '../state.js';
 import { getLang } from './i18n.js';
 import { formatTimeShort } from '../utils/dates.js';
