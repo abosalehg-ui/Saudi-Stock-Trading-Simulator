@@ -27,8 +27,13 @@ export function renderStockDetails(symbol) {
   const grid = document.createElement('div');
   grid.className = 'stock-details-grid';
 
-  const left = document.createElement('div');
-  left.innerHTML = `
+  // Three blocks rather than two columns of mixed content: the header spans
+  // the grid, then the chart, then the order form. Stacked (phone modal, or
+  // the desktop side panel) that reads price -> chart -> act, instead of
+  // burying the chart below the buy/sell buttons.
+  const header = document.createElement('div');
+  header.className = 'stock-details-header';
+  header.innerHTML = `
     <h3 id="stock-title">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)} (${escapeHtml(symbol)})${stock.isShariaCompliant ? ' 🕌' : ''}</h3>
     <p class="stock-detail-price">${escapeHtml(t('currentPrice'))}: <strong>${price.toFixed(2)} ${escapeHtml(sar)}</strong></p>
     <p>${escapeHtml(t('change'))}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span></p>
@@ -63,10 +68,9 @@ export function renderStockDetails(symbol) {
       <button class="btn btn-danger order-submit-btn" id="order-sell">${escapeHtml(t('sell'))}</button>
     </div>
   `;
-  left.appendChild(form);
-
-  const right = document.createElement('div');
-  right.innerHTML = `
+  const chartBlock = document.createElement('div');
+  chartBlock.className = 'stock-details-chart';
+  chartBlock.innerHTML = `
     <div class="chart-container">
       <canvas id="price-chart" role="img" aria-label="${escapeHtml(t('currentPrice'))}"></canvas>
     </div>
@@ -79,8 +83,9 @@ export function renderStockDetails(symbol) {
     </div>
   `;
 
-  grid.appendChild(left);
-  grid.appendChild(right);
+  grid.appendChild(header);
+  grid.appendChild(chartBlock);
+  grid.appendChild(form);
   detailsEl.appendChild(grid);
 
   const priceInput = document.getElementById('order-price');

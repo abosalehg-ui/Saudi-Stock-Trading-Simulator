@@ -97,12 +97,17 @@
         </div>
       </div>
 
-      <div class="action-bar">
-        <button id="glossary-btn" class="btn btn-secondary">📖 قاموس المصطلحات</button>
-        <button id="stats-btn" class="btn btn-secondary">🏆 إحصائياتي</button>
-        <button id="learning-btn" class="btn btn-secondary">📚 مسارات التعلم</button>
-        <button id="scenarios-btn" class="btn btn-secondary">📜 سيناريوهات تاريخية</button>
-        <button id="tour-btn" class="btn btn-secondary">🎓 جولة تعريفية</button>
+      <!-- The action bar lives here on desktop and inside #more-sheet-body on
+           phones, where five buttons wrapped onto three rows. src/ui/responsive.js
+           moves the one node between the two hosts. -->
+      <div id="action-bar-slot">
+        <div class="action-bar" id="action-bar">
+          <button id="glossary-btn" class="btn btn-secondary">📖 قاموس المصطلحات</button>
+          <button id="stats-btn" class="btn btn-secondary">🏆 إحصائياتي</button>
+          <button id="learning-btn" class="btn btn-secondary">📚 مسارات التعلم</button>
+          <button id="scenarios-btn" class="btn btn-secondary">📜 سيناريوهات تاريخية</button>
+          <button id="tour-btn" class="btn btn-secondary">🎓 جولة تعريفية</button>
+        </div>
       </div>
 
       <!-- .main-content was styled but never present in the markup, so every
@@ -147,7 +152,28 @@
             tabindex="0"
           >
             <div class="panel">
-              <h2 class="panel-title" id="panel-title-stocks">قائمة الأسهم</h2>
+              <div class="panel-head">
+                <h2 class="panel-title" id="panel-title-stocks">قائمة الأسهم</h2>
+                <span class="panel-meta" id="stock-count"></span>
+              </div>
+              <!-- 91 stocks used to be filterable only by the Sharia toggle,
+                   even though every entry already carries a sector. -->
+              <div class="list-toolbar">
+                <label class="sr-only" for="stock-search" id="stock-search-label">
+                  بحث في قائمة الأسهم
+                </label>
+                <input
+                  type="text"
+                  id="stock-search"
+                  class="list-search"
+                  placeholder="ابحث باسم السهم أو رمزه…"
+                  autocomplete="off"
+                />
+                <label class="sr-only" for="stock-sector" id="stock-sector-label">القطاع</label>
+                <select id="stock-sector" class="list-select"></select>
+                <label class="sr-only" for="stock-sort" id="stock-sort-label">الترتيب</label>
+                <select id="stock-sort" class="list-select"></select>
+              </div>
               <div class="stock-list" id="stock-list"></div>
             </div>
           </div>
@@ -180,6 +206,16 @@
         </div>
 
         <aside>
+          <!-- Desktop host for #stock-details. On phones the same node is moved
+               into #stock-modal and this panel stays hidden. -->
+          <section class="panel stock-panel" id="stock-panel" aria-labelledby="panel-title-stocks">
+            <div id="stock-panel-body">
+              <p class="empty-state" id="stock-panel-hint">
+                اختر سهماً من القائمة لعرض الرسم البياني وتنفيذ أمر.
+              </p>
+            </div>
+          </section>
+
           <div class="tips-container">
             <div class="panel">
               <h2 class="panel-title" id="panel-title-tips">💡 نصائح مالية</h2>
@@ -348,6 +384,43 @@
           <button class="btn btn-primary" id="confirm-modal-yes">نعم</button>
           <button class="btn btn-secondary" id="confirm-modal-no">لا</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Bottom navigation, phones only: the tabs and the five secondary
+         buttons all sat at the top of the page, furthest from the thumb. -->
+    <nav class="bottom-nav" id="bottom-nav" aria-label="التنقل الرئيسي">
+      <button class="bottom-nav-btn active" id="nav-market" data-tab="market" aria-current="page">
+        <span class="bottom-nav-icon" aria-hidden="true">📊</span>
+        <span class="bottom-nav-label" id="nav-market-label">السوق</span>
+      </button>
+      <button class="bottom-nav-btn" id="nav-portfolio" data-tab="portfolio" aria-current="false">
+        <span class="bottom-nav-icon" aria-hidden="true">💼</span>
+        <span class="bottom-nav-label" id="nav-portfolio-label">المحفظة</span>
+      </button>
+      <button class="bottom-nav-btn" id="nav-orders" data-tab="orders" aria-current="false">
+        <span class="bottom-nav-icon" aria-hidden="true">📋</span>
+        <span class="bottom-nav-label" id="nav-orders-label">الأوامر</span>
+      </button>
+      <button class="bottom-nav-btn" id="nav-more" aria-expanded="false" aria-controls="more-sheet">
+        <span class="bottom-nav-icon" aria-hidden="true">☰</span>
+        <span class="bottom-nav-label" id="nav-more-label">المزيد</span>
+      </button>
+    </nav>
+
+    <div
+      class="sheet"
+      id="more-sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="more-sheet-title"
+    >
+      <div class="sheet-panel">
+        <div class="sheet-head">
+          <h2 class="sheet-title" id="more-sheet-title">المزيد</h2>
+          <button class="close-modal" id="close-more-sheet" aria-label="إغلاق">&times;</button>
+        </div>
+        <div class="sheet-body" id="more-sheet-body"></div>
       </div>
     </div>
 

@@ -67,7 +67,7 @@
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.45);
 
-  --font: 'Segoe UI', system-ui, -apple-system, 'Noto Sans Arabic', Tahoma, sans-serif;
+  --font: 'IBM Plex Sans Arabic', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 *,
@@ -537,6 +537,75 @@ input:focus-visible,
   border-bottom: 1px solid var(--border);
 }
 
+/* A title with a counter beside it. The rule moves to the wrapper so the
+   underline still spans the full panel width. */
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-head .panel-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.panel-meta {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* --- Stock list toolbar --------------------------------------------------- */
+/* Search on its own row, the two selects sharing the next one: three stacked
+   full-width controls cost ~150px of a 740px phone before the first row. */
+.list-toolbar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.list-search {
+  /* inherits the shared input rules */
+  min-width: 0;
+  grid-column: 1 / -1;
+}
+
+.list-select {
+  min-height: var(--tap-min);
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.list-select:focus {
+  outline: none;
+  border-color: var(--brand);
+}
+
+@media (min-width: 640px) {
+  .list-toolbar {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .list-search {
+    grid-column: auto;
+  }
+}
+
 .stock-list {
   display: flex;
   flex-direction: column;
@@ -899,6 +968,18 @@ input[type='text']:focus {
   gap: 20px;
 }
 
+/* Name, price and any market warning always run the full width; the chart and
+   the order form pair up only when there is room for both. */
+.stock-details-header {
+  grid-column: 1 / -1;
+}
+
+/* Hidden as soon as a stock has been rendered into the panel. Doing it in CSS
+   keeps the placeholder out of the render path entirely. */
+#stock-panel-body:has(#stock-details > *) #stock-panel-hint {
+  display: none;
+}
+
 /* ==========================================================================
    Tips, challenges, orders
    ========================================================================== */
@@ -1009,6 +1090,24 @@ input[type='text']:focus {
 .action-bar .btn {
   font-size: 13px;
   padding: 8px 12px;
+}
+
+/* ==========================================================================
+   Bottom navigation and the "more" sheet — phones only
+   --------------------------------------------------------------------------
+   Hidden by default and enabled in the max-width block, so nothing here
+   applies to desktop even for a frame during load.
+   ========================================================================== */
+.bottom-nav {
+  display: none;
+}
+
+.sheet {
+  display: none;
+}
+
+.stock-panel {
+  display: none;
 }
 
 /* ==========================================================================
@@ -1317,6 +1416,42 @@ input[type='text']:focus {
   .action-bar {
     justify-content: flex-start;
   }
+
+  /* The side panel replaces the modal at this width: chart and order form sit
+     beside the list, which is how every real trading terminal is laid out. */
+  .stock-panel {
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  /* One column inside the side panel — it is already the narrow half of the
+     page, so the chart/form split would give each ~200px. */
+  .stock-panel .stock-details-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .stock-panel #stock-details h3 {
+    padding-inline-end: 0;
+  }
+
+  /* The aside tracks the list instead of scrolling away from it. */
+  .main-content > aside {
+    position: sticky;
+    top: var(--sticky-offset);
+  }
+}
+
+/* Wide desktop: the list column stops growing so rows don't stretch a stock
+   name across the full width, and the chart column takes the surplus. */
+@media (min-width: 1400px) {
+  .main-content {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .stock-list {
+    max-height: 720px;
+  }
 }
 
 /* ==========================================================================
@@ -1409,19 +1544,6 @@ input[type='text']:focus {
     padding: 10px 12px;
   }
 
-  .action-bar {
-    /* One horizontally scrolled row instead of three wrapped ones. */
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin-inline: -12px;
-    padding-inline: 12px;
-  }
-
-  .action-bar .btn {
-    flex: none;
-  }
-
   .stock-list {
     /* A 400px scroll box inside a scrolling page meant two competing scroll
        surfaces under one thumb. The page is the only scroller now. */
@@ -1447,6 +1569,131 @@ input[type='text']:focus {
   .order-type label {
     font-size: 13px;
     padding: 8px 4px;
+  }
+
+  /* --- Bottom navigation ------------------------------------------------
+     The tabs and the five secondary buttons all sat at the top of the page,
+     the furthest point from the thumb on a phone. Both move down here. */
+  .tabs {
+    display: none;
+  }
+
+  .bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 900;
+    background: var(--surface-1);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bottom-nav-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 56px;
+    padding: 6px 4px;
+    background: none;
+    border: none;
+    border-top: 2px solid transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .bottom-nav-btn.active {
+    color: var(--brand);
+    border-top-color: var(--brand);
+  }
+
+  .bottom-nav-icon {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .bottom-nav-label {
+    line-height: 1.2;
+  }
+
+  /* Clears the fixed bar so the footer and the reset controls stay reachable. */
+  body {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom));
+  }
+
+  /* --- "More" sheet ------------------------------------------------------ */
+  .sheet {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(3, 7, 18, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+
+  .sheet.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .sheet-panel {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    background: var(--surface-1);
+    border-top: 1px solid var(--border-strong);
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+    transition: transform 0.25s;
+    max-height: 80dvh;
+    overflow-y: auto;
+  }
+
+  .sheet.open .sheet-panel {
+    transform: translateY(0);
+  }
+
+  .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .sheet-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .sheet-head .close-modal {
+    position: static;
+  }
+
+  /* Inside the sheet the action bar is a full-width stack, not a scrolling
+     row: there is room for it here, which is the point of moving it. */
+  .sheet-body .action-bar {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    overflow: visible;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sheet-body .action-bar .btn {
+    width: 100%;
+    font-size: 15px;
+    justify-content: flex-start;
+    text-align: start;
   }
 }
 

@@ -147,6 +147,40 @@ export const translations = {
     candleHigh: 'الأعلى',
     candleLow: 'الأدنى',
     candleClose: 'الإغلاق',
+    // Stock list toolbar
+    searchStocks: 'ابحث باسم السهم أو رمزه…',
+    searchStocksLabel: 'بحث في قائمة الأسهم',
+    allSectors: 'كل القطاعات',
+    sectorLabel: 'القطاع',
+    sortLabel: 'الترتيب',
+    sortDefault: 'الترتيب الافتراضي',
+    sortTopGainers: 'الأكثر ارتفاعاً',
+    sortTopLosers: 'الأكثر انخفاضاً',
+    sortName: 'أبجدياً',
+    noStocksMatch: 'لا توجد أسهم مطابقة',
+    stocksShown: 'سهم معروض',
+    // Bottom navigation (mobile)
+    navMore: '☰ المزيد',
+    moreTitle: 'المزيد',
+    // Desktop side panel
+    selectStockHint: 'اختر سهماً من القائمة لعرض الرسم البياني وتنفيذ أمر.',
+    sectors: {
+      banking: 'البنوك',
+      petrochemical: 'البتروكيماويات',
+      telecom: 'الاتصالات',
+      retail: 'التجزئة',
+      healthcare: 'الرعاية الصحية',
+      insurance: 'التأمين',
+      cement: 'الإسمنت',
+      energy: 'الطاقة',
+      industrial: 'الصناعة',
+      realestate: 'العقار',
+      transport: 'النقل',
+      media: 'الإعلام',
+      hotels: 'الفنادق والسياحة',
+      agriculture: 'الزراعة والأغذية',
+      building: 'مواد البناء',
+    },
   },
   en: {
     sar: 'SAR',
@@ -294,6 +328,40 @@ export const translations = {
     candleHigh: 'High',
     candleLow: 'Low',
     candleClose: 'Close',
+    // Stock list toolbar
+    searchStocks: 'Search by name or symbol…',
+    searchStocksLabel: 'Search the stock list',
+    allSectors: 'All sectors',
+    sectorLabel: 'Sector',
+    sortLabel: 'Sort',
+    sortDefault: 'Default order',
+    sortTopGainers: 'Top gainers',
+    sortTopLosers: 'Top losers',
+    sortName: 'Alphabetical',
+    noStocksMatch: 'No matching stocks',
+    stocksShown: 'shown',
+    // Bottom navigation (mobile)
+    navMore: '☰ More',
+    moreTitle: 'More',
+    // Desktop side panel
+    selectStockHint: 'Pick a stock from the list to see its chart and place an order.',
+    sectors: {
+      banking: 'Banking',
+      petrochemical: 'Petrochemicals',
+      telecom: 'Telecom',
+      retail: 'Retail',
+      healthcare: 'Healthcare',
+      insurance: 'Insurance',
+      cement: 'Cement',
+      energy: 'Energy',
+      industrial: 'Industrial',
+      realestate: 'Real Estate',
+      transport: 'Transport',
+      media: 'Media',
+      hotels: 'Hotels & Tourism',
+      agriculture: 'Agriculture & Food',
+      building: 'Building Materials',
+    },
   },
 };
 
@@ -327,6 +395,18 @@ export function initLang() {
 export function t(key) {
   const value = translations[currentLang]?.[key];
   return value !== undefined ? value : key;
+}
+
+/**
+ * Translate a `stock.sector` value. Falls back to the raw key so a sector
+ * added to the data without a translation still renders something readable
+ * rather than blank.
+ *
+ * @param {string} sector
+ * @returns {string}
+ */
+export function sectorName(sector) {
+  return translations[currentLang]?.sectors?.[sector] ?? sector;
 }
 
 export function toggleLang() {

@@ -8,6 +8,7 @@ import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
 import { evaluateChallenges } from '../engine/challenges.js';
+import { selectStocks } from '../engine/stock-filter.js';
 import { clearChildren, escapeHtml } from './dom.js';
 
 /** @type {(symbol: string) => void} */
@@ -76,9 +77,31 @@ function buildStockItem(stock, lang) {
 }
 
 /**
+ * Search / sector / sort state for the list. Deliberately not persisted: it is
+ * a view of the catalogue, not part of the player's saved game.
+ *
+ * @type {{query: string, sector: string, sort: import('../engine/stock-filter.js').StockSort}}
+ */
+const listFilters = { query: '', sector: 'all', sort: 'default' };
+
+/**
+ * Merge in a filter change and rebuild the list.
+ * @param {Partial<typeof listFilters>} patch
+ */
+export function setStockListFilters(patch) {
+  Object.assign(listFilters, patch);
+  renderStocks();
+}
+
+/** @returns {typeof listFilters} a copy, so callers can't mutate the state behind renderStocks() */
+export function getStockListFilters() {
+  return { ...listFilters };
+}
+
+/**
  * Full rebuild of the stock list: needed whenever which stocks are shown or
- * how they're labeled changes (Sharia filter, language). Call updateStockPrices()
- * instead for a plain price tick or selection change.
+ * how they're labeled changes (Sharia filter, search, sector, sort, language).
+ * Call updateStockPrices() instead for a plain price tick or selection change.
  */
 export function renderStocks() {
   const listEl = document.getElementById('stock-list');
@@ -86,13 +109,31 @@ export function renderStocks() {
   clearChildren(listEl);
   stockItemRefs.clear();
   const lang = getLang();
-  const filtered = gameState.shariaFilter ? stocks.filter((s) => s.isShariaCompliant) : stocks;
-
-  filtered.forEach((stock) => {
-    const refs = buildStockItem(stock, lang);
-    stockItemRefs.set(stock.symbol, refs);
-    listEl.appendChild(refs.container);
+  const filtered = selectStocks({
+    stocks,
+    prices: stockPrices,
+    shariaOnly: !!gameState.shariaFilter,
+    query: listFilters.query,
+    sector: listFilters.sector,
+    sort: listFilters.sort,
+    lang,
   });
+
+  if (filtered.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'empty-state';
+    p.textContent = t('noStocksMatch');
+    listEl.appendChild(p);
+  } else {
+    filtered.forEach((stock) => {
+      const refs = buildStockItem(stock, lang);
+      stockItemRefs.set(stock.symbol, refs);
+      listEl.appendChild(refs.container);
+    });
+  }
+
+  const countEl = document.getElementById('stock-count');
+  if (countEl) countEl.textContent = `${filtered.length} ${t('stocksShown')}`;
   updateStockPrices();
 }
 
