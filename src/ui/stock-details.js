@@ -31,7 +31,7 @@ export function renderStockDetails(symbol) {
   left.innerHTML = `
     <h3 id="stock-title">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)} (${escapeHtml(symbol)})${stock.isShariaCompliant ? ' 🕌' : ''}</h3>
     <p class="stock-detail-price">${escapeHtml(t('currentPrice'))}: <strong>${price.toFixed(2)} ${escapeHtml(sar)}</strong></p>
-    <p>${escapeHtml(t('change'))}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span></p>
+    <p>${escapeHtml(t('change'))}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span></p>
     ${marketOpen ? '' : `<p class="market-warning" role="alert">⚠️ ${escapeHtml(t('marketClosedMessage'))}</p>`}
   `;
 
@@ -59,7 +59,7 @@ export function renderStockDetails(symbol) {
     <label for="order-price" class="sr-only">${escapeHtml(t('priceForLimitOrders'))}</label>
     <input type="number" id="order-price" placeholder="${escapeHtml(t('priceForLimitOrders'))}" min="0.01" step="0.01" inputmode="decimal" hidden>
     <div class="order-submit-row">
-      <button class="btn btn-primary order-submit-btn" id="order-buy">${escapeHtml(t('buy'))}</button>
+      <button class="btn btn-buy order-submit-btn" id="order-buy">${escapeHtml(t('buy'))}</button>
       <button class="btn btn-danger order-submit-btn" id="order-sell">${escapeHtml(t('sell'))}</button>
     </div>
   `;

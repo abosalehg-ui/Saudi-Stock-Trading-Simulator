@@ -1,6 +1,7 @@
 import { buildOHLC } from '../engine/ohlc.js';
 import { priceHistory } from '../state.js';
 import { destroyChart } from './chart.js';
+import { themeColor, themeColorAlpha } from './theme.js';
 
 /**
  * Render a candlestick chart onto a canvas.
@@ -24,7 +25,7 @@ export function renderCandlestick(canvasId, symbol) {
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
   if (candles.length === 0) {
-    ctx.fillStyle = '#95a5a6';
+    ctx.fillStyle = themeColor('--text-muted');
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('—', cssWidth / 2, cssHeight / 2);
@@ -45,10 +46,10 @@ export function renderCandlestick(canvasId, symbol) {
   const candleSlot = innerW / candles.length;
   const candleWidth = Math.max(2, Math.min(14, candleSlot * 0.6));
 
-  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.strokeStyle = themeColorAlpha('--border', 0.9);
   ctx.lineWidth = 1;
   ctx.font = '11px sans-serif';
-  ctx.fillStyle = '#95a5a6';
+  ctx.fillStyle = themeColor('--text-muted');
   ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
     const price = min + (range * i) / 4;
@@ -63,7 +64,7 @@ export function renderCandlestick(canvasId, symbol) {
   candles.forEach((c, i) => {
     const xCenter = padding.left + candleSlot * (i + 0.5);
     const isUp = c.close >= c.open;
-    const color = isUp ? '#2ecc71' : '#e74c3c';
+    const color = isUp ? themeColor('--gain') : themeColor('--loss');
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
     ctx.lineWidth = 1;

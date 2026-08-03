@@ -44,7 +44,9 @@ describe('updateStockPrices', () => {
     const nodeAfter = document.querySelector(`.stock-item[data-symbol="${symbol}"]`);
     expect(nodeAfter).toBe(nodeBefore); // same DOM node, not rebuilt
     expect(nodeAfter.querySelector('.stock-price').textContent).toMatch(/^\d/);
-    expect(nodeAfter.querySelector('.stock-change').textContent).toContain('+50.00%');
+    // Direction is carried by an arrow rather than a +/- sign, matching the
+    // ticker, so it survives being read without colour.
+    expect(nodeAfter.querySelector('.stock-change').textContent).toContain('▲ 50.00%');
     expect(nodeAfter.querySelector('.stock-change').className).toContain('positive');
   });
 

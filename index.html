@@ -15,16 +15,40 @@
       name="description"
       content="محاكي تداول الأسهم السعودية - تعلم سوق تداول دون مخاطر مالية"
     />
+    <!-- Colours the browser UI on mobile to match the page background. -->
+    <meta name="theme-color" content="#0b1220" />
     <title>تداول - محاكاة سوق الأسهم السعودي</title>
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230f3460'/%3E%3Cpath d='M6 22l6-7 5 4 9-11' stroke='%2316a085' stroke-width='3' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231F6FEB'/%3E%3Cpath d='M7 21.5l6.5-7 4.5 3.5L25 10' stroke='%23FFFFFF' stroke-width='2.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
   </head>
   <body>
-    <div class="lang-switch">
-      <button id="lang-toggle" class="btn btn-secondary" aria-label="Toggle language">E</button>
-    </div>
+    <!-- The language button used to be position:fixed over the tickers, and the
+         page had no title, logo or anchor of any kind above the marquees. -->
+    <header class="app-bar">
+      <div class="app-bar-inner">
+        <span class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="32" height="32" fill="none">
+              <rect width="32" height="32" rx="8" fill="#1F6FEB" />
+              <path
+                d="M7 21.5l6.5-7 4.5 3.5L25 10"
+                stroke="#FFFFFF"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          <span class="brand-name">تداول</span>
+          <span class="brand-tag" id="brand-tag">محاكي سوق الأسهم السعودي</span>
+        </span>
+        <button id="lang-toggle" class="btn btn-ghost lang-btn" aria-label="Toggle language">
+          E
+        </button>
+      </div>
+    </header>
 
     <div class="ticker" aria-hidden="true">
       <div class="ticker-content" id="ticker"></div>
@@ -40,12 +64,16 @@
       <div class="market-status-bar">
         <span id="market-status" class="market-status">—</span>
         <span id="hijri-date" class="hijri-date"></span>
-        <label>
-          <input type="checkbox" id="sharia-filter" />
+        <!-- Switches rather than bare checkboxes: the inputs measured 13x13px
+             inside 15px-tall labels, the two smallest targets on the page. -->
+        <label class="switch-row">
+          <input type="checkbox" id="sharia-filter" class="switch-input" />
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
           <span id="sharia-filter-label-text">🕌 إظهار الأسهم الشرعية فقط</span>
         </label>
-        <label>
-          <input type="checkbox" id="allow-24-7" />
+        <label class="switch-row">
+          <input type="checkbox" id="allow-24-7" class="switch-input" />
+          <span class="switch-track" aria-hidden="true"><span class="switch-thumb"></span></span>
           <span id="allow-24-7-label-text">وضع المحاكاة 24/7</span>
         </label>
       </div>
@@ -77,99 +105,133 @@
         <button id="tour-btn" class="btn btn-secondary">🎓 جولة تعريفية</button>
       </div>
 
-      <nav class="tabs" role="tablist">
-        <button
-          class="tab active"
-          id="tab-market"
-          role="tab"
-          aria-controls="market-tab"
-          aria-selected="true"
-        >
-          📊 السوق
-        </button>
-        <button
-          class="tab"
-          id="tab-portfolio"
-          role="tab"
-          aria-controls="portfolio-tab"
-          aria-selected="false"
-        >
-          💼 المحفظة
-        </button>
-        <button
-          class="tab"
-          id="tab-orders"
-          role="tab"
-          aria-controls="orders-tab"
-          aria-selected="false"
-        >
-          📋 الأوامر
-        </button>
-      </nav>
-
-      <div id="market-tab" class="tab-content active" role="tabpanel" aria-labelledby="tab-market" tabindex="0">
-        <div class="panel">
-          <h2 class="panel-title" id="panel-title-stocks">قائمة الأسهم</h2>
-          <div class="stock-list" id="stock-list"></div>
-        </div>
-      </div>
-
-      <div id="portfolio-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-portfolio" tabindex="0">
-        <div class="panel">
-          <h2 class="panel-title" id="panel-title-portfolio">محفظتي</h2>
-          <div id="portfolio"></div>
-        </div>
-      </div>
-
-      <div id="orders-tab" class="tab-content" role="tabpanel" aria-labelledby="tab-orders" tabindex="0">
-        <div class="panel">
-          <h2 class="panel-title" id="panel-title-orders">الأوامر المعلقة</h2>
-          <div id="pending-orders"></div>
-        </div>
-      </div>
-
-      <div class="tips-container">
-        <div class="panel">
-          <h2 class="panel-title" id="panel-title-tips">💡 نصائح مالية</h2>
-          <div id="tips-list"></div>
-        </div>
-      </div>
-
-      <div class="challenges">
-        <div class="panel">
-          <h2 class="panel-title" id="panel-title-challenges">🎯 التحديات</h2>
-          <div class="challenge-item">
-            <div><strong id="challenge1-title">التحدي 1</strong>:
-              <span id="challenge1-goal">ربح 10% من رأس المال</span></div>
-            <div class="challenge-reward" id="challenge1-reward">المكافأة: دعم 100,000 ريال</div>
-            <div
-              class="challenge-progress"
-              role="progressbar"
-              aria-labelledby="challenge1-title"
-              aria-valuemin="0"
-              aria-valuemax="100"
+      <!-- .main-content was styled but never present in the markup, so every
+           screen width got the same single stacked column. -->
+      <div class="main-content">
+        <div>
+          <nav class="tabs" role="tablist">
+            <button
+              class="tab active"
+              id="tab-market"
+              role="tab"
+              aria-controls="market-tab"
+              aria-selected="true"
             >
-              <div class="challenge-progress-bar" id="challenge1-progress"></div>
+              📊 السوق
+            </button>
+            <button
+              class="tab"
+              id="tab-portfolio"
+              role="tab"
+              aria-controls="portfolio-tab"
+              aria-selected="false"
+            >
+              💼 المحفظة
+            </button>
+            <button
+              class="tab"
+              id="tab-orders"
+              role="tab"
+              aria-controls="orders-tab"
+              aria-selected="false"
+            >
+              📋 الأوامر
+            </button>
+          </nav>
+
+          <div
+            id="market-tab"
+            class="tab-content active"
+            role="tabpanel"
+            aria-labelledby="tab-market"
+            tabindex="0"
+          >
+            <div class="panel">
+              <h2 class="panel-title" id="panel-title-stocks">قائمة الأسهم</h2>
+              <div class="stock-list" id="stock-list"></div>
             </div>
           </div>
-          <div class="challenge-item">
-            <div><strong id="challenge2-title">التحدي 2</strong>:
-              <span id="challenge2-goal">ربح 20% من رأس المال</span></div>
-            <div class="challenge-reward" id="challenge2-reward">المكافأة: دعم 300,000 ريال</div>
-            <div
-              class="challenge-progress"
-              role="progressbar"
-              aria-labelledby="challenge2-title"
-              aria-valuemin="0"
-              aria-valuemax="100"
-            >
-              <div class="challenge-progress-bar" id="challenge2-progress"></div>
+
+          <div
+            id="portfolio-tab"
+            class="tab-content"
+            role="tabpanel"
+            aria-labelledby="tab-portfolio"
+            tabindex="0"
+          >
+            <div class="panel">
+              <h2 class="panel-title" id="panel-title-portfolio">محفظتي</h2>
+              <div id="portfolio"></div>
             </div>
           </div>
-          <button id="export-csv-btn" class="btn btn-secondary csv-export-btn">
-            ⬇ تصدير المعاملات CSV
-          </button>
+
+          <div
+            id="orders-tab"
+            class="tab-content"
+            role="tabpanel"
+            aria-labelledby="tab-orders"
+            tabindex="0"
+          >
+            <div class="panel">
+              <h2 class="panel-title" id="panel-title-orders">الأوامر المعلقة</h2>
+              <div id="pending-orders"></div>
+            </div>
+          </div>
         </div>
+
+        <aside>
+          <div class="tips-container">
+            <div class="panel">
+              <h2 class="panel-title" id="panel-title-tips">💡 نصائح مالية</h2>
+              <div id="tips-list"></div>
+            </div>
+          </div>
+
+          <div class="challenges">
+            <div class="panel">
+              <h2 class="panel-title" id="panel-title-challenges">🎯 التحديات</h2>
+              <div class="challenge-item">
+                <div>
+                  <strong id="challenge1-title">التحدي 1</strong>:
+                  <span id="challenge1-goal">ربح 10% من رأس المال</span>
+                </div>
+                <div class="challenge-reward" id="challenge1-reward">
+                  المكافأة: دعم 100,000 ريال
+                </div>
+                <div
+                  class="challenge-progress"
+                  role="progressbar"
+                  aria-labelledby="challenge1-title"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div class="challenge-progress-bar" id="challenge1-progress"></div>
+                </div>
+              </div>
+              <div class="challenge-item">
+                <div>
+                  <strong id="challenge2-title">التحدي 2</strong>:
+                  <span id="challenge2-goal">ربح 20% من رأس المال</span>
+                </div>
+                <div class="challenge-reward" id="challenge2-reward">
+                  المكافأة: دعم 300,000 ريال
+                </div>
+                <div
+                  class="challenge-progress"
+                  role="progressbar"
+                  aria-labelledby="challenge2-title"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                >
+                  <div class="challenge-progress-bar" id="challenge2-progress"></div>
+                </div>
+              </div>
+              <button id="export-csv-btn" class="btn btn-secondary csv-export-btn">
+                ⬇ تصدير المعاملات CSV
+              </button>
+            </div>
+          </div>
+        </aside>
       </div>
 
       <div class="session-controls">
