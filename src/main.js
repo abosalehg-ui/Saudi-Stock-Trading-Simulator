@@ -23,7 +23,8 @@ import {
   resetGameState,
   initPriceState,
   loadPriceState,
-  savePriceState,
+  savePriceStateThrottled,
+  flushPriceState,
   loadStats,
 } from './state.js';
 import { updatePrices } from './engine/prices.js';
@@ -39,9 +40,7 @@ import { isMarketOpen } from './engine/market-hours.js';
 import {
   bindRenderCallbacks,
   renderStocks,
-  setStockListFilters,
   updateStockPrices,
-  bindStockListEvents,
   renderPortfolio,
   renderPendingOrders,
   updateStats,
@@ -52,32 +51,26 @@ import {
   updateMarketStatusBadge,
   updateHijriDate,
 } from './ui/render.js';
-import { bindStockDetailsCallbacks, renderStockDetails } from './ui/stock-details.js';
+import {
+  bindStockDetailsCallbacks,
+  renderStockDetails,
+  patchStockDetails,
+} from './ui/stock-details.js';
 import {
   showAlert,
   showConfirm,
   openStockModal,
   closeStockModal,
-  closeModal,
   isModalOpen,
 } from './ui/modal.js';
-import { downloadTransactionsCsv } from './ui/csv-export.js';
-import { getLang, initLang, toggleLang, t, sectorName } from './ui/i18n.js';
-import {
-  initResponsiveLayout,
-  isDesktopLayout,
-  toggleMoreSheet,
-  isMoreSheetOpen,
-  syncBottomNav,
-} from './ui/responsive.js';
-import { listSectors } from './engine/stock-filter.js';
-import { initTheme, cycleThemeMode, getThemeMode } from './ui/theme.js';
-import { stocks } from './data/stocks.js';
-import { openGlossary, attachGlossaryListeners } from './ui/glossary.js';
-import { openStatsModal, closeStatsModal } from './ui/stats.js';
-import { openLearningModal, closeLearningModal } from './ui/learning.js';
-import { openScenariosModal, closeScenariosModal, bindScenariosCallbacks } from './ui/scenarios.js';
-import { startTour, attachTourListeners, maybeAutoStart } from './ui/tour.js';
+import { initLang, toggleLang, t } from './ui/i18n.js';
+import { rebuildStaticLabels } from './ui/labels.js';
+import { showToast } from './ui/toast.js';
+import { initResponsiveLayout, isDesktopLayout } from './ui/responsive.js';
+import { attachShellListeners } from './ui/shell.js';
+import { initTheme } from './ui/theme.js';
+import { evaluateChallenges } from './engine/challenges.js';
+import { maybeAutoStart } from './ui/tour.js';
 import { recordPnlSnapshot, recordChallengeCompleted, recordSessionStart } from './engine/stats.js';
 
 function refreshAll() {
@@ -88,15 +81,36 @@ function refreshAll() {
   renderPortfolio();
   renderPendingOrders();
   const { pnlPercent, totalValue } = updateStats();
-  const { challenge1JustCompleted, challenge2JustCompleted } = updateChallenges({
+
+  // Granting the rewards lives here rather than inside the renderer: it moves
+  // cash and resets initialCapital, and a repaint should never do that.
+  const { challenge1JustCompleted, challenge2JustCompleted } = evaluateChallenges({
     pnlPercent,
     totalValue,
-    showAlertFn: showAlert,
   });
-  if (challenge1JustCompleted) recordChallengeCompleted();
-  if (challenge2JustCompleted) recordChallengeCompleted();
-  const pnlAmount = totalValue - gameState.initialCapital;
-  recordPnlSnapshot(pnlPercent, pnlAmount);
+  if (challenge1JustCompleted) {
+    recordChallengeCompleted();
+    showAlert(t('challenge1Complete'));
+  }
+  if (challenge2JustCompleted) {
+    recordChallengeCompleted();
+    showAlert(t('challenge2Complete'));
+  }
+  // Re-read after the rewards: they change cash, so the bars would otherwise
+  // paint the pre-reward percentage for one tick.
+  const { pnlPercent: shownPnlPercent, totalValue: shownTotal } =
+    challenge1JustCompleted || challenge2JustCompleted ? updateStats() : { pnlPercent, totalValue };
+  updateChallenges({ pnlPercent: shownPnlPercent });
+
+  recordPnlSnapshot(shownPnlPercent, shownTotal - gameState.initialCapital);
+
+  // The selected stock's price and chart used to sit frozen at whatever they
+  // were when it was picked, while the list beside them ticked on — two
+  // different numbers for the same stock, side by side on a desktop layout.
+  // This patches them in place, so a half-typed quantity and the indicator
+  // checkboxes survive.
+  if (session.selectedStock) patchStockDetails(session.selectedStock);
+
   updateTicker();
   updateNewsTicker();
   updateMarketStatusBadge();
@@ -115,7 +129,10 @@ function startPriceUpdates() {
     const { cancelled } = marketLive ? checkPendingOrders() : { cancelled: [] };
     refreshAll();
     saveGameState();
-    savePriceState();
+    // Throttled: this payload is ~216KB of JSON and both stringify and
+    // setItem are synchronous, so writing it every tick blocked the main
+    // thread every 6 seconds at 10x speed.
+    savePriceStateThrottled();
     // Orders whose trigger fired but couldn't execute (e.g. two orders
     // competing for the same shares) are dropped rather than retried forever;
     // let the user know instead of a pending order silently vanishing.
@@ -234,15 +251,15 @@ function handleSubmitOrder(input) {
     // A market order shifts stockPrices immediately (applyMarketImpact); persist that
     // now instead of waiting for the next interval tick, or a reload right after a
     // trade would show the price snapping back.
-    savePriceState();
+    flushPriceState();
     closeStockModal();
-    showAlert(msg);
+    showToast(msg);
   } else {
     addPendingOrder(order);
     renderPendingOrders();
     saveGameState();
     closeStockModal();
-    showAlert(order.kind === 'stop-loss' ? t('stopLossAdded') : t('orderAdded'));
+    showToast(order.kind === 'stop-loss' ? t('stopLossAdded') : t('orderAdded'));
   }
 }
 
@@ -274,135 +291,6 @@ function resetGame() {
   });
 }
 
-function rebuildStaticLabels() {
-  const lang = getLang();
-  document.documentElement.lang = lang;
-  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
-  document.getElementById('lang-toggle').textContent = t('languageButton');
-
-  // Keyed by element id rather than by querySelectorAll order: the previous
-  // positional mapping silently mislabelled everything if a card, panel or tab
-  // were ever reordered, and it depended on the modal .panel-title nodes
-  // happening to sort after the in-page ones.
-  const textById = {
-    'stat-label-cash': t('cashBalance'),
-    'stat-label-portfolio': t('portfolioValue'),
-    'stat-label-total': t('totalAssets'),
-    'stat-label-pnl': t('profitLoss'),
-    'panel-title-stocks': t('stockList'),
-    'panel-title-portfolio': t('myPortfolio'),
-    'panel-title-orders': t('pendingOrders'),
-    'panel-title-tips': t('financialTips'),
-    'panel-title-challenges': t('challenges'),
-    'tab-market': t('marketTab'),
-    'tab-portfolio': t('portfolioTab'),
-    'tab-orders': t('ordersTab'),
-    'challenge1-title': t('challenge1Title'),
-    'challenge1-goal': t('challenge1Goal'),
-    'challenge1-reward': t('challenge1Reward'),
-    'challenge2-title': t('challenge2Title'),
-    'challenge2-goal': t('challenge2Goal'),
-    'challenge2-reward': t('challenge2Reward'),
-    'glossary-title': t('glossaryTitle'),
-    'stats-title': t('statsTitle'),
-    'learning-title': t('learningTitle'),
-    'scenarios-title': t('scenariosTitle'),
-    'nav-market-label': t('marketTab'),
-    'nav-portfolio-label': t('portfolioTab'),
-    'nav-orders-label': t('ordersTab'),
-    'nav-more-label': t('moreTitle'),
-    'more-sheet-title': t('moreTitle'),
-    'stock-search-label': t('searchStocksLabel'),
-    'stock-sector-label': t('sectorLabel'),
-    'stock-sort-label': t('sortLabel'),
-    'stock-panel-hint': t('selectStockHint'),
-  };
-  Object.entries(textById).forEach(([id, text]) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  });
-
-  // Close buttons carried a hardcoded Arabic aria-label even in English mode.
-  document.querySelectorAll('.close-modal').forEach((el) => {
-    el.setAttribute('aria-label', t('closeBtn'));
-  });
-
-  document.getElementById('reset-btn').textContent = t('reset');
-  document.getElementById('export-csv-btn').textContent = t('exportCsv');
-  document.getElementById('sharia-filter-label-text').textContent = t('showShariaOnly');
-  document.getElementById('allow-24-7-label-text').textContent = t('enable24Trading');
-  document.getElementById('glossary-btn').textContent = t('glossaryBtn');
-  document.getElementById('stats-btn').textContent = t('statsBtn');
-  document.getElementById('learning-btn').textContent = t('learningPathsBtn');
-  document.getElementById('scenarios-btn').textContent = t('scenariosBtn');
-  document.getElementById('tour-btn').textContent = t('tourStartBtn');
-
-  const search = document.getElementById('stock-search');
-  if (search) search.placeholder = t('searchStocks');
-  syncThemeToggle();
-  // The bottom-nav labels carry the emoji already, so strip the one baked into
-  // the tab translations rather than showing it twice.
-  ['market', 'portfolio', 'orders'].forEach((name) => {
-    const el = document.getElementById(`nav-${name}-label`);
-    if (el) el.textContent = el.textContent.replace(/^\P{L}+/u, '');
-  });
-  buildListFilterOptions();
-}
-
-const THEME_ICONS = { system: '🌓', light: '☀️', dark: '🌙' };
-const THEME_LABEL_KEYS = { system: 'themeSystem', light: 'themeLight', dark: 'themeDark' };
-
-/**
- * Mirror the current theme mode onto the toggle. The icon alone would leave
- * the state unreadable to a screen reader, so the label carries it too.
- */
-function syncThemeToggle() {
-  const btn = document.getElementById('theme-toggle');
-  if (!btn) return;
-  const mode = getThemeMode();
-  const label = t(THEME_LABEL_KEYS[mode]);
-  const icon = document.getElementById('theme-toggle-icon');
-  if (icon) icon.textContent = THEME_ICONS[mode];
-  btn.setAttribute('aria-label', label);
-  btn.setAttribute('title', label);
-}
-
-/**
- * (Re)fill the sector and sort selects, preserving the current choice. Called
- * on load and on every language switch, since the option labels are localised.
- */
-function buildListFilterOptions() {
-  const sectorEl = /** @type {HTMLSelectElement | null} */ (
-    document.getElementById('stock-sector')
-  );
-  const sortEl = /** @type {HTMLSelectElement | null} */ (document.getElementById('stock-sort'));
-  if (!sectorEl || !sortEl) return;
-
-  const fill = (select, options) => {
-    const previous = select.value;
-    select.replaceChildren(
-      ...options.map(([value, label]) => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = label;
-        return option;
-      })
-    );
-    if (previous && options.some(([value]) => value === previous)) select.value = previous;
-  };
-
-  fill(sectorEl, [
-    ['all', t('allSectors')],
-    ...listSectors(stocks).map((sector) => [sector, sectorName(sector)]),
-  ]);
-  fill(sortEl, [
-    ['default', t('sortDefault')],
-    ['gainers', t('sortTopGainers')],
-    ['losers', t('sortTopLosers')],
-    ['name', t('sortName')],
-  ]);
-}
-
 function handleToggleLanguage() {
   toggleLang();
   rebuildStaticLabels();
@@ -413,131 +301,6 @@ function handleToggleLanguage() {
   }
   displayRandomTips();
   saveGameState();
-}
-
-const TABS = ['market', 'portfolio', 'orders'];
-
-/**
- * Activate a tab by id rather than by DOM position: the old
- * `.tab:nth-child(n)` lookups broke silently if anything was inserted into the
- * tab bar. Also keeps aria-selected in sync, without which the declared
- * role="tab" told screen readers nothing about which tab was current.
- *
- * @param {'market'|'portfolio'|'orders'} tab
- */
-function switchTab(tab) {
-  TABS.forEach((name) => {
-    const isActive = name === tab;
-    const tabEl = document.getElementById(`tab-${name}`);
-    const panelEl = document.getElementById(`${name}-tab`);
-    tabEl.classList.toggle('active', isActive);
-    tabEl.setAttribute('aria-selected', String(isActive));
-    panelEl.classList.toggle('active', isActive);
-  });
-  syncBottomNav(tab);
-  if (tab === 'orders') renderPendingOrders();
-}
-
-// Backdrop-click and Escape both need this list; declared once so the two
-// handlers can't drift apart.
-const SECONDARY_MODAL_IDS = ['glossary-modal', 'stats-modal', 'learning-modal', 'scenarios-modal'];
-
-function attachEventListeners() {
-  bindStockListEvents();
-  document.getElementById('lang-toggle').addEventListener('click', handleToggleLanguage);
-  document.getElementById('theme-toggle').addEventListener('click', () => {
-    cycleThemeMode();
-    syncThemeToggle();
-    repaintThemedCanvases();
-  });
-  document.getElementById('reset-btn').addEventListener('click', resetGame);
-  document.getElementById('export-csv-btn').addEventListener('click', () => {
-    if (gameState.transactions.length === 0) {
-      showAlert(t('noTransactionsToExport'));
-      return;
-    }
-    downloadTransactionsCsv();
-  });
-  document.getElementById('speed-1').addEventListener('click', () => setSpeed(1));
-  document.getElementById('speed-5').addEventListener('click', () => setSpeed(5));
-  document.getElementById('speed-10').addEventListener('click', () => setSpeed(10));
-  TABS.forEach((name) => {
-    document.getElementById(`tab-${name}`).addEventListener('click', () => switchTab(name));
-  });
-
-  document.getElementById('sharia-filter').addEventListener('change', (e) => {
-    gameState.shariaFilter = e.target.checked;
-    renderStocks();
-    saveGameState();
-  });
-  document.getElementById('allow-24-7').addEventListener('change', (e) => {
-    gameState.allow24Trading = e.target.checked;
-    updateMarketStatusBadge();
-    saveGameState();
-  });
-
-  document.getElementById('close-stock-modal').addEventListener('click', () => closeStockModal());
-
-  // Stock list toolbar. The search is debounced so a rebuild of up to 91 rows
-  // doesn't run on every keystroke.
-  let searchTimer = null;
-  document.getElementById('stock-search').addEventListener('input', (e) => {
-    const value = e.target.value;
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => setStockListFilters({ query: value }), 120);
-  });
-  document.getElementById('stock-sector').addEventListener('change', (e) => {
-    setStockListFilters({ sector: e.target.value });
-  });
-  document.getElementById('stock-sort').addEventListener('change', (e) => {
-    setStockListFilters({ sort: e.target.value });
-  });
-
-  // Bottom navigation (phones).
-  document.querySelectorAll('.bottom-nav-btn[data-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      switchTab(btn.dataset.tab);
-      toggleMoreSheet(false);
-      document.querySelector('.main-content')?.scrollIntoView({ block: 'start' });
-    });
-  });
-  document.getElementById('nav-more').addEventListener('click', () => {
-    toggleMoreSheet(!isMoreSheetOpen());
-  });
-  document
-    .getElementById('close-more-sheet')
-    .addEventListener('click', () => toggleMoreSheet(false));
-  document.getElementById('more-sheet').addEventListener('click', (event) => {
-    // Backdrop only: clicks on the panel itself must not dismiss it.
-    if (event.target === event.currentTarget) toggleMoreSheet(false);
-  });
-
-  document.getElementById('glossary-btn').addEventListener('click', openGlossary);
-  document.getElementById('stats-btn').addEventListener('click', openStatsModal);
-  document.getElementById('learning-btn').addEventListener('click', openLearningModal);
-  document.getElementById('scenarios-btn').addEventListener('click', openScenariosModal);
-  document.getElementById('tour-btn').addEventListener('click', startTour);
-
-  document.getElementById('close-stats-modal').addEventListener('click', closeStatsModal);
-  document.getElementById('close-learning-modal').addEventListener('click', closeLearningModal);
-  document.getElementById('close-scenarios-modal').addEventListener('click', closeScenariosModal);
-
-  attachGlossaryListeners();
-  attachTourListeners();
-  bindScenariosCallbacks({ onChange: refreshAll });
-
-  window.addEventListener('click', (event) => {
-    if (event.target === document.getElementById('stock-modal')) closeStockModal();
-    SECONDARY_MODAL_IDS.forEach((id) => {
-      if (event.target === document.getElementById(id)) closeModal(id);
-    });
-  });
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    if (isMoreSheetOpen()) toggleMoreSheet(false);
-    if (isModalOpen('stock-modal')) closeStockModal();
-    SECONDARY_MODAL_IDS.filter(isModalOpen).forEach((id) => closeModal(id));
-  });
 }
 
 function init() {
@@ -560,7 +323,13 @@ function init() {
   // its buttons are bound wherever they end up.
   initResponsiveLayout({ onChange: handleLayoutChange });
 
-  attachEventListeners();
+  attachShellListeners({
+    onToggleLanguage: handleToggleLanguage,
+    onThemeChanged: repaintThemedCanvases,
+    onReset: resetGame,
+    onSetSpeed: setSpeed,
+    onRefresh: refreshAll,
+  });
 
   document.getElementById('sharia-filter').checked = !!gameState.shariaFilter;
   document.getElementById('allow-24-7').checked = !!gameState.allow24Trading;
@@ -576,6 +345,19 @@ function init() {
   setInterval(() => {
     updateMarketStatusBadge();
   }, 30000);
+
+  // The price write is throttled, so a tab that goes away between writes would
+  // otherwise lose the most recent ticks. 'pagehide' rather than 'beforeunload'
+  // because the latter is unreliable on mobile, where the tab is usually
+  // frozen rather than unloaded.
+  const flush = () => {
+    saveGameState();
+    flushPriceState();
+  };
+  window.addEventListener('pagehide', flush);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
 }
 
 if (document.readyState === 'loading') {

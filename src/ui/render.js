@@ -3,13 +3,12 @@ import { stocks, findStock } from '../data/stocks.js';
 import { financialTips } from '../data/tips.js';
 import { gameState, stockPrices, activeNews, session } from '../state.js';
 import { getLang, t } from './i18n.js';
-import { formatCurrency } from '../utils/numbers.js';
+import { formatCurrency, direction } from '../utils/numbers.js';
 import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
-import { evaluateChallenges } from '../engine/challenges.js';
-import { selectStocks } from '../engine/stock-filter.js';
-import { clearChildren, escapeHtml } from './dom.js';
+import { selectStocks, changePercent } from '../engine/stock-filter.js';
+import { clearChildren, html, setHtml } from './dom.js';
 
 /** @type {(symbol: string) => void} */
 let onSelectStock = () => {};
@@ -147,12 +146,11 @@ export function updateStockPrices() {
     const stock = findStock(symbol);
     if (!stock) return;
     const price = stockPrices[symbol];
-    const change = ((price - stock.basePrice) / stock.basePrice) * 100;
+    const change = changePercent(stock, stockPrices);
+    const { glyph, className } = direction(change);
     refs.priceEl.textContent = `${price.toFixed(2)} ${t('sar')}`;
-    // Arrow rather than a bare sign, matching the ticker: direction should not
-    // depend on colour alone, and the glyph is faster to scan down a list.
-    refs.changeEl.textContent = `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%`;
-    refs.changeEl.className = `stock-change ${change >= 0 ? 'positive' : 'negative'}`;
+    refs.changeEl.textContent = `${glyph} ${Math.abs(change).toFixed(2)}%`;
+    refs.changeEl.className = `stock-change ${className}`;
     refs.container.classList.toggle('selected', session.selectedStock === symbol);
   });
 }
@@ -204,22 +202,46 @@ export function renderPortfolio() {
 
     const div = document.createElement('div');
     div.className = 'portfolio-item';
-    div.innerHTML = `
-      <div class="stock-header">
-        <div>
-          <div class="stock-name">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)}</div>
-          <div class="stock-symbol">${escapeHtml(symbol)} - ${holding.quantity} ${escapeHtml(t('shares'))}</div>
+    const { glyph, className } = direction(profitAfterSell);
+    // costBasis is zero only for a holding bought at price 0, which the price
+    // floor makes unreachable — but dividing anyway would print NaN%, so the
+    // percentage is simply omitted rather than rendered as garbage.
+    const pnlPct =
+      costBasis > 0 ? ` (${Math.abs((profitAfterSell / costBasis) * 100).toFixed(2)}%)` : '';
+    setHtml(
+      div,
+      html`
+        <div class="stock-header">
+          <div>
+            <div class="stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</div>
+            <div class="stock-symbol">${symbol} - ${holding.quantity} ${t('shares')}</div>
+          </div>
         </div>
-      </div>
-      <div class="portfolio-details">
-        <div class="detail-item"><span>${t('lastPrice')}:</span><strong>${currentPrice.toFixed(2)} ${sar}</strong></div>
-        <div class="detail-item"><span>${t('avgCost')}:</span><strong>${holding.avgCost.toFixed(2)} ${sar}</strong></div>
-        <div class="detail-item"><span>${t('totalCost')}:</span><strong>${costBasis.toFixed(2)} ${sar}</strong></div>
-        <div class="detail-item"><span>${t('marketValue')}:</span><strong>${marketValue.toFixed(2)} ${sar}</strong></div>
-        <div class="detail-item"><span>${t('valueAfterSell')}:</span><strong>${valueAfterSell.toFixed(2)} ${sar}</strong></div>
-        <div class="detail-item"><span>${t('pnlAfterSell')}:</span><strong class="${profitAfterSell >= 0 ? 'positive' : 'negative'}">${profitAfterSell >= 0 ? '▲' : '▼'} ${Math.abs(profitAfterSell).toFixed(2)} ${sar} (${Math.abs((profitAfterSell / costBasis) * 100).toFixed(2)}%)</strong></div>
-      </div>
-    `;
+        <div class="portfolio-details">
+          <div class="detail-item">
+            <span>${t('lastPrice')}:</span><strong>${currentPrice.toFixed(2)} ${sar}</strong>
+          </div>
+          <div class="detail-item">
+            <span>${t('avgCost')}:</span><strong>${holding.avgCost.toFixed(2)} ${sar}</strong>
+          </div>
+          <div class="detail-item">
+            <span>${t('totalCost')}:</span><strong>${costBasis.toFixed(2)} ${sar}</strong>
+          </div>
+          <div class="detail-item">
+            <span>${t('marketValue')}:</span><strong>${marketValue.toFixed(2)} ${sar}</strong>
+          </div>
+          <div class="detail-item">
+            <span>${t('valueAfterSell')}:</span><strong>${valueAfterSell.toFixed(2)} ${sar}</strong>
+          </div>
+          <div class="detail-item">
+            <span>${t('pnlAfterSell')}:</span>
+            <strong class="${className}">
+              ${glyph} ${Math.abs(profitAfterSell).toFixed(2)} ${sar}${pnlPct}
+            </strong>
+          </div>
+        </div>
+      `
+    );
 
     const actions = document.createElement('div');
     actions.className = 'portfolio-actions';
@@ -258,28 +280,44 @@ export function renderPendingOrders() {
     if (!stock) return;
     const currentPrice = stockPrices[order.symbol];
     const refPrice = order.kind === 'stop-loss' ? order.stopPrice : order.limitPrice;
-    const priceDiff = ((currentPrice - refPrice) / refPrice) * 100;
+    // A pending order always carries a finite, positive reference price (both
+    // state.js's loader and validateOrder() enforce it), so this cannot divide
+    // by zero — but guard rather than depend on a validator two modules away.
+    const priceDiff = refPrice > 0 ? ((currentPrice - refPrice) / refPrice) * 100 : 0;
     const sar = t('sar');
     const div = document.createElement('div');
     div.className = 'order-item';
-    div.innerHTML = `
-      <div class="order-header">
-        <div>
-          <strong class="order-stock-name">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)}</strong>
-          <span class="order-stock-symbol">(${escapeHtml(order.symbol)})</span>
+    const { glyph, className } = direction(priceDiff);
+    setHtml(
+      div,
+      html`
+        <div class="order-header">
+          <div>
+            <strong class="order-stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</strong>
+            <span class="order-stock-symbol">(${order.symbol})</span>
+          </div>
+          <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-buy' : 'btn-danger'}">
+            ${order.type === 'buy' ? t('buy') : t('sell')} ·
+            ${order.kind === 'stop-loss' ? t('orderKindStopLoss') : t('orderKindLimit')}
+          </span>
         </div>
-        <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-buy' : 'btn-danger'}">
-          ${order.type === 'buy' ? t('buy') : t('sell')} · ${order.kind === 'stop-loss' ? t('orderKindStopLoss') : t('orderKindLimit')}
-        </span>
-      </div>
-      <div class="order-details">
-        <div>${t('quantity')}: <strong>${order.quantity}</strong></div>
-        <div>${order.kind === 'stop-loss' ? t('stopPrice') : t('limitPrice')}: <strong>${refPrice.toFixed(2)} ${sar}</strong></div>
-        <div>${t('currentPrice')}: <strong>${currentPrice.toFixed(2)} ${sar}</strong></div>
-        <div>${t('difference')}: <span class="${priceDiff >= 0 ? 'positive' : 'negative'}">${priceDiff >= 0 ? '▲' : '▼'} ${Math.abs(priceDiff).toFixed(2)}%</span></div>
-        <div class="order-date-row">${escapeHtml(t('date'))}: ${escapeHtml(formatDateBilingual(order.timestamp, lang))}</div>
-      </div>
-    `;
+        <div class="order-details">
+          <div>${t('quantity')}: <strong>${order.quantity}</strong></div>
+          <div>
+            ${order.kind === 'stop-loss' ? t('stopPrice') : t('limitPrice')}:
+            <strong>${refPrice.toFixed(2)} ${sar}</strong>
+          </div>
+          <div>${t('currentPrice')}: <strong>${currentPrice.toFixed(2)} ${sar}</strong></div>
+          <div>
+            ${t('difference')}:
+            <span class="${className}">${glyph} ${Math.abs(priceDiff).toFixed(2)}%</span>
+          </div>
+          <div class="order-date-row">
+            ${t('date')}: ${formatDateBilingual(order.timestamp, lang)}
+          </div>
+        </div>
+      `
+    );
     const actions = document.createElement('div');
     actions.className = 'order-actions';
     const cancelBtn = document.createElement('button');
@@ -311,8 +349,9 @@ export function updateStats() {
   document.getElementById('total-value').textContent = formatCurrency(totalValue, lang, t('sar'));
 
   const pnlEl = document.getElementById('pnl');
-  pnlEl.textContent = `${pnl >= 0 ? '▲' : '▼'} ${Math.abs(pnl).toFixed(2)} ${t('sar')} (${Math.abs(pnlPercent).toFixed(2)}%)`;
-  pnlEl.className = 'stat-value ' + (pnl >= 0 ? 'positive' : 'negative');
+  const { glyph, className } = direction(pnl);
+  pnlEl.textContent = `${glyph} ${Math.abs(pnl).toFixed(2)} ${t('sar')} (${Math.abs(pnlPercent).toFixed(2)}%)`;
+  pnlEl.className = `stat-value ${className}`;
 
   return { pnlPercent, totalValue };
 }
@@ -334,23 +373,24 @@ function setChallengeProgress(barId, percent) {
 }
 
 /**
- * Update the challenge progress bars and grant any newly-earned rewards.
- * @returns {{challenge1JustCompleted: boolean, challenge2JustCompleted: boolean}}
+ * Draw the challenge progress bars. Rendering only.
+ *
+ * Granting the rewards used to happen here, which made every repaint a
+ * money-moving operation: evaluateChallenges() mutates cash and initialCapital,
+ * so a function whose job is to set two bar widths could change the player's
+ * balance. main.js owns that call now, and this just reflects the result.
+ *
+ * @param {{pnlPercent: number}} args
  */
-export function updateChallenges({ pnlPercent, totalValue, showAlertFn }) {
-  const progress1 = Math.min((pnlPercent / CHALLENGE_1_THRESHOLD) * 100, 100);
-  const progress2 = Math.min((pnlPercent / CHALLENGE_2_THRESHOLD) * 100, 100);
-  setChallengeProgress('challenge1-progress', progress1);
-  setChallengeProgress('challenge2-progress', progress2);
-
-  const { challenge1JustCompleted, challenge2JustCompleted } = evaluateChallenges({
-    pnlPercent,
-    totalValue,
-  });
-  if (challenge1JustCompleted && showAlertFn) showAlertFn(t('challenge1Complete'));
-  if (challenge2JustCompleted && showAlertFn) showAlertFn(t('challenge2Complete'));
-
-  return { challenge1JustCompleted, challenge2JustCompleted };
+export function updateChallenges({ pnlPercent }) {
+  setChallengeProgress(
+    'challenge1-progress',
+    Math.min((pnlPercent / CHALLENGE_1_THRESHOLD) * 100, 100)
+  );
+  setChallengeProgress(
+    'challenge2-progress',
+    Math.min((pnlPercent / CHALLENGE_2_THRESHOLD) * 100, 100)
+  );
 }
 
 // Two copies of the list are rendered back to back so the CSS marquee loops
@@ -398,12 +438,13 @@ export function updateTicker() {
 
   stocks.forEach((stock) => {
     const price = stockPrices[stock.symbol];
-    const change = ((price - stock.basePrice) / stock.basePrice) * 100;
+    const change = changePercent(stock, stockPrices);
+    const { glyph, className } = direction(change);
     const refs = tickerRefs.get(stock.symbol) || [];
     refs.forEach(({ priceEl, changeEl }) => {
       priceEl.textContent = price.toFixed(2);
-      changeEl.textContent = `${change >= 0 ? '\u25b2' : '\u25bc'} ${Math.abs(change).toFixed(2)}%`;
-      changeEl.className = change >= 0 ? 'positive' : 'negative';
+      changeEl.textContent = `${glyph} ${Math.abs(change).toFixed(2)}%`;
+      changeEl.className = className;
     });
   });
 }
@@ -462,11 +503,15 @@ export function displayRandomTips() {
   const tipsEl = document.getElementById('tips-list');
   if (!tipsEl) return;
   const tips = financialTips[getLang()];
-  const selected = [];
-  while (selected.length < 3) {
-    const tip = tips[Math.floor(Math.random() * tips.length)];
-    if (!selected.includes(tip)) selected.push(tip);
+  // Shuffle-and-take rather than reject-until-distinct: the old loop spun
+  // forever (hanging the tab, not just the render) if the list ever held fewer
+  // than three distinct tips. This terminates whatever the data looks like.
+  const pool = [...tips];
+  for (let i = pool.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
   }
+  const selected = pool.slice(0, 3);
   clearChildren(tipsEl);
   selected.forEach((tip) => {
     const div = document.createElement('div');

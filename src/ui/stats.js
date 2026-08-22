@@ -67,8 +67,6 @@ export function renderStatsContent() {
     label.textContent = c.label;
     const value = document.createElement('div');
     value.className = 'stats-card-value';
-    value.style.whiteSpace = 'pre-line';
-    value.style.fontSize = '15px';
     value.textContent = c.value;
     card.appendChild(label);
     card.appendChild(value);

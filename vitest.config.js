@@ -21,7 +21,6 @@ export default defineConfig({
         'src/ui/learning.js',
         'src/ui/scenarios.js',
         'src/ui/stats.js',
-        'src/ui/stock-details.js',
         'src/ui/tour.js',
       ],
       // A few points of margin below the current baseline (~94/82/97/97):

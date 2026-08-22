@@ -2,6 +2,28 @@ import { t } from './i18n.js';
 
 let lastFocused = null;
 
+/**
+ * Hide the page behind a modal from assistive tech.
+ *
+ * aria-modal="true" alone is not reliably honoured, so the background is also
+ * marked `inert` — which additionally takes it out of the Tab order, closing
+ * the gap the focus trap could not (the trap listens on the modal, so focus
+ * that starts outside it was never caught).
+ *
+ * Reference-counted: a modal opening on top of another must not un-hide the
+ * page when only the inner one closes.
+ *
+ * @param {number} delta - +1 when opening, -1 when closing
+ */
+let openModalCount = 0;
+function setBackgroundInert(delta) {
+  openModalCount = Math.max(0, openModalCount + delta);
+  const background = document.querySelector('.main-content');
+  if (!background) return;
+  if (openModalCount > 0) background.setAttribute('inert', '');
+  else background.removeAttribute('inert');
+}
+
 // One controller per open modal: aborting it detaches every listener the modal
 // registered, so no close path (button, Escape, backdrop) can leak handlers.
 // Keyed per modal element because modals can stack (e.g. an alert opens while
@@ -27,8 +49,11 @@ function trapFocus(modal, onEscape) {
   traps.set(modal, controller);
   const { signal } = controller;
 
+  // `:not([hidden])` matters: the order form's price field is hidden for market
+  // orders, and without this the Tab cycle stopped on an invisible input.
   const focusables = modal.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    'button:not([hidden]), [href]:not([hidden]), input:not([hidden]), select:not([hidden]),' +
+      ' textarea:not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])'
   );
   const first = focusables[0];
   const last = focusables[focusables.length - 1];
@@ -69,10 +94,12 @@ export function showAlert(message) {
   okBtn.textContent = t('confirmOk');
   lastFocused = document.activeElement;
   modal.style.display = 'block';
+  setBackgroundInert(1);
 
   const close = () => {
     modal.style.display = 'none';
     releaseTrap(modal);
+    setBackgroundInert(-1);
     restoreFocus();
   };
   const signal = trapFocus(modal, close);
@@ -91,10 +118,12 @@ export function showConfirm(message) {
     noBtn.textContent = t('confirmNo');
     lastFocused = document.activeElement;
     modal.style.display = 'block';
+    setBackgroundInert(1);
 
     const settle = (answer) => {
       modal.style.display = 'none';
       releaseTrap(modal);
+      setBackgroundInert(-1);
       restoreFocus();
       resolve(answer);
     };
@@ -119,6 +148,7 @@ export function openModal(id, onClose) {
   if (!modal) return;
   lastFocused = document.activeElement;
   modal.style.display = 'block';
+  setBackgroundInert(1);
   trapFocus(modal, () => closeModal(id, onClose));
 }
 
@@ -129,8 +159,10 @@ export function openModal(id, onClose) {
 export function closeModal(id, onClose) {
   const modal = document.getElementById(id);
   if (!modal) return;
+  if (modal.style.display === 'none') return;
   modal.style.display = 'none';
   releaseTrap(modal);
+  setBackgroundInert(-1);
   if (typeof onClose === 'function') onClose();
   restoreFocus();
 }
@@ -142,15 +174,19 @@ export function isModalOpen(id) {
 
 export function openStockModal() {
   const modal = document.getElementById('stock-modal');
+  if (modal.style.display === 'block') return;
   lastFocused = document.activeElement;
   modal.style.display = 'block';
+  setBackgroundInert(1);
   trapFocus(modal, () => closeStockModal());
 }
 
 export function closeStockModal(onClose) {
   const modal = document.getElementById('stock-modal');
+  if (modal.style.display === 'none') return;
   modal.style.display = 'none';
   releaseTrap(modal);
+  setBackgroundInert(-1);
   if (typeof onClose === 'function') onClose();
   restoreFocus();
 }

@@ -11,6 +11,8 @@ import {
   loadStats,
   resetStats,
   personalStats,
+  savePriceStateThrottled,
+  flushPriceState,
 } from '../src/state.js';
 import { STORAGE_KEY, PRICES_STORAGE_KEY } from '../src/config.js';
 
@@ -242,5 +244,66 @@ describe('completedLessons sanitisation', () => {
     );
     loadGameState();
     expect(gameState.completedLessons).toEqual({ 'lesson-a': 1234 });
+  });
+});
+
+describe('price-state write throttling', () => {
+  /**
+   * The throttle counter is module state, so tests must not assume a cold
+   * start. Advancing to the next writing tick makes each test independent of
+   * whatever ran before it.
+   */
+  function advanceToWritingTick() {
+    for (let i = 0; i < 20; i += 1) {
+      if (savePriceStateThrottled()) return;
+    }
+    throw new Error('throttle never opened a writing tick');
+  }
+
+  beforeEach(() => {
+    resetGameState();
+    localStorage.clear();
+  });
+
+  it('writes on one tick in every ten', () => {
+    // The payload is ~216KB of JSON and both stringify and setItem are
+    // synchronous, so writing it on every tick blocked the main thread on a
+    // fixed schedule (every 6 seconds at 10x speed).
+    advanceToWritingTick();
+    for (let i = 0; i < 9; i += 1) {
+      expect(savePriceStateThrottled()).toBe(false);
+    }
+    expect(savePriceStateThrottled()).toBe(true);
+  });
+
+  it('actually persists on a writing tick', () => {
+    advanceToWritingTick();
+    localStorage.removeItem(PRICES_STORAGE_KEY);
+    for (let i = 0; i < 9; i += 1) savePriceStateThrottled();
+    expect(localStorage.getItem(PRICES_STORAGE_KEY)).toBeNull();
+    savePriceStateThrottled();
+    expect(localStorage.getItem(PRICES_STORAGE_KEY)).toBeTruthy();
+  });
+
+  it('flushPriceState writes immediately, whatever the window', () => {
+    advanceToWritingTick();
+    localStorage.removeItem(PRICES_STORAGE_KEY);
+    savePriceStateThrottled(); // a skipped tick
+    expect(localStorage.getItem(PRICES_STORAGE_KEY)).toBeNull();
+
+    flushPriceState();
+    expect(localStorage.getItem(PRICES_STORAGE_KEY)).toBeTruthy();
+  });
+
+  it('flushPriceState restarts the window rather than leaving it mid-cycle', () => {
+    advanceToWritingTick();
+    savePriceStateThrottled();
+    savePriceStateThrottled();
+
+    flushPriceState();
+    for (let i = 0; i < 9; i += 1) {
+      expect(savePriceStateThrottled()).toBe(false);
+    }
+    expect(savePriceStateThrottled()).toBe(true);
   });
 });

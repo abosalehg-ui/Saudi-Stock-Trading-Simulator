@@ -25,3 +25,9 @@ beforeEach(() => {
     globalThis.localStorage.clear();
   }
 });
+
+// jsdom implements no layout, so it ships no scrollIntoView. Real browsers all
+// have it; without this stub any handler that scrolls throws inside a test.
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}

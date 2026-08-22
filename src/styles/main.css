@@ -998,8 +998,9 @@ input[type='text']:focus {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 4px 10px;
+  /* Was 36px, i.e. under the 44px the rest of the app holds itself to. */
+  min-height: var(--tap-min);
+  padding: 4px 12px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1880,5 +1881,95 @@ input[type='text']:focus {
   .news-ticker-content {
     animation: none;
     transform: none;
+  }
+}
+
+/* ==========================================================================
+   Stats cards
+   ========================================================================== */
+
+/* Both of these were inline styles set from stats.js, which put two values
+   outside the token system where no stylesheet reader would find them. */
+.stats-card-value {
+  white-space: pre-line;
+  font-size: 15px;
+}
+
+.lesson-list-item {
+  text-align: start;
+}
+
+/* ==========================================================================
+   Toast
+   --------------------------------------------------------------------------
+   Confirmation for a successful trade. Deliberately not a modal: this fires on
+   every order, and a dialog there costs a mandatory click per trade in an app
+   whose point is repetition. Errors still use the modal.
+   ========================================================================== */
+.toast-host {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 84px);
+  margin-inline: auto;
+  width: max-content;
+  max-width: min(90vw, 420px);
+  padding: 12px 20px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  box-shadow: var(--shadow-2);
+  text-align: center;
+  font-weight: 600;
+  z-index: 2000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  /* Hidden state must not swallow clicks on the tab bar underneath. */
+  pointer-events: none;
+}
+
+.toast-host.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (min-width: 1024px) {
+  .toast-host {
+    bottom: 32px;
+  }
+}
+
+/* ==========================================================================
+   Candlestick hover readout
+   ========================================================================== */
+.chart-container {
+  position: relative;
+}
+
+.candle-tooltip {
+  position: absolute;
+  inset-inline-start: 8px;
+  top: 8px;
+  padding: 6px 10px;
+  background: var(--surface-3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  box-shadow: var(--shadow-1);
+}
+
+.candle-tooltip[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-host {
+    transition: none;
   }
 }

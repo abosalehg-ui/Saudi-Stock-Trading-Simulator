@@ -3,6 +3,7 @@ import {
   STORAGE_KEY,
   PRICES_STORAGE_KEY,
   PRICE_HISTORY_MAX_POINTS,
+  TRANSACTIONS_MAX,
 } from './config.js';
 import { stocks, findStock } from './data/stocks.js';
 
@@ -214,13 +215,16 @@ function sanitizeLoadedState(loaded) {
   }
 
   if (Array.isArray(loaded.transactions)) {
-    clean.transactions = loaded.transactions.filter(
-      (tx) =>
-        tx &&
-        typeof tx.symbol === 'string' &&
-        Number.isFinite(tx.price) &&
-        Number.isFinite(tx.quantity)
-    );
+    clean.transactions = loaded.transactions
+      .filter(
+        (tx) =>
+          tx &&
+          typeof tx.symbol === 'string' &&
+          Number.isFinite(tx.price) &&
+          Number.isFinite(tx.quantity)
+      )
+      // Saves written before the cap existed can hold an arbitrarily long log.
+      .slice(-TRANSACTIONS_MAX);
   }
 
   if (Array.isArray(loaded.pendingOrders)) {
@@ -323,6 +327,52 @@ export function initPriceState() {
 const PRICE_DATA_VERSION = 2;
 
 const round4 = (n) => Math.round(n * 10000) / 10000;
+
+/**
+ * How many ticks may pass between price-history writes.
+ *
+ * savePriceState() serialises 91 symbols with 100 history points each — about
+ * 216KB of JSON — and both JSON.stringify and localStorage.setItem are
+ * synchronous, so doing it on every tick blocks the main thread on a fixed
+ * schedule (every 6 seconds at 10x). The game state itself is orders of
+ * magnitude smaller and still saves every tick; only this bulk payload is
+ * throttled.
+ *
+ * The cost of skipping a write is bounded and small: at most this many ticks of
+ * price history are lost if the tab dies without notice. Normal exits (closing,
+ * backgrounding, reloading) flush immediately via flushPriceState().
+ */
+const PRICE_SAVE_EVERY_TICKS = 10;
+
+let ticksSincePriceSave = 0;
+
+/**
+ * Throttled price-state write. Call once per tick; it persists on the first
+ * call and then every PRICE_SAVE_EVERY_TICKS-th one.
+ *
+ * @returns {boolean} true if this call actually wrote
+ */
+export function savePriceStateThrottled() {
+  if (ticksSincePriceSave % PRICE_SAVE_EVERY_TICKS !== 0) {
+    ticksSincePriceSave += 1;
+    return false;
+  }
+  ticksSincePriceSave += 1;
+  savePriceState();
+  return true;
+}
+
+/**
+ * Write the price state now and restart the throttle window.
+ *
+ * Used where losing the last few ticks would actually be visible: after a trade
+ * (which moves the price immediately via applyMarketImpact) and when the page
+ * is being hidden or unloaded.
+ */
+export function flushPriceState() {
+  ticksSincePriceSave = 1;
+  savePriceState();
+}
 
 /**
  * Persist live prices and their history so a page reload resumes the market

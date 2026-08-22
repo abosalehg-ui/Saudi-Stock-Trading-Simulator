@@ -9,12 +9,6 @@ const sharedRules = {
   'no-console': ['warn', { allow: ['warn', 'error'] }],
   // `t` (the translator) was being shadowed by a `forEach((t) => ...)` param.
   'no-shadow': 'error',
-  // Every innerHTML sink must go through escapeHtml(); flag raw assignment so
-  // a future one can't quietly skip it.
-  'no-restricted-properties': [
-    'warn',
-    { object: 'element', property: 'innerHTML', message: 'Build nodes or escape via escapeHtml().' },
-  ],
 };
 
 export default [
@@ -27,7 +21,35 @@ export default [
       sourceType: 'module',
       globals: { ...globals.browser },
     },
-    rules: sharedRules,
+    rules: {
+      ...sharedRules,
+      // Route every markup insertion through setHtml() + the auto-escaping
+      // html`` tag in src/ui/dom.js, which owns the only audited innerHTML
+      // sink (and disables this rule on that one line).
+      //
+      // The previous version specified `object: 'element'`, which matches a
+      // variable *literally named* `element`. None of the six real sinks were,
+      // so the rule flagged nothing and an unescaped
+      // `div.innerHTML = ` + '`<b>${input}</b>`' + ` passed lint clean. Matching
+      // on the property alone is what makes it bite; 'error' rather than
+      // 'warn' because a warning that never fails CI is not a guard.
+      //
+      // Scoped to src/: a test that builds its own fixture from a string
+      // literal is not a sink, and making tests route through setHtml() would
+      // be ceremony without safety.
+      'no-restricted-properties': [
+        'error',
+        { property: 'innerHTML', message: 'Use setHtml(host, html`...`) from ui/dom.js.' },
+        { property: 'outerHTML', message: 'Use setHtml(host, html`...`) from ui/dom.js.' },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='insertAdjacentHTML']",
+          message: 'Use setHtml(host, html`...`) from ui/dom.js.',
+        },
+      ],
+    },
   },
   {
     files: ['tests/**/*.js'],

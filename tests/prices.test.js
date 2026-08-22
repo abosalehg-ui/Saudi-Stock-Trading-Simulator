@@ -88,7 +88,11 @@ describe('updatePrices', () => {
 
   it('keeps prices within [basePrice * MIN_PRICE_RATIO, basePrice * MAX_PRICE_RATIO] under extreme noise', () => {
     gameState.allow24Trading = true;
-    vi.spyOn(Math, 'random').mockReturnValue(0.999); // pushes randomShock to its max
+    // 1e-8 drives Box-Muller to a ~6-sigma draw every single tick, and is also
+    // below SHOCK_PROBABILITY so the rare extra jump fires on every tick too —
+    // far past anything the real distribution produces. If the clamp holds
+    // here it holds anywhere.
+    vi.spyOn(Math, 'random').mockReturnValue(1e-8);
     const stock = stocks[0];
     for (let i = 0; i < 50; i++) {
       updatePrices();
@@ -100,7 +104,12 @@ describe('updatePrices', () => {
 
   it('distributes an active news item impact into the affected stock price, not others', () => {
     gameState.allow24Trading = true;
-    vi.spyOn(Math, 'random').mockReturnValue(0.5); // neutralizes randomShock and the 5% jump chance
+    // 0.25 is the value that zeroes the Box-Muller draw: its cos(2*pi*0.25)
+    // factor is 0, so standardNormal() returns ~1e-16. (0.5 zeroed the *old*
+    // uniform shock; under a normal draw it is a -1.18 sigma move, which is
+    // not what this test wants to hold still.) It also sits above
+    // SHOCK_PROBABILITY, so the extra jump stays off.
+    vi.spyOn(Math, 'random').mockReturnValue(0.25);
     const target = stocks[0];
     const other = stocks[1];
     activeNews.items = [
@@ -126,9 +135,43 @@ describe('updatePrices', () => {
     expect(targetChangePct).toBeGreaterThan(Math.abs(otherChangePct) * 100);
   });
 
+  it('caps a news step when a re-phased tick lands just before the item expires', () => {
+    gameState.allow24Trading = true;
+    vi.spyOn(Math, 'random').mockReturnValue(0.25); // hold the random shock at ~0
+    const target = stocks[0];
+    // A speed change tears down and rebuilds the price interval, so ticks do
+    // not stay on whole-minute offsets. This is a tick landing at elapsed 4.97
+    // of a 5-minute item with its impact still unapplied: the divisor
+    // (duration - elapsed) is 0.03, which without the clamp turns a 3% story
+    // into a >100% move in one tick.
+    activeNews.items = [
+      {
+        symbol: target.symbol,
+        templateIndex: 0,
+        type: 'positive',
+        impact: 0.03,
+        appliedImpact: 0,
+        duration: 5,
+        timestamp: Date.now() - 4.97 * 60000,
+      },
+    ];
+    const before = stockPrices[target.symbol];
+    updatePrices();
+    const movePct = (stockPrices[target.symbol] - before) / before;
+    // The whole remaining impact lands in this tick (ticksLeft clamps to 1),
+    // which is the intended worst case — and nothing beyond it.
+    expect(movePct).toBeGreaterThan(0);
+    expect(movePct).toBeLessThanOrEqual(0.031);
+  });
+
   it('amplifies drift for stocks affected by an active scenario', () => {
     gameState.allow24Trading = true;
-    vi.spyOn(Math, 'random').mockReturnValue(0.5); // neutralizes randomShock and the 5% jump chance
+    // 0.25 is the value that zeroes the Box-Muller draw: its cos(2*pi*0.25)
+    // factor is 0, so standardNormal() returns ~1e-16. (0.5 zeroed the *old*
+    // uniform shock; under a normal draw it is a -1.18 sigma move, which is
+    // not what this test wants to hold still.) It also sits above
+    // SHOCK_PROBABILITY, so the extra jump stays off.
+    vi.spyOn(Math, 'random').mockReturnValue(0.25);
     startScenario('crash_2006'); // negative muMultiplier on banking/petrochemical/realestate/cement
     const bankStock = findStock('1120'); // banking sector, positive base mu
     const priceBefore = stockPrices[bankStock.symbol];
