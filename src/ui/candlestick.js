@@ -2,6 +2,72 @@ import { buildOHLC } from '../engine/ohlc.js';
 import { priceHistory } from '../state.js';
 import { destroyChart } from './chart.js';
 import { themeColor, themeColorAlpha } from './theme.js';
+import { getLang, t } from './i18n.js';
+import { formatTimeShort } from '../utils/dates.js';
+
+/**
+ * Geometry of the last drawn frame, so the pointer handler can map an x
+ * coordinate back to a candle without recomputing the layout.
+ * @type {{candles: Array<object>, padding: object, candleSlot: number, cssWidth: number}|null}
+ */
+let lastFrame = null;
+
+/** Remove the hover readout and its listeners, if any. */
+function teardownTooltip(canvas) {
+  if (canvas?._candleCleanup) {
+    canvas._candleCleanup();
+    delete canvas._candleCleanup;
+  }
+  document.getElementById('candle-tooltip')?.remove();
+}
+
+/**
+ * Attach the OHLC hover readout.
+ *
+ * Switching from the line chart to candles used to *lose* information: Chart.js
+ * gives the line a tooltip, and this hand-rolled canvas had none, so the
+ * candles carried no readable numbers at all. (The candleOpen/High/Low/Close
+ * translations existed the whole time, unused.)
+ */
+function attachTooltip(canvas) {
+  teardownTooltip(canvas);
+  const tooltip = document.createElement('div');
+  tooltip.id = 'candle-tooltip';
+  tooltip.className = 'candle-tooltip';
+  tooltip.hidden = true;
+  canvas.parentElement?.appendChild(tooltip);
+
+  const onMove = (event) => {
+    if (!lastFrame) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const index = Math.floor((x - lastFrame.padding.left) / lastFrame.candleSlot);
+    const candle = lastFrame.candles[index];
+    if (!candle) {
+      tooltip.hidden = true;
+      return;
+    }
+    const lang = getLang();
+    tooltip.textContent = [
+      formatTimeShort(candle.time, lang),
+      `${t('candleOpen')}: ${candle.open.toFixed(2)}`,
+      `${t('candleHigh')}: ${candle.high.toFixed(2)}`,
+      `${t('candleLow')}: ${candle.low.toFixed(2)}`,
+      `${t('candleClose')}: ${candle.close.toFixed(2)}`,
+    ].join(' · ');
+    tooltip.hidden = false;
+  };
+  const onLeave = () => {
+    tooltip.hidden = true;
+  };
+
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerleave', onLeave);
+  canvas._candleCleanup = () => {
+    canvas.removeEventListener('pointermove', onMove);
+    canvas.removeEventListener('pointerleave', onLeave);
+  };
+}
 
 /**
  * Render a candlestick chart onto a canvas.
@@ -25,6 +91,8 @@ export function renderCandlestick(canvasId, symbol) {
   ctx.clearRect(0, 0, cssWidth, cssHeight);
 
   if (candles.length === 0) {
+    teardownTooltip(canvas);
+    lastFrame = null;
     ctx.fillStyle = themeColor('--text-muted');
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
@@ -79,4 +147,20 @@ export function renderCandlestick(canvasId, symbol) {
     const bodyHeight = Math.max(1, bodyBottom - bodyTop);
     ctx.fillRect(xCenter - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
   });
+
+  // Time axis. The chart had no x labels at all, so a candle's position
+  // carried no meaning beyond "further right is later".
+  const lang = getLang();
+  const labelEvery = Math.max(1, Math.ceil(candles.length / 6));
+  ctx.fillStyle = themeColor('--text-muted');
+  ctx.textAlign = 'center';
+  ctx.font = '11px sans-serif';
+  candles.forEach((c, i) => {
+    if (i % labelEvery !== 0) return;
+    const xCenter = padding.left + candleSlot * (i + 0.5);
+    ctx.fillText(formatTimeShort(c.time, lang), xCenter, cssHeight - padding.bottom + 16);
+  });
+
+  lastFrame = { candles, padding, candleSlot, cssWidth };
+  attachTooltip(canvas);
 }

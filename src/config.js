@@ -15,8 +15,21 @@ export const NEWS_GENERATION_PROBABILITY = 0.3;
 export const SHOCK_PROBABILITY = 0.015;
 export const SHOCK_MAGNITUDE = 0.05;
 
+// Each stock's `sigma` was tuned against the old uniform shock term, which
+// realised only 1/sqrt(3) of the declared volatility. Switching to a true
+// normal draw would otherwise have made every stock visibly calmer overnight,
+// so this restores the previous felt volatility without touching 91 rows of
+// data. Raise it to make the market livelier between news events.
+export const TICK_VOLATILITY_SCALE = 1 / Math.sqrt(3);
+
 export const MIN_PRICE_RATIO = 0.3;
 export const MAX_PRICE_RATIO = 3;
+
+// The transaction log is re-serialised into localStorage on every tick, so it
+// cannot be allowed to grow without limit. 500 covers far more than a session's
+// trading while keeping the saved payload bounded; the CSV export is the place
+// to go for a full history.
+export const TRANSACTIONS_MAX = 500;
 
 export const MAX_ORDER_QUANTITY = 1_000_000;
 export const MIN_ORDER_QUANTITY = 1;

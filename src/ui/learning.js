@@ -67,7 +67,6 @@ function renderPathList() {
       const item = document.createElement('button');
       item.type = 'button';
       item.className = 'lesson-list-item' + (completed ? ' completed' : '');
-      item.style.textAlign = 'start';
       const titleSpan = document.createElement('span');
       titleSpan.textContent = lesson.title[lang];
       const statusSpan = document.createElement('span');
@@ -132,14 +131,13 @@ function renderLesson() {
   backBtn.addEventListener('click', renderPathList);
   actions.appendChild(backBtn);
 
-  const completed = getCompletedSet()[lesson.id];
   const completeBtn = document.createElement('button');
   completeBtn.className = 'btn btn-primary';
-  if (activeLessonIndex < path.lessons.length - 1) {
-    completeBtn.textContent = t('lessonNext');
-  } else {
-    completeBtn.textContent = completed ? t('lessonClose') : t('lessonCompleted');
-  }
+  // The last lesson's button used to read t('lessonCompleted') — '✅ مكتمل',
+  // a *status* label — so it announced the lesson as finished before the user
+  // had pressed it. It is an action, so it gets an action's wording.
+  completeBtn.textContent =
+    activeLessonIndex < path.lessons.length - 1 ? t('lessonNext') : t('lessonFinish');
   completeBtn.addEventListener('click', () => {
     markLessonComplete(lesson.id);
     if (activeLessonIndex < path.lessons.length - 1) {

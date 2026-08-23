@@ -25,11 +25,15 @@ export function listSectors(stocks) {
 /**
  * Percentage change from the base price, i.e. what the list renders.
  *
+ * Exported because render.js (list + ticker) and stock-details.js each carried
+ * their own copy of this expression, and only this one guarded against a
+ * missing price or a zero basePrice — the other three would render NaN%.
+ *
  * @param {{symbol: string, basePrice: number}} stock
  * @param {Record<string, number>} prices
  * @returns {number}
  */
-function changePercent(stock, prices) {
+export function changePercent(stock, prices) {
   const price = prices[stock.symbol];
   if (typeof price !== 'number' || !stock.basePrice) return 0;
   return ((price - stock.basePrice) / stock.basePrice) * 100;

@@ -9,8 +9,14 @@
          style.width / style.display programmatically. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; manifest-src 'self'; worker-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'"
     />
+    <!-- connect-src is 'self' rather than 'none' only so the service worker can
+         re-fetch the app's own precached assets; there is still no runtime call
+         to any other origin, and default-src 'none' blocks every other
+         destination. frame-ancestors cannot be set from a meta tag (it is
+         ignored there) and GitHub Pages serves no custom headers, so the page
+         is embeddable — see the deployment note in README.md. -->
     <meta
       name="description"
       content="محاكي تداول الأسهم السعودية - تعلم سوق تداول دون مخاطر مالية"
@@ -383,9 +389,17 @@
       </div>
     </div>
 
-    <div id="tour-overlay" class="tour-overlay">
-      <div id="tour-highlight" class="tour-highlight"></div>
-      <div id="tour-tooltip" class="tour-tooltip" role="dialog" aria-live="polite">
+    <!-- role/aria-modal live on the overlay, because that is the element
+         openModal() traps focus inside and marks the page behind as inert. -->
+    <div
+      id="tour-overlay"
+      class="tour-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tour-title"
+    >
+      <div id="tour-highlight" class="tour-highlight" aria-hidden="true"></div>
+      <div id="tour-tooltip" class="tour-tooltip" aria-live="polite">
         <h3 id="tour-title"></h3>
         <p id="tour-body"></p>
         <div class="tour-tooltip-actions">

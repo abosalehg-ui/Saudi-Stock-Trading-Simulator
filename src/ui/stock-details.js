@@ -1,10 +1,10 @@
 import { findStock } from '../data/stocks.js';
 import { gameState, stockPrices, session } from '../state.js';
 import { getLang, t } from './i18n.js';
-import { renderChart } from './chart.js';
-import { renderCandlestick } from './candlestick.js';
 import { isMarketOpen } from '../engine/market-hours.js';
-import { escapeHtml } from './dom.js';
+import { changePercent } from '../engine/stock-filter.js';
+import { direction } from '../utils/numbers.js';
+import { html, setHtml } from './dom.js';
 
 let onSubmitOrder = () => {};
 
@@ -12,83 +12,208 @@ export function bindStockDetailsCallbacks(callbacks) {
   onSubmitOrder = callbacks.onSubmitOrder ?? onSubmitOrder;
 }
 
-export function renderStockDetails(symbol) {
+/**
+ * Which indicators are switched on, kept here rather than read back off the
+ * checkboxes.
+ *
+ * The DOM used to be the only record of it, so every rebuild of this panel — a
+ * theme switch, a language switch, crossing the 1024px breakpoint — silently
+ * cleared the user's chart setup.
+ *
+ * @type {{candle: boolean, sma20: boolean, sma50: boolean, rsi: boolean, macd: boolean}}
+ */
+const indicatorState = { candle: false, sma20: false, sma50: false, rsi: false, macd: false };
+
+/** @returns {typeof indicatorState} a copy; callers must not mutate the source */
+export function getIndicatorState() {
+  return { ...indicatorState };
+}
+
+const INDICATOR_IDS = {
+  candle: 'ind-candle',
+  sma20: 'ind-sma20',
+  sma50: 'ind-sma50',
+  rsi: 'ind-rsi',
+  macd: 'ind-macd',
+};
+
+/**
+ * Draw the chart for `symbol` honouring the current indicator selection.
+ *
+ * Chart.js is ~200KB of the bundle and nothing here runs until a stock is
+ * selected, so both renderers are pulled in on demand: the initial bundle drops
+ * from ~310KB to ~100KB. Every caller is async as a result — awaited only by
+ * the tests, since a chart that paints a tick later is invisible to the user.
+ *
+ * @param {string} symbol
+ */
+async function drawChart(symbol) {
+  if (indicatorState.candle) {
+    const { renderCandlestick } = await import('./candlestick.js');
+    renderCandlestick('price-chart', symbol);
+    return;
+  }
+  const { renderChart } = await import('./chart.js');
+  renderChart(symbol, indicatorState);
+}
+
+/**
+ * Text that changes on every price tick, split out of the full render so
+ * refreshAll() can update it without rebuilding the panel.
+ *
+ * @param {string} symbol
+ * @returns {{priceText: string, changeText: string, changeClass: string, marketOpen: boolean}}
+ */
+function priceFieldsFor(symbol) {
+  const stock = findStock(symbol);
+  const price = stockPrices[symbol];
+  const change = changePercent(stock, stockPrices);
+  const { glyph, className } = direction(change);
+  return {
+    priceText: `${price.toFixed(2)} ${t('sar')}`,
+    changeText: `${glyph} ${Math.abs(change).toFixed(2)}%`,
+    changeClass: className,
+    marketOpen: isMarketOpen() || gameState.allow24Trading,
+  };
+}
+
+/**
+ * Patch the live parts of an already-built details panel: the price, the change
+ * and the market-closed warning, plus the chart's data.
+ *
+ * This is the half that runs on every tick. Rebuilding instead would wipe a
+ * half-typed quantity and reset the indicator checkboxes under the user's
+ * hands, which is why the panel is split in two at all.
+ *
+ * A no-op when the panel is not currently showing `symbol`.
+ *
+ * @param {string} symbol
+ */
+export async function patchStockDetails(symbol) {
+  const priceEl = document.getElementById('stock-detail-price-value');
+  if (!priceEl || priceEl.dataset.symbol !== symbol) return;
+
+  const { priceText, changeText, changeClass, marketOpen } = priceFieldsFor(symbol);
+  priceEl.textContent = priceText;
+
+  const changeEl = document.getElementById('stock-detail-change-value');
+  if (changeEl) {
+    changeEl.textContent = changeText;
+    changeEl.className = changeClass;
+  }
+
+  const warning = document.getElementById('stock-detail-market-warning');
+  if (warning) warning.hidden = marketOpen;
+
+  await drawChart(symbol);
+}
+
+/**
+ * Build the whole details panel for a stock: header, chart, order form.
+ *
+ * Call this when the selection (or the language/theme/layout) changes. For a
+ * plain price tick call patchStockDetails() instead.
+ *
+ * @param {string} symbol
+ */
+export async function renderStockDetails(symbol) {
   const stock = findStock(symbol);
   if (!stock) return;
-  const price = stockPrices[symbol];
-  const change = ((price - stock.basePrice) / stock.basePrice) * 100;
   const lang = getLang();
-  const sar = t('sar');
-  const marketOpen = isMarketOpen() || gameState.allow24Trading;
+  const { priceText, changeText, changeClass, marketOpen } = priceFieldsFor(symbol);
 
   const detailsEl = document.getElementById('stock-details');
-  detailsEl.innerHTML = '';
-
-  const grid = document.createElement('div');
-  grid.className = 'stock-details-grid';
+  if (!detailsEl) return;
 
   // Three blocks rather than two columns of mixed content: the header spans
   // the grid, then the chart, then the order form. Stacked (phone modal, or
   // the desktop side panel) that reads price -> chart -> act, instead of
   // burying the chart below the buy/sell buttons.
-  const header = document.createElement('div');
-  header.className = 'stock-details-header';
-  header.innerHTML = `
-    <h3 id="stock-title">${escapeHtml(lang === 'ar' ? stock.name : stock.nameEn)} (${escapeHtml(symbol)})${stock.isShariaCompliant ? ' 🕌' : ''}</h3>
-    <p class="stock-detail-price">${escapeHtml(t('currentPrice'))}: <strong>${price.toFixed(2)} ${escapeHtml(sar)}</strong></p>
-    <p>${escapeHtml(t('change'))}: <span class="${change >= 0 ? 'positive' : 'negative'}">${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toFixed(2)}%</span></p>
-    ${marketOpen ? '' : `<p class="market-warning" role="alert">⚠️ ${escapeHtml(t('marketClosedMessage'))}</p>`}
-  `;
+  setHtml(
+    detailsEl,
+    html`
+      <div class="stock-details-grid">
+        <div class="stock-details-header">
+          <h3 id="stock-title">
+            ${lang === 'ar' ? stock.name : stock.nameEn}
+            (${symbol})${stock.isShariaCompliant ? ' 🕌' : ''}
+          </h3>
+          <p class="stock-detail-price">
+            ${t('currentPrice')}:
+            <strong id="stock-detail-price-value" data-symbol="${symbol}">${priceText}</strong>
+          </p>
+          <p>
+            ${t('change')}:
+            <span id="stock-detail-change-value" class="${changeClass}">${changeText}</span>
+          </p>
+          <p
+            class="market-warning"
+            id="stock-detail-market-warning"
+            role="alert"
+            ${marketOpen ? 'hidden' : ''}
+          >
+            ⚠️ ${t('marketClosedMessage')}
+          </p>
+        </div>
 
-  const form = document.createElement('div');
-  form.className = 'order-form';
-  form.setAttribute('role', 'group');
-  form.setAttribute('aria-labelledby', 'stock-title');
-  form.innerHTML = `
-    <div class="order-type" role="radiogroup" aria-label="${escapeHtml(t('orderKindLimit'))}">
-      <label>
-        <input type="radio" name="orderType" value="market" checked>
-        <span>${escapeHtml(t('market'))}</span>
-      </label>
-      <label>
-        <input type="radio" name="orderType" value="limit">
-        <span>${escapeHtml(t('limit'))}</span>
-      </label>
-      <label>
-        <input type="radio" name="orderType" value="stop-loss">
-        <span>${escapeHtml(t('stopLoss'))}</span>
-      </label>
-    </div>
-    <label for="order-quantity" class="sr-only">${escapeHtml(t('quantity'))}</label>
-    <input type="number" id="order-quantity" placeholder="${escapeHtml(t('quantity'))}" min="1" max="1000000" step="1" inputmode="numeric">
-    <label for="order-price" class="sr-only">${escapeHtml(t('priceForLimitOrders'))}</label>
-    <input type="number" id="order-price" placeholder="${escapeHtml(t('priceForLimitOrders'))}" min="0.01" step="0.01" inputmode="decimal" hidden>
-    <div class="order-submit-row">
-      <button class="btn btn-buy order-submit-btn" id="order-buy">${escapeHtml(t('buy'))}</button>
-      <button class="btn btn-danger order-submit-btn" id="order-sell">${escapeHtml(t('sell'))}</button>
-    </div>
-  `;
-  const chartBlock = document.createElement('div');
-  chartBlock.className = 'stock-details-chart';
-  chartBlock.innerHTML = `
-    <div class="chart-container">
-      <canvas id="price-chart" role="img" aria-label="${escapeHtml(t('currentPrice'))}"></canvas>
-    </div>
-    <div class="indicator-controls" role="group" aria-label="${escapeHtml(t('indicators'))}">
-      <label><input type="checkbox" id="ind-candle"> ${escapeHtml(t('candlestickToggle'))}</label>
-      <label><input type="checkbox" id="ind-sma20"> SMA 20</label>
-      <label><input type="checkbox" id="ind-sma50"> SMA 50</label>
-      <label><input type="checkbox" id="ind-rsi"> RSI</label>
-      <label><input type="checkbox" id="ind-macd"> MACD</label>
-    </div>
-  `;
+        <div class="stock-details-chart">
+          <div class="chart-container">
+            <canvas id="price-chart" role="img" aria-label="${t('currentPrice')}"></canvas>
+          </div>
+          <div class="indicator-controls" role="group" aria-label="${t('indicators')}">
+            <label><input type="checkbox" id="ind-candle" /> ${t('candlestickToggle')}</label>
+            <label><input type="checkbox" id="ind-sma20" /> SMA 20</label>
+            <label><input type="checkbox" id="ind-sma50" /> SMA 50</label>
+            <label><input type="checkbox" id="ind-rsi" /> RSI</label>
+            <label><input type="checkbox" id="ind-macd" /> MACD</label>
+          </div>
+        </div>
 
-  grid.appendChild(header);
-  grid.appendChild(chartBlock);
-  grid.appendChild(form);
-  detailsEl.appendChild(grid);
+        <div class="order-form" role="group" aria-labelledby="stock-title">
+          <div class="order-type" role="radiogroup" aria-label="${t('orderKindLimit')}">
+            <label>
+              <input type="radio" name="orderType" value="market" checked />
+              <span>${t('market')}</span>
+            </label>
+            <label>
+              <input type="radio" name="orderType" value="limit" />
+              <span>${t('limit')}</span>
+            </label>
+            <label>
+              <input type="radio" name="orderType" value="stop-loss" />
+              <span>${t('stopLoss')}</span>
+            </label>
+          </div>
+          <label for="order-quantity" class="sr-only">${t('quantity')}</label>
+          <input
+            type="number"
+            id="order-quantity"
+            placeholder="${t('quantity')}"
+            min="1"
+            max="1000000"
+            step="1"
+            inputmode="numeric"
+          />
+          <label for="order-price" class="sr-only">${t('priceForLimitOrders')}</label>
+          <input
+            type="number"
+            id="order-price"
+            placeholder="${t('priceForLimitOrders')}"
+            min="0.01"
+            step="0.01"
+            inputmode="decimal"
+            hidden
+          />
+          <div class="order-submit-row">
+            <button class="btn btn-buy order-submit-btn" id="order-buy">${t('buy')}</button>
+            <button class="btn btn-danger order-submit-btn" id="order-sell">${t('sell')}</button>
+          </div>
+        </div>
+      </div>
+    `
+  );
 
-  const priceInput = document.getElementById('order-price');
+  const priceInput = /** @type {HTMLInputElement} */ (document.getElementById('order-price'));
   document.querySelectorAll('input[name="orderType"]').forEach((radio) => {
     radio.addEventListener('change', (e) => {
       const val = e.target.value;
@@ -101,27 +226,19 @@ export function renderStockDetails(symbol) {
   document.getElementById('order-buy').addEventListener('click', () => submit('buy'));
   document.getElementById('order-sell').addEventListener('click', () => submit('sell'));
 
-  const rerender = () => {
-    const useCandles = document.getElementById('ind-candle').checked;
-    const indicators = {
-      sma20: document.getElementById('ind-sma20').checked,
-      sma50: document.getElementById('ind-sma50').checked,
-      rsi: document.getElementById('ind-rsi').checked,
-      macd: document.getElementById('ind-macd').checked,
-    };
-    if (useCandles) {
-      renderCandlestick('price-chart', symbol);
-    } else {
-      renderChart(symbol, indicators);
-    }
-  };
-  document.getElementById('ind-candle').addEventListener('change', rerender);
-  document.getElementById('ind-sma20').addEventListener('change', rerender);
-  document.getElementById('ind-sma50').addEventListener('change', rerender);
-  document.getElementById('ind-rsi').addEventListener('change', rerender);
-  document.getElementById('ind-macd').addEventListener('change', rerender);
+  // Restore the surviving selection onto the fresh checkboxes, then keep the
+  // module-level record in step with them.
+  Object.entries(INDICATOR_IDS).forEach(([key, id]) => {
+    const box = /** @type {HTMLInputElement} */ (document.getElementById(id));
+    if (!box) return;
+    box.checked = indicatorState[key];
+    box.addEventListener('change', () => {
+      indicatorState[key] = box.checked;
+      drawChart(symbol);
+    });
+  });
 
-  renderChart(symbol);
+  await drawChart(symbol);
 }
 
 function submit(type) {

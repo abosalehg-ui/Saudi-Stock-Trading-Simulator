@@ -1,5 +1,6 @@
 import {
   IMPACT_DECAY_RATE,
+  TICK_VOLATILITY_SCALE,
   MIN_PRICE_RATIO,
   MAX_PRICE_RATIO,
   PRICE_HISTORY_MAX_POINTS,
@@ -34,6 +35,25 @@ export function decayPriceImpact(impact, rate) {
 }
 
 /**
+ * One draw from a standard normal distribution (Box-Muller transform).
+ *
+ * The shock term used `Math.random() * 2 - 1`, a *uniform* draw, which is not
+ * the distribution Geometric Brownian Motion is defined over: it has no tails,
+ * so the model could never produce the occasional outsized move that makes a
+ * price series look like a market. It also silently scaled the volatility down,
+ * since a uniform variable on [-1, 1] has standard deviation 1/sqrt(3) ~ 0.577,
+ * not 1 — so the realised volatility was ~58% of every stock's declared sigma.
+ *
+ * @returns {number} a sample with mean 0 and standard deviation 1
+ */
+function standardNormal() {
+  // Math.random() can return exactly 0, and log(0) is -Infinity.
+  let u = 0;
+  while (u === 0) u = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * Math.random());
+}
+
+/**
  * Simulate a single Geometric Brownian Motion step for one stock.
  * @param {import('../data/stocks.js').Stock} stock - Stock definition
  * @param {number} currentPrice - The previous price
@@ -44,15 +64,29 @@ function gbmStep(stock, currentPrice) {
   const scenarioFx = getScenarioMultipliers(stock);
   const muMult = scenarioFx ? scenarioFx.muMultiplier : 1;
   const sigmaMult = scenarioFx ? scenarioFx.sigmaMultiplier : 1;
-  let drift = stock.mu * muMult * dt;
-  let randomShock = stock.sigma * sigmaMult * Math.sqrt(dt) * (Math.random() * 2 - 1);
+  const sigma = stock.sigma * sigmaMult * TICK_VOLATILITY_SCALE;
+  // The -sigma^2/2 Ito correction: without it the expected price drifts upward
+  // by that amount per step purely as an artefact of compounding, so every
+  // stock trended up regardless of its mu.
+  let drift = (stock.mu * muMult - (sigma * sigma) / 2) * dt;
+  let randomShock = sigma * Math.sqrt(dt) * standardNormal();
 
   const relevantNews = activeNews.items.filter((n) => n.symbol === stock.symbol);
   relevantNews.forEach((news) => {
     const elapsed = simElapsedMs(news.timestamp, gameState.speed) / 60000;
     if (elapsed < news.duration) {
       const remaining = news.impact - news.appliedImpact;
-      const step = remaining / (news.duration - elapsed);
+      // The divisor is "ticks left until this item expires". Clamping it at 1
+      // matters: it is otherwise unbounded below, and the code only ever
+      // avoided that because ticks happened to land on whole-minute offsets.
+      // Every speed change tears down and rebuilds the interval
+      // (startPriceUpdates -> clearInterval + setInterval), which re-phases the
+      // ticks — land one at elapsed 4.97 of a 5-minute item and the divisor is
+      // 0.03, turning what is left of a 3% story into a 100%+ jump in a single
+      // tick. Simulating that with random re-phasing produced single-tick
+      // drifts past 13,000%; only the price bounds below were containing it.
+      const ticksLeft = Math.max(1, news.duration - elapsed);
+      const step = remaining / ticksLeft;
       drift += step;
       news.appliedImpact += step;
     }

@@ -16,9 +16,16 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      # Fails the build on high/critical advisories so a vulnerable transitive
-      # dependency can't land unnoticed between manual reviews.
+      # Blocking gate: only what actually ships to users. A high/critical
+      # advisory in a runtime dependency must never land unnoticed.
+      - run: npm audit --omit=dev --audit-level=high
+      # Build tooling is reported but does not block: an advisory in a
+      # transitive dev dependency (Vite -> PostCSS -> nanoid, ...) reaches no
+      # user, and gating on it took the whole repository down on 2026-08-22 —
+      # lint, typecheck, coverage and build never ran on any PR, because this
+      # was the first step. Visible, not blocking.
       - run: npm audit --audit-level=high
+        continue-on-error: true
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test:coverage

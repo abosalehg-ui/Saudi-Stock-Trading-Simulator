@@ -40,3 +40,17 @@ export function formatCurrency(value, lang, suffix, digits = 2) {
   });
   return `${formatted} ${suffix}`;
 }
+
+/**
+ * Direction glyph + CSS class for a signed value.
+ *
+ * The arrow rather than a bare sign is deliberate: direction must not depend on
+ * colour alone. Centralised because the list, the ticker, the portfolio, the
+ * pending orders and the P&L card each rebuilt the same ternary pair.
+ *
+ * @param {number} value
+ * @returns {{glyph: string, className: 'positive'|'negative'}}
+ */
+export function direction(value) {
+  return value >= 0 ? { glyph: '▲', className: 'positive' } : { glyph: '▼', className: 'negative' };
+}

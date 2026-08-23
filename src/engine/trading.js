@@ -4,6 +4,7 @@ import {
   VOLUME_IMPACT_FACTOR,
   MIN_ORDER_QUANTITY,
   MAX_ORDER_QUANTITY,
+  TRANSACTIONS_MAX,
 } from '../config.js';
 import { gameState, stockPrices } from '../state.js';
 import { findStock } from '../data/stocks.js';
@@ -173,6 +174,12 @@ function recordExecution(order, executedPrice, avgCostBefore) {
     commission,
     time: Date.now(),
   });
+  // Bounded here rather than only on load: saveGameState() serialises this
+  // array on every tick, so an unbounded log grows the per-tick cost of a
+  // running session, not just the size of the save.
+  if (gameState.transactions.length > TRANSACTIONS_MAX) {
+    gameState.transactions.splice(0, gameState.transactions.length - TRANSACTIONS_MAX);
+  }
   recordTrade({
     symbol: order.symbol,
     type: order.type,
