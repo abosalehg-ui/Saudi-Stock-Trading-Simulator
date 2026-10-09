@@ -3,12 +3,12 @@ import { stocks, findStock } from '../data/stocks.js';
 import { financialTips } from '../data/tips.js';
 import { gameState, stockPrices, activeNews, session } from '../state.js';
 import { getLang, t } from './i18n.js';
-import { formatCurrency, direction } from '../utils/numbers.js';
+import { formatCurrency, formatPrice, formatChange, direction } from '../utils/numbers.js';
 import { formatDateBilingual, formatHijriToday } from '../utils/dates.js';
 import { isMarketOpen, describeNextOpen } from '../engine/market-hours.js';
 import { newsText } from '../engine/news.js';
 import { selectStocks, changePercent } from '../engine/stock-filter.js';
-import { clearChildren, html, setHtml } from './dom.js';
+import { clearChildren, html, setHtml, placeChildren, reconcileKeyed } from './dom.js';
 
 /** @type {(symbol: string) => void} */
 let onSelectStock = () => {};
@@ -147,12 +147,33 @@ export function updateStockPrices() {
     if (!stock) return;
     const price = stockPrices[symbol];
     const change = changePercent(stock, stockPrices);
-    const { glyph, className } = direction(change);
-    refs.priceEl.textContent = `${price.toFixed(2)} ${t('sar')}`;
-    refs.changeEl.textContent = `${glyph} ${Math.abs(change).toFixed(2)}%`;
-    refs.changeEl.className = `stock-change ${className}`;
+    refs.priceEl.textContent = formatPrice(price, t('sar'));
+    refs.changeEl.textContent = formatChange(change);
+    refs.changeEl.className = `stock-change ${direction(change).className}`;
     refs.container.classList.toggle('selected', session.selectedStock === symbol);
   });
+  if (listFilters.sort === 'gainers' || listFilters.sort === 'losers') resortStockList();
+}
+
+/**
+ * Re-apply a change-based sort after a tick. Without this the list was ordered
+ * once, when the sort was picked, and "top gainers" drifted out of order as
+ * prices moved. Only nodes that are out of place are moved.
+ */
+function resortStockList() {
+  const listEl = document.getElementById('stock-list');
+  if (!listEl || stockItemRefs.size === 0) return;
+  const ordered = selectStocks({
+    stocks,
+    prices: stockPrices,
+    shariaOnly: !!gameState.shariaFilter,
+    query: listFilters.query,
+    sector: listFilters.sector,
+    sort: listFilters.sort,
+    lang: getLang(),
+  });
+  const nodes = ordered.map((stock) => stockItemRefs.get(stock.symbol)?.container).filter(Boolean);
+  if (nodes.length === stockItemRefs.size) placeChildren(listEl, nodes);
 }
 
 /**
@@ -176,158 +197,195 @@ export function bindStockListEvents() {
   });
 }
 
+/**
+ * Show the empty-state paragraph in `host` (and forget its rows), or remove it.
+ * @param {Element} host
+ * @param {Map<string, unknown>} cache
+ * @param {string|null} text - null when the list has rows
+ * @returns {boolean} true when the empty state is showing
+ */
+function syncEmptyState(host, cache, text) {
+  if (text === null) {
+    host.querySelector(':scope > .empty-state')?.remove();
+    return false;
+  }
+  cache.clear();
+  clearChildren(host);
+  const p = document.createElement('p');
+  p.className = 'empty-state';
+  p.textContent = text;
+  host.appendChild(p);
+  return true;
+}
+
+/**
+ * A list row made of a details block, re-rendered every tick (it holds no
+ * focusable elements), and an actions block built once with its buttons.
+ * @param {string} className
+ * @param {string} actionsClass
+ * @param {HTMLButtonElement[]} buttons
+ */
+function buildRow(className, actionsClass, buttons) {
+  const el = document.createElement('div');
+  el.className = className;
+  const body = document.createElement('div');
+  const actions = document.createElement('div');
+  actions.className = actionsClass;
+  buttons.forEach((b) => actions.appendChild(b));
+  el.appendChild(body);
+  el.appendChild(actions);
+  return { el, body };
+}
+
+/** @param {string} className @param {string} label @param {() => void} onClick */
+function makeButton(className, label, onClick) {
+  const btn = document.createElement('button');
+  btn.className = className;
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+// Keyed by `${lang}:${symbol}` / `${lang}:${order.id}`, so a language switch
+// rebuilds the rows (their button labels are translated) while a price tick
+// only patches them.
+const portfolioRows = new Map();
+const pendingOrderRows = new Map();
+
 export function renderPortfolio() {
   const portfolioEl = document.getElementById('portfolio');
   if (!portfolioEl) return;
   const lang = getLang();
-  clearChildren(portfolioEl);
+  const holdings = Object.entries(gameState.portfolio).filter(([symbol]) => findStock(symbol));
 
-  if (Object.keys(gameState.portfolio).length === 0) {
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = t('portfolioEmpty');
-    portfolioEl.appendChild(p);
+  if (syncEmptyState(portfolioEl, portfolioRows, holdings.length ? null : t('portfolioEmpty'))) {
     return;
   }
 
-  Object.entries(gameState.portfolio).forEach(([symbol, holding]) => {
-    const stock = findStock(symbol);
-    if (!stock) return;
-    const currentPrice = stockPrices[symbol];
-    const marketValue = currentPrice * holding.quantity;
-    const costBasis = holding.avgCost * holding.quantity;
-    const valueAfterSell = marketValue * (1 - COMMISSION);
-    const profitAfterSell = valueAfterSell - costBasis;
-    const sar = t('sar');
-
-    const div = document.createElement('div');
-    div.className = 'portfolio-item';
-    const { glyph, className } = direction(profitAfterSell);
-    // costBasis is zero only for a holding bought at price 0, which the price
-    // floor makes unreachable — but dividing anyway would print NaN%, so the
-    // percentage is simply omitted rather than rendered as garbage.
-    const pnlPct =
-      costBasis > 0 ? ` (${Math.abs((profitAfterSell / costBasis) * 100).toFixed(2)}%)` : '';
-    setHtml(
-      div,
-      html`
-        <div class="stock-header">
-          <div>
-            <div class="stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</div>
-            <div class="stock-symbol">${symbol} - ${holding.quantity} ${t('shares')}</div>
-          </div>
-        </div>
-        <div class="portfolio-details">
-          <div class="detail-item">
-            <span>${t('lastPrice')}:</span><strong>${currentPrice.toFixed(2)} ${sar}</strong>
-          </div>
-          <div class="detail-item">
-            <span>${t('avgCost')}:</span><strong>${holding.avgCost.toFixed(2)} ${sar}</strong>
-          </div>
-          <div class="detail-item">
-            <span>${t('totalCost')}:</span><strong>${costBasis.toFixed(2)} ${sar}</strong>
-          </div>
-          <div class="detail-item">
-            <span>${t('marketValue')}:</span><strong>${marketValue.toFixed(2)} ${sar}</strong>
-          </div>
-          <div class="detail-item">
-            <span>${t('valueAfterSell')}:</span><strong>${valueAfterSell.toFixed(2)} ${sar}</strong>
-          </div>
-          <div class="detail-item">
-            <span>${t('pnlAfterSell')}:</span>
-            <strong class="${className}">
-              ${glyph} ${Math.abs(profitAfterSell).toFixed(2)} ${sar}${pnlPct}
-            </strong>
-          </div>
-        </div>
-      `
-    );
-
-    const actions = document.createElement('div');
-    actions.className = 'portfolio-actions';
-    const buyBtn = document.createElement('button');
-    buyBtn.className = 'btn btn-buy portfolio-action-btn';
-    buyBtn.textContent = t('buyMore');
-    buyBtn.addEventListener('click', () => onQuickTrade(symbol, 'buy'));
-    const sellBtn = document.createElement('button');
-    sellBtn.className = 'btn btn-danger portfolio-action-btn';
-    sellBtn.textContent = t('sellAll');
-    sellBtn.addEventListener('click', () => onQuickTrade(symbol, 'sell'));
-    actions.appendChild(buyBtn);
-    actions.appendChild(sellBtn);
-    div.appendChild(actions);
-    portfolioEl.appendChild(div);
+  reconcileKeyed(portfolioEl, portfolioRows, holdings, {
+    key: ([symbol]) => `${lang}:${symbol}`,
+    create: ([symbol]) =>
+      buildRow('portfolio-item', 'portfolio-actions', [
+        makeButton('btn btn-buy portfolio-action-btn', t('buyMore'), () =>
+          onQuickTrade(symbol, 'buy')
+        ),
+        makeButton('btn btn-danger portfolio-action-btn', t('sellAll'), () =>
+          onQuickTrade(symbol, 'sell')
+        ),
+      ]),
+    update: (row, [symbol, holding]) => renderHoldingDetails(row.body, symbol, holding, lang),
   });
+}
+
+function renderHoldingDetails(body, symbol, holding, lang) {
+  const stock = findStock(symbol);
+  const currentPrice = stockPrices[symbol];
+  const marketValue = currentPrice * holding.quantity;
+  const costBasis = holding.avgCost * holding.quantity;
+  const valueAfterSell = marketValue * (1 - COMMISSION);
+  const profitAfterSell = valueAfterSell - costBasis;
+  const sar = t('sar');
+  const { glyph, className } = direction(profitAfterSell);
+  // costBasis is zero only for a holding bought at price 0, which the price
+  // floor makes unreachable; omit the percentage rather than print NaN%.
+  const pnlPct =
+    costBasis > 0 ? ` (${Math.abs((profitAfterSell / costBasis) * 100).toFixed(2)}%)` : '';
+  setHtml(
+    body,
+    html`
+      <div class="stock-header">
+        <div>
+          <div class="stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</div>
+          <div class="stock-symbol">${symbol} - ${holding.quantity} ${t('shares')}</div>
+        </div>
+      </div>
+      <div class="portfolio-details">
+        <div class="detail-item">
+          <span>${t('lastPrice')}:</span><strong>${formatPrice(currentPrice, sar)}</strong>
+        </div>
+        <div class="detail-item">
+          <span>${t('avgCost')}:</span><strong>${formatPrice(holding.avgCost, sar)}</strong>
+        </div>
+        <div class="detail-item">
+          <span>${t('totalCost')}:</span><strong>${formatPrice(costBasis, sar)}</strong>
+        </div>
+        <div class="detail-item">
+          <span>${t('marketValue')}:</span><strong>${formatPrice(marketValue, sar)}</strong>
+        </div>
+        <div class="detail-item">
+          <span>${t('valueAfterSell')}:</span><strong>${formatPrice(valueAfterSell, sar)}</strong>
+        </div>
+        <div class="detail-item">
+          <span>${t('pnlAfterSell')}:</span>
+          <strong class="${className}">
+            ${glyph} ${formatPrice(Math.abs(profitAfterSell), sar)}${pnlPct}
+          </strong>
+        </div>
+      </div>
+    `
+  );
 }
 
 export function renderPendingOrders() {
   const ordersEl = document.getElementById('pending-orders');
   if (!ordersEl) return;
-  clearChildren(ordersEl);
   const lang = getLang();
-  const orders = gameState.pendingOrders || [];
+  const orders = (gameState.pendingOrders || []).filter((order) => findStock(order.symbol));
 
-  if (orders.length === 0) {
-    const p = document.createElement('p');
-    p.className = 'empty-state';
-    p.textContent = t('noPendingOrders');
-    ordersEl.appendChild(p);
+  if (syncEmptyState(ordersEl, pendingOrderRows, orders.length ? null : t('noPendingOrders'))) {
     return;
   }
 
-  orders.forEach((order) => {
-    const stock = findStock(order.symbol);
-    if (!stock) return;
-    const currentPrice = stockPrices[order.symbol];
-    const refPrice = order.kind === 'stop-loss' ? order.stopPrice : order.limitPrice;
-    // A pending order always carries a finite, positive reference price (both
-    // state.js's loader and validateOrder() enforce it), so this cannot divide
-    // by zero — but guard rather than depend on a validator two modules away.
-    const priceDiff = refPrice > 0 ? ((currentPrice - refPrice) / refPrice) * 100 : 0;
-    const sar = t('sar');
-    const div = document.createElement('div');
-    div.className = 'order-item';
-    const { glyph, className } = direction(priceDiff);
-    setHtml(
-      div,
-      html`
-        <div class="order-header">
-          <div>
-            <strong class="order-stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</strong>
-            <span class="order-stock-symbol">(${order.symbol})</span>
-          </div>
-          <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-buy' : 'btn-danger'}">
-            ${order.type === 'buy' ? t('buy') : t('sell')} ·
-            ${order.kind === 'stop-loss' ? t('orderKindStopLoss') : t('orderKindLimit')}
-          </span>
-        </div>
-        <div class="order-details">
-          <div>${t('quantity')}: <strong>${order.quantity}</strong></div>
-          <div>
-            ${order.kind === 'stop-loss' ? t('stopPrice') : t('limitPrice')}:
-            <strong>${refPrice.toFixed(2)} ${sar}</strong>
-          </div>
-          <div>${t('currentPrice')}: <strong>${currentPrice.toFixed(2)} ${sar}</strong></div>
-          <div>
-            ${t('difference')}:
-            <span class="${className}">${glyph} ${Math.abs(priceDiff).toFixed(2)}%</span>
-          </div>
-          <div class="order-date-row">
-            ${t('date')}: ${formatDateBilingual(order.timestamp, lang)}
-          </div>
-        </div>
-      `
-    );
-    const actions = document.createElement('div');
-    actions.className = 'order-actions';
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'btn btn-danger cancel-order-btn';
-    cancelBtn.textContent = t('cancelOrder');
-    cancelBtn.addEventListener('click', () => onCancelOrder(order.id));
-    actions.appendChild(cancelBtn);
-    div.appendChild(actions);
-    ordersEl.appendChild(div);
+  reconcileKeyed(ordersEl, pendingOrderRows, orders, {
+    key: (order) => `${lang}:${order.id}`,
+    create: (order) =>
+      buildRow('order-item', 'order-actions', [
+        makeButton('btn btn-danger cancel-order-btn', t('cancelOrder'), () =>
+          onCancelOrder(order.id)
+        ),
+      ]),
+    update: (row, order) => renderPendingOrderDetails(row.body, order, lang),
   });
+}
+
+function renderPendingOrderDetails(body, order, lang) {
+  const stock = findStock(order.symbol);
+  const currentPrice = stockPrices[order.symbol];
+  const refPrice = order.kind === 'stop-loss' ? order.stopPrice : order.limitPrice;
+  // Both the save loader and validateOrder() guarantee a positive reference
+  // price; guard anyway rather than depend on a validator two modules away.
+  const priceDiff = refPrice > 0 ? ((currentPrice - refPrice) / refPrice) * 100 : 0;
+  const sar = t('sar');
+  setHtml(
+    body,
+    html`
+      <div class="order-header">
+        <div>
+          <strong class="order-stock-name">${lang === 'ar' ? stock.name : stock.nameEn}</strong>
+          <span class="order-stock-symbol">(${order.symbol})</span>
+        </div>
+        <span class="btn order-kind-badge ${order.type === 'buy' ? 'btn-buy' : 'btn-danger'}">
+          ${order.type === 'buy' ? t('buy') : t('sell')} ·
+          ${order.kind === 'stop-loss' ? t('orderKindStopLoss') : t('orderKindLimit')}
+        </span>
+      </div>
+      <div class="order-details">
+        <div>${t('quantity')}: <strong>${order.quantity}</strong></div>
+        <div>
+          ${order.kind === 'stop-loss' ? t('stopPrice') : t('limitPrice')}:
+          <strong>${formatPrice(refPrice, sar)}</strong>
+        </div>
+        <div>${t('currentPrice')}: <strong>${formatPrice(currentPrice, sar)}</strong></div>
+        <div>
+          ${t('difference')}:
+          <span class="${direction(priceDiff).className}">${formatChange(priceDiff)}</span>
+        </div>
+        <div class="order-date-row">
+          ${t('date')}: ${formatDateBilingual(order.timestamp, lang)}
+        </div>
+      </div>
+    `
+  );
 }
 
 export function updateStats() {
@@ -439,11 +497,11 @@ export function updateTicker() {
   stocks.forEach((stock) => {
     const price = stockPrices[stock.symbol];
     const change = changePercent(stock, stockPrices);
-    const { glyph, className } = direction(change);
+    const { className } = direction(change);
     const refs = tickerRefs.get(stock.symbol) || [];
     refs.forEach(({ priceEl, changeEl }) => {
       priceEl.textContent = price.toFixed(2);
-      changeEl.textContent = `${glyph} ${Math.abs(change).toFixed(2)}%`;
+      changeEl.textContent = formatChange(change);
       changeEl.className = className;
     });
   });

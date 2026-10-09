@@ -589,6 +589,12 @@ input:focus-visible,
   transform: translateX(-18px);
 }
 
+.order-error {
+  color: var(--loss);
+  font-size: 13px;
+  margin: 8px 0 0;
+}
+
 .market-warning {
   background: var(--tint-loss);
   border: 1px solid var(--loss);
@@ -1101,6 +1107,8 @@ input[type='text']:focus {
   padding: 12px 0;
   font-size: 15px;
   color: var(--text);
+  /* Multi-line messages (the auto-cancelled orders list) are built with \n. */
+  white-space: pre-line;
 }
 
 .alert-modal-footer {

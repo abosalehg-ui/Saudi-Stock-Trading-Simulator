@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   validateOrder,
   executeMarketOrder,
@@ -338,5 +338,72 @@ describe('rejected market orders leave the market untouched', () => {
     const r = executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity: 100 });
     expect(r.ok).toBe(true);
     expect(stockPrices['1180']).not.toBe(priceBefore);
+  });
+});
+
+describe('pending sells require the shares up front', () => {
+  it('rejects a limit sell for a stock not held', () => {
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'limit',
+      quantityRaw: '5',
+      priceRaw: '50',
+    });
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('NO_HOLDING');
+  });
+
+  it('accepts a limit sell covered by the holding', () => {
+    gameState.portfolio['1180'] = { quantity: 5, avgCost: 30 };
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'sell',
+      kind: 'limit',
+      quantityRaw: '5',
+      priceRaw: '50',
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('still reports a stop-loss buy as sell-only rather than as a missing holding', () => {
+    const r = validateOrder({
+      symbol: '1180',
+      type: 'buy',
+      kind: 'stop-loss',
+      quantityRaw: '5',
+      priceRaw: '50',
+    });
+    expect(r.error).toBe('STOP_LOSS_SELL_ONLY');
+  });
+
+  it('accepts a quantity in Arabic-Indic digits and reports an oversized one as too large', () => {
+    expect(
+      validateOrder({ symbol: '1180', type: 'buy', kind: 'market', quantityRaw: '٢٠' }).order
+        .quantity
+    ).toBe(20);
+    expect(
+      validateOrder({ symbol: '1180', type: 'buy', kind: 'market', quantityRaw: '٥٠٠٠٠٠٠' }).error
+    ).toBe('QUANTITY_TOO_LARGE');
+  });
+});
+
+describe('executeMarketOrder rejection leaves no trace', () => {
+  it('rejects a buy that only the post-impact price makes unaffordable, without moving the market', () => {
+    // Highest possible slippage, so the fill is dearer than the spot price.
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.999);
+    try {
+      const quantity = 1000;
+      const spot = stockPrices['1180'];
+      gameState.cash = spot * quantity * (1 + COMMISSION); // covers spot exactly
+      const r = executeMarketOrder({ symbol: '1180', type: 'buy', kind: 'market', quantity });
+      expect(r.ok).toBe(false);
+      expect(r.error).toBe('INSUFFICIENT_FUNDS');
+      expect(stockPrices['1180']).toBe(spot);
+      expect(gameState.priceImpacts['1180']).toBeUndefined();
+      expect(gameState.transactions).toHaveLength(0);
+    } finally {
+      random.mockRestore();
+    }
   });
 });

@@ -30,6 +30,12 @@ function teardownTooltip(canvas) {
  * translations existed the whole time, unused.)
  */
 function attachTooltip(canvas) {
+  // Already attached to this canvas: a price tick only redraws, so keep the
+  // readout and refresh it in place instead of rebuilding it under the pointer.
+  if (canvas._candleCleanup && document.getElementById('candle-tooltip')) {
+    canvas._candleRefresh?.();
+    return;
+  }
   teardownTooltip(canvas);
   const tooltip = document.createElement('div');
   tooltip.id = 'candle-tooltip';
@@ -37,11 +43,10 @@ function attachTooltip(canvas) {
   tooltip.hidden = true;
   canvas.parentElement?.appendChild(tooltip);
 
-  const onMove = (event) => {
-    if (!lastFrame) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const index = Math.floor((x - lastFrame.padding.left) / lastFrame.candleSlot);
+  let pointerX = null;
+  const show = () => {
+    if (!lastFrame || pointerX === null) return;
+    const index = Math.floor((pointerX - lastFrame.padding.left) / lastFrame.candleSlot);
     const candle = lastFrame.candles[index];
     if (!candle) {
       tooltip.hidden = true;
@@ -57,16 +62,29 @@ function attachTooltip(canvas) {
     ].join(' · ');
     tooltip.hidden = false;
   };
+  const onMove = (event) => {
+    pointerX = event.clientX - canvas.getBoundingClientRect().left;
+    show();
+  };
   const onLeave = () => {
+    pointerX = null;
     tooltip.hidden = true;
   };
 
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerleave', onLeave);
+  canvas._candleRefresh = show;
   canvas._candleCleanup = () => {
     canvas.removeEventListener('pointermove', onMove);
     canvas.removeEventListener('pointerleave', onLeave);
+    delete canvas._candleRefresh;
   };
+}
+
+/** The page's own font, so the axis labels match the rest of the UI. */
+function canvasFont(sizePx) {
+  const family = getComputedStyle(document.body).fontFamily || 'sans-serif';
+  return `${sizePx}px ${family}`;
 }
 
 /**
@@ -94,7 +112,7 @@ export function renderCandlestick(canvasId, symbol) {
     teardownTooltip(canvas);
     lastFrame = null;
     ctx.fillStyle = themeColor('--text-muted');
-    ctx.font = '14px sans-serif';
+    ctx.font = canvasFont(14);
     ctx.textAlign = 'center';
     ctx.fillText('—', cssWidth / 2, cssHeight / 2);
     return;
@@ -116,7 +134,7 @@ export function renderCandlestick(canvasId, symbol) {
 
   ctx.strokeStyle = themeColorAlpha('--border', 0.9);
   ctx.lineWidth = 1;
-  ctx.font = '11px sans-serif';
+  ctx.font = canvasFont(11);
   ctx.fillStyle = themeColor('--text-muted');
   ctx.textAlign = 'right';
   for (let i = 0; i <= 4; i++) {
@@ -154,7 +172,7 @@ export function renderCandlestick(canvasId, symbol) {
   const labelEvery = Math.max(1, Math.ceil(candles.length / 6));
   ctx.fillStyle = themeColor('--text-muted');
   ctx.textAlign = 'center';
-  ctx.font = '11px sans-serif';
+  ctx.font = canvasFont(11);
   candles.forEach((c, i) => {
     if (i % labelEvery !== 0) return;
     const xCenter = padding.left + candleSlot * (i + 0.5);

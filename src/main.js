@@ -1,7 +1,6 @@
 // Self-hosted so the strict CSP (font-src 'self') holds and the UI looks the
-// same on every OS. The previous stack fell back to Tahoma on Windows and to
-// whatever the system Arabic face was elsewhere. Only the three weights the
-// design actually uses are loaded; latin covers the digits and English mode.
+// same on every OS. Only the three weights the design uses are loaded; latin
+// covers the digits and English mode.
 import '@fontsource/ibm-plex-sans-arabic/arabic-400.css';
 import '@fontsource/ibm-plex-sans-arabic/arabic-600.css';
 import '@fontsource/ibm-plex-sans-arabic/arabic-700.css';
@@ -9,18 +8,12 @@ import '@fontsource/ibm-plex-sans-arabic/latin-400.css';
 import '@fontsource/ibm-plex-sans-arabic/latin-600.css';
 import '@fontsource/ibm-plex-sans-arabic/latin-700.css';
 import './styles/main.css';
-import {
-  PRICE_UPDATE_INTERVAL_MS,
-  NEWS_UPDATE_INTERVAL_MS,
-  STORAGE_KEY,
-  PRICES_STORAGE_KEY,
-} from './config.js';
+import { PRICE_UPDATE_INTERVAL_MS, NEWS_UPDATE_INTERVAL_MS } from './config.js';
 import {
   gameState,
   session,
   loadGameState,
   saveGameState,
-  resetGameState,
   initPriceState,
   loadPriceState,
   savePriceStateThrottled,
@@ -29,13 +22,7 @@ import {
 } from './state.js';
 import { updatePrices } from './engine/prices.js';
 import { generateNews } from './engine/news.js';
-import {
-  validateOrder,
-  executeMarketOrder,
-  addPendingOrder,
-  checkPendingOrders,
-  cancelPendingOrder,
-} from './engine/trading.js';
+import { checkPendingOrders } from './engine/trading.js';
 import { isMarketOpen } from './engine/market-hours.js';
 import {
   bindRenderCallbacks,
@@ -56,16 +43,16 @@ import {
   renderStockDetails,
   patchStockDetails,
 } from './ui/stock-details.js';
+import { showAlert, openStockModal, closeStockModal, isModalOpen } from './ui/modal.js';
 import {
-  showAlert,
-  showConfirm,
-  openStockModal,
-  closeStockModal,
-  isModalOpen,
-} from './ui/modal.js';
+  bindActionCallbacks,
+  handleSubmitOrder,
+  handleCancelOrder,
+  describeCancelledOrders,
+  resetGame,
+} from './ui/actions.js';
 import { initLang, toggleLang, t } from './ui/i18n.js';
 import { rebuildStaticLabels } from './ui/labels.js';
-import { showToast } from './ui/toast.js';
 import { initResponsiveLayout, isDesktopLayout } from './ui/responsive.js';
 import { attachShellListeners } from './ui/shell.js';
 import { initTheme } from './ui/theme.js';
@@ -104,11 +91,8 @@ function refreshAll() {
 
   recordPnlSnapshot(shownPnlPercent, shownTotal - gameState.initialCapital);
 
-  // The selected stock's price and chart used to sit frozen at whatever they
-  // were when it was picked, while the list beside them ticked on — two
-  // different numbers for the same stock, side by side on a desktop layout.
-  // This patches them in place, so a half-typed quantity and the indicator
-  // checkboxes survive.
+  // Keep the open details panel in step with the list. A patch, not a rebuild,
+  // so the order form and indicator checkboxes are left alone.
   if (session.selectedStock) patchStockDetails(session.selectedStock);
 
   updateTicker();
@@ -134,10 +118,9 @@ function startPriceUpdates() {
     // thread every 6 seconds at 10x speed.
     savePriceStateThrottled();
     // Orders whose trigger fired but couldn't execute (e.g. two orders
-    // competing for the same shares) are dropped rather than retried forever;
-    // let the user know instead of a pending order silently vanishing.
+    // competing for the same shares) are dropped rather than retried forever.
     if (cancelled.length > 0) {
-      showAlert(t('pendingOrdersAutoCancelled'));
+      showAlert(describeCancelledOrders(cancelled));
     }
   }, PRICE_UPDATE_INTERVAL_MS / gameState.speed);
 }
@@ -183,83 +166,15 @@ function handleLayoutChange(desktop) {
 }
 
 function handleQuickTrade(symbol, type) {
-  // selectStock() -> renderStockDetails() builds the form synchronously, so the
-  // quantity field already exists here; the old setTimeout(100) was guarding
-  // against nothing.
+  // selectStock() builds the form synchronously, so the field exists here.
   selectStock(symbol);
   if (type === 'sell' && gameState.portfolio[symbol]) {
     const qty = document.getElementById('order-quantity');
-    if (qty) qty.value = String(gameState.portfolio[symbol].quantity);
-  }
-}
-
-function handleCancelOrder(orderId) {
-  showConfirm(t('confirmCancelOrder')).then((ok) => {
-    if (!ok) return;
-    if (cancelPendingOrder(orderId)) {
-      renderPendingOrders();
-      saveGameState();
+    if (qty) {
+      qty.value = String(gameState.portfolio[symbol].quantity);
+      // Through the input event, so the panel's saved form state sees it too.
+      qty.dispatchEvent(new Event('input'));
     }
-  });
-}
-
-function errorMessageFor(error) {
-  switch (error) {
-    case 'NO_STOCK':
-      return t('selectStock');
-    case 'INVALID_QUANTITY':
-      return t('enterValidQuantity');
-    case 'QUANTITY_TOO_LARGE':
-      return t('quantityTooLarge');
-    case 'INVALID_PRICE':
-      return t('enterLimitPrice');
-    case 'STOP_LOSS_SELL_ONLY':
-    case 'NO_HOLDING':
-      return t('stopLossSellOnly');
-    case 'INSUFFICIENT_FUNDS':
-      return t('insufficientFunds');
-    case 'INSUFFICIENT_SHARES':
-      return t('insufficientShares');
-    default:
-      return t('invalidNumber');
-  }
-}
-
-function handleSubmitOrder(input) {
-  const validation = validateOrder(input);
-  if (!validation.ok) {
-    // @ts-expect-error tsc doesn't narrow this OrderValidationResult union in
-    // this call context; the discriminant check above makes it safe at runtime.
-    showAlert(errorMessageFor(validation.error));
-    return;
-  }
-  const { order } = validation;
-
-  if (order.kind === 'market') {
-    if (!isMarketOpen() && !gameState.allow24Trading) {
-      showAlert(t('marketClosedMessage'));
-      return;
-    }
-    const result = executeMarketOrder(order);
-    if (!result.ok) {
-      showAlert(errorMessageFor(result.error));
-      return;
-    }
-    const msg = order.type === 'buy' ? t('purchaseSuccess') : t('sellSuccess');
-    refreshAll();
-    saveGameState();
-    // A market order shifts stockPrices immediately (applyMarketImpact); persist that
-    // now instead of waiting for the next interval tick, or a reload right after a
-    // trade would show the price snapping back.
-    flushPriceState();
-    closeStockModal();
-    showToast(msg);
-  } else {
-    addPendingOrder(order);
-    renderPendingOrders();
-    saveGameState();
-    closeStockModal();
-    showToast(order.kind === 'stop-loss' ? t('stopLossAdded') : t('orderAdded'));
   }
 }
 
@@ -268,27 +183,6 @@ function setSpeed(speed) {
   startPriceUpdates();
   startNewsUpdates();
   saveGameState();
-}
-
-function resetGame() {
-  showConfirm(t('confirmReset')).then((ok) => {
-    if (!ok) return;
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-      localStorage.removeItem(PRICES_STORAGE_KEY);
-    } catch (e) {
-      console.error('Failed to clear localStorage:', e);
-    }
-    resetGameState();
-    // resetGameState() puts speed back to 1, but the running intervals were
-    // built with the *old* divisor — rebuild them or the sim keeps ticking at
-    // the previous speed while the UI reports 1x.
-    startPriceUpdates();
-    startNewsUpdates();
-    refreshAll();
-    closeStockModal();
-    displayRandomTips();
-  });
 }
 
 function handleToggleLanguage() {
@@ -318,6 +212,13 @@ function init() {
     onQuickTrade: handleQuickTrade,
   });
   bindStockDetailsCallbacks({ onSubmitOrder: handleSubmitOrder });
+  bindActionCallbacks({
+    refreshAll,
+    restartTimers: () => {
+      startPriceUpdates();
+      startNewsUpdates();
+    },
+  });
 
   // Before attachEventListeners(), so the action bar is already in its host and
   // its buttons are bound wherever they end up.

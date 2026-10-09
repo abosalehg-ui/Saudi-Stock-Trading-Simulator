@@ -210,3 +210,64 @@ describe('updateHijriDate', () => {
     expect(document.getElementById('hijri-date').style.display).toBe('none');
   });
 });
+
+describe('rows survive a price tick', () => {
+  it('keeps the same portfolio buttons, and keyboard focus on them, across a re-render', () => {
+    gameState.portfolio[SYMBOL] = { quantity: 10, avgCost: 30 };
+    renderPortfolio();
+    const sellAll = document.querySelectorAll('#portfolio .portfolio-action-btn')[1];
+    sellAll.focus();
+
+    stockPrices[SYMBOL] = 55;
+    renderPortfolio();
+
+    expect(document.querySelectorAll('#portfolio .portfolio-action-btn')[1]).toBe(sellAll);
+    expect(document.activeElement).toBe(sellAll);
+    expect(document.querySelector('#portfolio .portfolio-item').textContent).toContain('55.00');
+  });
+
+  it('keeps the cancel button of a pending order across a re-render', () => {
+    gameState.pendingOrders = [
+      {
+        id: 1,
+        symbol: SYMBOL,
+        type: 'buy',
+        kind: 'limit',
+        quantity: 1,
+        limitPrice: 20,
+        stopPrice: null,
+        timestamp: Date.now(),
+      },
+    ];
+    renderPendingOrders();
+    const cancel = document.querySelector('.cancel-order-btn');
+    cancel.focus();
+    renderPendingOrders();
+    expect(document.querySelector('.cancel-order-btn')).toBe(cancel);
+    expect(document.activeElement).toBe(cancel);
+  });
+
+  it('rebuilds the rows on a language switch, so button labels follow it', () => {
+    gameState.portfolio[SYMBOL] = { quantity: 10, avgCost: 30 };
+    renderPortfolio();
+    const before = document.querySelector('#portfolio .portfolio-action-btn');
+    setLang('en');
+    renderPortfolio();
+    const after = document.querySelector('#portfolio .portfolio-action-btn');
+    expect(after).not.toBe(before);
+    expect(after.textContent).toBe('Buy More');
+  });
+
+  it('returns to the empty state when the last holding is sold, and back again', () => {
+    gameState.portfolio[SYMBOL] = { quantity: 10, avgCost: 30 };
+    renderPortfolio();
+    delete gameState.portfolio[SYMBOL];
+    renderPortfolio();
+    expect(document.querySelector('#portfolio .empty-state')).not.toBeNull();
+    expect(document.querySelector('#portfolio .portfolio-item')).toBeNull();
+    gameState.portfolio[SYMBOL] = { quantity: 1, avgCost: 30 };
+    renderPortfolio();
+    expect(document.querySelector('#portfolio .empty-state')).toBeNull();
+    expect(document.querySelectorAll('#portfolio .portfolio-item')).toHaveLength(1);
+  });
+});

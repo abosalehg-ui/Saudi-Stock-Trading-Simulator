@@ -27,6 +27,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
+      # Pushes to main deploy straight to production, so the same gates as CI
+      # run first: a merge that breaks the tests must not reach users.
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

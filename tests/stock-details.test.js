@@ -13,6 +13,9 @@ import {
   patchStockDetails,
   bindStockDetailsCallbacks,
   getIndicatorState,
+  getOrderFormState,
+  resetOrderForm,
+  showOrderError,
 } from '../src/ui/stock-details.js';
 import { stocks } from '../src/data/stocks.js';
 import { gameState, stockPrices, session, resetGameState } from '../src/state.js';
@@ -22,6 +25,7 @@ const symbol = stocks[0].symbol;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetOrderForm();
   resetGameState();
   setLang('ar');
   document.body.innerHTML = '<div id="stock-details"></div>';
@@ -190,5 +194,86 @@ describe('patchStockDetails', () => {
   it('is a no-op when no panel has been built', async () => {
     document.body.innerHTML = '<div id="stock-details"></div>';
     await expect(patchStockDetails(symbol)).resolves.toBeUndefined();
+  });
+});
+
+describe('order form state across rebuilds', () => {
+  function chooseKind(kind) {
+    const radio = document.querySelector(`input[name="orderType"][value="${kind}"]`);
+    radio.checked = true;
+    radio.dispatchEvent(new Event('change'));
+  }
+  function type(id, value) {
+    const el = document.getElementById(id);
+    el.value = value;
+    el.dispatchEvent(new Event('input'));
+  }
+
+  it('keeps the order kind, quantity and price when the same stock is rebuilt', () => {
+    renderStockDetails(symbol);
+    chooseKind('stop-loss');
+    type('order-quantity', '7');
+    type('order-price', '12.5');
+
+    // A language/theme/layout change rebuilds the panel for the same stock.
+    renderStockDetails(symbol);
+
+    expect(document.querySelector('input[name="orderType"]:checked').value).toBe('stop-loss');
+    expect(document.getElementById('order-price').hidden).toBe(false);
+    expect(document.getElementById('order-quantity').value).toBe('7');
+    expect(document.getElementById('order-price').value).toBe('12.5');
+  });
+
+  it('a rebuilt stop-loss form still submits a stop-loss, not a market order', () => {
+    const onSubmitOrder = vi.fn();
+    bindStockDetailsCallbacks({ onSubmitOrder });
+    renderStockDetails(symbol);
+    chooseKind('stop-loss');
+    type('order-quantity', '2');
+    type('order-price', '10');
+    renderStockDetails(symbol);
+    document.getElementById('order-sell').click();
+    expect(onSubmitOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'stop-loss', quantityRaw: '2', priceRaw: '10' })
+    );
+  });
+
+  it('starts from a fresh market order when a different stock is picked', () => {
+    renderStockDetails(symbol);
+    chooseKind('limit');
+    type('order-quantity', '9');
+    session.selectedStock = stocks[1].symbol;
+    renderStockDetails(stocks[1].symbol);
+    expect(document.querySelector('input[name="orderType"]:checked').value).toBe('market');
+    expect(document.getElementById('order-quantity').value).toBe('');
+    expect(getOrderFormState().symbol).toBe(stocks[1].symbol);
+  });
+
+  it('labels the order-type group as a whole, not as one of its options', () => {
+    renderStockDetails(symbol);
+    expect(document.querySelector('[role="radiogroup"]').getAttribute('aria-label')).toBe(
+      'نوع الأمر'
+    );
+  });
+
+  it('describes the chart with the current price for assistive tech', () => {
+    renderStockDetails(symbol);
+    const label = document.getElementById('price-chart').getAttribute('aria-label');
+    expect(label).toContain(stockPrices[symbol].toFixed(2));
+  });
+
+  it('shows an inline error, and clears it when the user edits the field', () => {
+    renderStockDetails(symbol);
+    const error = document.getElementById('order-error');
+    expect(showOrderError('خطأ')).toBe(true);
+    expect(error.hidden).toBe(false);
+    expect(error.textContent).toBe('خطأ');
+    type('order-quantity', '1');
+    expect(error.hidden).toBe(true);
+  });
+
+  it('reports that there is nowhere to show an inline error without the panel', () => {
+    document.body.innerHTML = '';
+    expect(showOrderError('x')).toBe(false);
   });
 });

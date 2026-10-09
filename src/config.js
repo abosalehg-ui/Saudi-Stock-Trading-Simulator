@@ -26,13 +26,14 @@ export const MIN_PRICE_RATIO = 0.3;
 export const MAX_PRICE_RATIO = 3;
 
 // The transaction log is re-serialised into localStorage on every tick, so it
-// cannot be allowed to grow without limit. 500 covers far more than a session's
-// trading while keeping the saved payload bounded; the CSV export is the place
-// to go for a full history.
+// cannot be allowed to grow without limit. Only the most recent 500 trades are
+// kept, and that includes what the CSV export contains.
 export const TRANSACTIONS_MAX = 500;
 
 export const MAX_ORDER_QUANTITY = 1_000_000;
 export const MIN_ORDER_QUANTITY = 1;
+export const MIN_ORDER_PRICE = 0.01;
+export const MAX_ORDER_PRICE = 100_000;
 
 export const CHALLENGE_1_THRESHOLD = 10;
 export const CHALLENGE_1_REWARD = 100000;

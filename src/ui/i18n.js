@@ -58,6 +58,10 @@ export const translations = {
     pendingOrdersAutoCancelled:
       'تعذر تنفيذ أمر معلق واحد أو أكثر (رصيد أو أسهم غير كافية) وتم إلغاؤه تلقائياً.',
     stopLossSellOnly: 'أوامر وقف الخسارة متاحة للبيع فقط، ويجب امتلاك السهم أولاً.',
+    noHoldingToSell: 'لا تمتلك ما يكفي من هذا السهم لوضع أمر بيع معلق.',
+    orderTypeGroup: 'نوع الأمر',
+    chartSummary: 'رسم السعر: {price}، التغير {trend} خلال آخر {points} نقطة',
+    csvExportLimitNote: 'يشمل آخر 500 عملية فقط',
     purchaseSuccess: 'تم الشراء بنجاح!',
     sellSuccess: 'تم البيع بنجاح!',
     confirmCancelOrder: 'هل أنت متأكد من إلغاء هذا الأمر؟',
@@ -241,6 +245,10 @@ export const translations = {
     pendingOrdersAutoCancelled:
       'One or more pending orders could not be executed (insufficient funds/shares) and were automatically cancelled.',
     stopLossSellOnly: 'Stop-loss orders are sell-only and require owning the stock first.',
+    noHoldingToSell: "You don't hold enough of this stock to place a pending sell order.",
+    orderTypeGroup: 'Order type',
+    chartSummary: 'Price chart: {price}, change {trend} over the last {points} points',
+    csvExportLimitNote: 'Includes the most recent 500 trades only',
     purchaseSuccess: 'Purchase successful!',
     sellSuccess: 'Sale successful!',
     confirmCancelOrder: 'Are you sure you want to cancel this order?',

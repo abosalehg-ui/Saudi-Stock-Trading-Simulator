@@ -42,9 +42,12 @@ import { themeColor, themeColorAlpha } from './theme.js';
 export function renderChart(symbol, indicators = {}) {
   const canvas = document.getElementById('price-chart');
   if (!canvas) return;
-  if (session.chart) {
-    session.chart.destroy();
-    session.chart = null;
+  // Coming from the candlestick view: drop its hover readout, which would
+  // otherwise keep showing candle values over the line chart.
+  if (canvas._candleCleanup) {
+    canvas._candleCleanup();
+    delete canvas._candleCleanup;
+    document.getElementById('candle-tooltip')?.remove();
   }
   const lang = getLang();
   const data = priceHistory[symbol] || [];
@@ -169,6 +172,23 @@ export function renderChart(symbol, indicators = {}) {
     };
   }
 
+  // A price tick redraws the same chart with one more point. Updating the
+  // existing instance keeps an open tooltip and skips the entry animation,
+  // which replayed on every tick when the chart was destroyed and rebuilt.
+  // A new canvas (theme, language or layout rebuild) or a different symbol or
+  // indicator set still gets a fresh chart, since the axes and colours differ.
+  const key = `${symbol}|${JSON.stringify(indicators)}`;
+  if (session.chart && session.chart.canvas === canvas && session.chart.$key === key) {
+    session.chart.data.labels = labels;
+    session.chart.data.datasets.forEach((dataset, i) => {
+      dataset.data = datasets[i].data;
+      if (dataset.type === 'bar') dataset.backgroundColor = datasets[i].backgroundColor;
+    });
+    session.chart.update('none');
+    return;
+  }
+  destroyChart();
+
   session.chart = new Chart(canvas, {
     type: 'line',
     data: { labels, datasets },
@@ -185,6 +205,7 @@ export function renderChart(symbol, indicators = {}) {
       scales,
     },
   });
+  session.chart.$key = key;
 }
 
 export function destroyChart() {

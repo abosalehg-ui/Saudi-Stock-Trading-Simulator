@@ -307,3 +307,32 @@ describe('price-state write throttling', () => {
     expect(savePriceStateThrottled()).toBe(true);
   });
 });
+
+describe('loadGameState drops records the app cannot use', () => {
+  it('drops transactions without a valid time or side, which would break the CSV export', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        transactions: [
+          { symbol: '1180', type: 'buy', price: 10, quantity: 1, time: 1700000000000 },
+          { symbol: '1180', type: 'buy', price: 10, quantity: 1, time: 'yesterday' },
+          { symbol: '1180', type: 'hold', price: 10, quantity: 1, time: 1700000000000 },
+        ],
+      })
+    );
+    loadGameState();
+    expect(gameState.transactions).toHaveLength(1);
+    expect(() => new Date(gameState.transactions[0].time).toISOString()).not.toThrow();
+  });
+
+  it('drops an active scenario whose id no longer exists', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        activeScenario: { id: 'renamed-away', startedAt: 1, durationMs: 1000 },
+      })
+    );
+    loadGameState();
+    expect(gameState.activeScenario).toBeNull();
+  });
+});
