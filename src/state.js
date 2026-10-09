@@ -6,6 +6,7 @@ import {
   TRANSACTIONS_MAX,
 } from './config.js';
 import { stocks, findStock } from './data/stocks.js';
+import { findScenario } from './data/scenarios.js';
 
 /**
  * @typedef {Object} GameState
@@ -220,8 +221,12 @@ function sanitizeLoadedState(loaded) {
         (tx) =>
           tx &&
           typeof tx.symbol === 'string' &&
+          (tx.type === 'buy' || tx.type === 'sell') &&
           Number.isFinite(tx.price) &&
-          Number.isFinite(tx.quantity)
+          Number.isFinite(tx.quantity) &&
+          // The CSV export calls new Date(tx.time).toISOString(), which throws
+          // on an invalid date and would abort the whole export.
+          Number.isFinite(tx.time)
       )
       // Saves written before the cap existed can hold an arbitrarily long log.
       .slice(-TRANSACTIONS_MAX);
@@ -266,6 +271,7 @@ function sanitizeLoadedState(loaded) {
   if (
     scenario &&
     typeof scenario.id === 'string' &&
+    findScenario(scenario.id) &&
     Number.isFinite(scenario.startedAt) &&
     Number.isFinite(scenario.durationMs)
   ) {

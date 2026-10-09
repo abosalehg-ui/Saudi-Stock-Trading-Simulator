@@ -4,11 +4,13 @@ import {
   VOLUME_IMPACT_FACTOR,
   MIN_ORDER_QUANTITY,
   MAX_ORDER_QUANTITY,
+  MIN_ORDER_PRICE,
+  MAX_ORDER_PRICE,
   TRANSACTIONS_MAX,
 } from '../config.js';
 import { gameState, stockPrices } from '../state.js';
 import { findStock } from '../data/stocks.js';
-import { safeParseNumber } from '../utils/numbers.js';
+import { safeParseNumber, normalizeDigits } from '../utils/numbers.js';
 import { recordTrade } from './stats.js';
 
 /**
@@ -44,7 +46,7 @@ export function validateOrder(input) {
     integer: true,
   });
   if (quantity === null) {
-    const asNum = Number.parseFloat(input.quantityRaw);
+    const asNum = Number.parseFloat(normalizeDigits(input.quantityRaw ?? ''));
     if (Number.isFinite(asNum) && asNum > MAX_ORDER_QUANTITY) {
       return { ok: false, error: 'QUANTITY_TOO_LARGE' };
     }
@@ -58,17 +60,28 @@ export function validateOrder(input) {
     quantity,
   };
 
-  if (input.kind === 'limit') {
-    const price = safeParseNumber(input.priceRaw, { min: 0.01, max: 100000 });
-    if (price === null) return { ok: false, error: 'INVALID_PRICE' };
-    order.limitPrice = price;
-  } else if (input.kind === 'stop-loss') {
-    if (input.type !== 'sell') return { ok: false, error: 'STOP_LOSS_SELL_ONLY' };
+  const priceBounds = { min: MIN_ORDER_PRICE, max: MAX_ORDER_PRICE };
+
+  if (input.kind === 'stop-loss' && input.type !== 'sell') {
+    return { ok: false, error: 'STOP_LOSS_SELL_ONLY' };
+  }
+
+  // A pending sell (limit or stop-loss) needs the shares now. Accepting it
+  // without them only deferred the failure: checkPendingOrders() would cancel
+  // it the moment its price was reached.
+  if (input.kind !== 'market' && input.type === 'sell') {
     const holding = gameState.portfolio[input.symbol];
     if (!holding || holding.quantity < quantity) {
       return { ok: false, error: 'NO_HOLDING' };
     }
-    const price = safeParseNumber(input.priceRaw, { min: 0.01, max: 100000 });
+  }
+
+  if (input.kind === 'limit') {
+    const price = safeParseNumber(input.priceRaw, priceBounds);
+    if (price === null) return { ok: false, error: 'INVALID_PRICE' };
+    order.limitPrice = price;
+  } else if (input.kind === 'stop-loss') {
+    const price = safeParseNumber(input.priceRaw, priceBounds);
     if (price === null) return { ok: false, error: 'INVALID_PRICE' };
     order.stopPrice = price;
   }
@@ -104,18 +117,8 @@ function applySell(symbol, price, quantity) {
 
 /**
  * Check whether a market order could fill at the current spot price, without
- * mutating anything.
- *
- * This runs *before* applyMarketImpact so a rejected order leaves no trace:
- * applyMarketImpact permanently moves stockPrices and priceImpacts, and there
- * is no rollback path, so validating afterwards let a repeatedly-failing order
- * push the market around for free.
- *
- * The check uses the pre-slippage spot price while the fill uses the
- * post-impact price, so an order sitting within a fraction of a percent of the
- * cash balance can still fail at applyBuy. That residual case is handled
- * normally (the order is rejected) and is not worth reserving cash for in a
- * simulator.
+ * mutating anything. A quick pre-check only: executeMarketOrder() re-checks
+ * against the post-impact price before it commits.
  *
  * @param {OrderInput} order
  * @returns {{ok: true} | {ok: false, error: 'INSUFFICIENT_FUNDS'|'INSUFFICIENT_SHARES'}}
@@ -134,10 +137,16 @@ export function canFill(order) {
 }
 
 /**
- * Apply temporary price impact from a market trade and update spot price.
- * Mutates state. Returns final executed price.
+ * Work out the price a market order would execute at (slippage plus volume
+ * impact) without touching any state.
+ *
+ * @param {string} symbol
+ * @param {'buy'|'sell'} type
+ * @param {number} quantity
+ * @returns {{price: number, impact: number}} the fill price and the signed
+ *   displacement to add to priceImpacts if the order goes through
  */
-function applyMarketImpact(symbol, type, quantity) {
+export function previewMarketImpact(symbol, type, quantity) {
   const stock = findStock(symbol);
   let price = stockPrices[symbol];
   price *= 1 + (Math.random() - 0.5) * SLIPPAGE;
@@ -147,16 +156,16 @@ function applyMarketImpact(symbol, type, quantity) {
   const volumePercentage = (orderValue / avgDailyVolume) * 100;
   const priceImpact = (volumePercentage * VOLUME_IMPACT_FACTOR) / 100;
 
+  return type === 'buy'
+    ? { price: price * (1 + priceImpact), impact: priceImpact }
+    : { price: price * (1 - priceImpact), impact: -priceImpact };
+}
+
+/** Commit a previewed impact: move the spot price and record the displacement. */
+function commitMarketImpact(symbol, { price, impact }) {
   if (!gameState.priceImpacts[symbol]) gameState.priceImpacts[symbol] = { value: 0 };
-  if (type === 'buy') {
-    price *= 1 + priceImpact;
-    gameState.priceImpacts[symbol].value += priceImpact;
-  } else {
-    price *= 1 - priceImpact;
-    gameState.priceImpacts[symbol].value -= priceImpact;
-  }
+  gameState.priceImpacts[symbol].value += impact;
   stockPrices[symbol] = price;
-  return price;
 }
 
 /**
@@ -195,19 +204,26 @@ function recordExecution(order, executedPrice, avgCostBefore) {
  * Returns { ok: true } or { ok: false, error }.
  */
 export function executeMarketOrder(order) {
-  // Reject before touching the market: applyMarketImpact has no rollback.
   const preCheck = canFill(order);
   if (!preCheck.ok) return preCheck;
 
+  // The fill price includes slippage and impact, so a buy that cleared the
+  // spot-price check can still cost more than the cash on hand. Check that
+  // before anything is written, so a rejected order leaves the market as it was.
+  const fill = previewMarketImpact(order.symbol, order.type, order.quantity);
+  if (order.type === 'buy' && fill.price * order.quantity * (1 + COMMISSION) > gameState.cash) {
+    return { ok: false, error: 'INSUFFICIENT_FUNDS' };
+  }
+
   const avgCostBefore = gameState.portfolio[order.symbol]?.avgCost;
-  const price = applyMarketImpact(order.symbol, order.type, order.quantity);
+  commitMarketImpact(order.symbol, fill);
   const result =
     order.type === 'buy'
-      ? applyBuy(order.symbol, price, order.quantity)
-      : applySell(order.symbol, price, order.quantity);
+      ? applyBuy(order.symbol, fill.price, order.quantity)
+      : applySell(order.symbol, fill.price, order.quantity);
   if (!result.ok) return result;
-  recordExecution(order, price, avgCostBefore);
-  return { ok: true, executedPrice: price };
+  recordExecution(order, fill.price, avgCostBefore);
+  return { ok: true, executedPrice: fill.price };
 }
 
 /**

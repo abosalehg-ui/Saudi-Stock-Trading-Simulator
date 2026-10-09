@@ -5,12 +5,9 @@ export default defineConfig({
   root: '.',
   base: './',
   plugins: [
-    // The app makes no network requests at runtime — the CSP pins connect-src
-    // to 'none' — so everything it needs is already in the bundle. It shipped a
-    // full manifest but no service worker, which meant it advertised itself as
-    // installable while Chrome's install criteria (a fetch-handling worker)
-    // went unmet, and it could not open offline despite having nothing to
-    // fetch. Precaching the build closes both gaps.
+    // The app makes no network requests at runtime, so precaching the build is
+    // enough for it to open offline, and the fetch-handling worker is what
+    // Chrome's install criteria require of a manifest-bearing page.
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'script-defer',

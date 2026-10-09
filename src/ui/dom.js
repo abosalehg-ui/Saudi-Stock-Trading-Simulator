@@ -1,10 +1,6 @@
 /**
  * Remove every child of an element.
  *
- * Lives here rather than in render.js because six render functions across four
- * modules were each carrying their own copy of the same `while (firstChild)`
- * loop.
- *
  * @param {Element} el
  */
 export function clearChildren(el) {
@@ -47,16 +43,8 @@ export function raw(markup) {
 }
 
 /**
- * Tagged template that escapes every interpolation by default.
- *
- * The previous convention was to call escapeHtml() by hand at each `${}`, with
- * an ESLint rule meant to catch a forgotten one. That rule matched only a
- * variable literally named `element`, so it flagged none of the real sinks and
- * a raw `div.innerHTML = ` + '`<b>${input}</b>`' + ` passed lint clean — the guard
- * looked present and enforced nothing.
- *
- * Escaping by default inverts that: forgetting is now the safe path, and
- * bypassing it takes an explicit raw() the reader can see.
+ * Tagged template that escapes every interpolation by default, so forgetting
+ * is the safe path and bypassing it takes an explicit raw() the reader can see.
  *
  * @param {TemplateStringsArray} strings
  * @param {...unknown} values
@@ -89,4 +77,70 @@ export function setHtml(host, markup) {
   template.innerHTML = markup;
   clearChildren(host);
   host.appendChild(template.content);
+}
+
+/**
+ * Put `nodes` into `host` in the given order, moving only the ones that are
+ * out of place.
+ *
+ * Moving a node detaches it, and a detached node loses focus, so a node that
+ * held focus (or contained the focused element) gets it back afterwards.
+ * Anything already in `host` but not in `nodes` is removed.
+ *
+ * @param {Element} host
+ * @param {Element[]} nodes
+ */
+export function placeChildren(host, nodes) {
+  const active = document.activeElement;
+  let refocus = false;
+  const keep = new Set(nodes);
+  Array.from(host.children).forEach((child) => {
+    if (!keep.has(child)) child.remove();
+  });
+  nodes.forEach((node, i) => {
+    const current = host.children[i];
+    if (current === node) return;
+    if (active && node.contains(active)) refocus = true;
+    host.insertBefore(node, current ?? null);
+  });
+  if (refocus && active instanceof HTMLElement && document.activeElement !== active) {
+    active.focus({ preventScroll: true });
+  }
+}
+
+/**
+ * Keep one DOM node per key across renders, so a list that refreshes every
+ * price tick patches its rows instead of replacing them.
+ *
+ * Replacing rows on every tick took keyboard focus with them and dropped any
+ * click whose press and release straddled a tick, because the button under the
+ * pointer no longer existed.
+ *
+ * @template T
+ * @param {Element} host
+ * @param {Map<string, {el: Element}>} cache - owned by the caller, one per list
+ * @param {T[]} items
+ * @param {{
+ *   key: (item: T) => string,
+ *   create: (item: T) => {el: Element},
+ *   update: (entry: any, item: T) => void,
+ * }} hooks
+ */
+export function reconcileKeyed(host, cache, items, { key, create, update }) {
+  const seen = new Set();
+  const nodes = items.map((item) => {
+    const k = key(item);
+    seen.add(k);
+    let entry = cache.get(k);
+    if (!entry) {
+      entry = create(item);
+      cache.set(k, entry);
+    }
+    update(entry, item);
+    return entry.el;
+  });
+  Array.from(cache.keys()).forEach((k) => {
+    if (!seen.has(k)) cache.delete(k);
+  });
+  placeChildren(host, nodes);
 }

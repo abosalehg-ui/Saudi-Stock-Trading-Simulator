@@ -135,6 +135,8 @@ export function rebuildStaticLabels() {
     if (el) el.textContent = text;
   });
 
+  document.getElementById('export-csv-btn')?.setAttribute('title', t('csvExportLimitNote'));
+
   // Close buttons carried a hardcoded Arabic aria-label even in English mode.
   document.querySelectorAll('.close-modal').forEach((el) => {
     el.setAttribute('aria-label', t('closeBtn'));

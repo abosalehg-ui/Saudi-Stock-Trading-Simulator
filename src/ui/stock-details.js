@@ -1,9 +1,9 @@
 import { findStock } from '../data/stocks.js';
-import { gameState, stockPrices, session } from '../state.js';
+import { gameState, stockPrices, priceHistory, session } from '../state.js';
 import { getLang, t } from './i18n.js';
 import { isMarketOpen } from '../engine/market-hours.js';
 import { changePercent } from '../engine/stock-filter.js';
-import { direction } from '../utils/numbers.js';
+import { direction, formatPrice, formatChange } from '../utils/numbers.js';
 import { html, setHtml } from './dom.js';
 
 let onSubmitOrder = () => {};
@@ -27,6 +27,63 @@ const indicatorState = { candle: false, sma20: false, sma50: false, rsi: false, 
 /** @returns {typeof indicatorState} a copy; callers must not mutate the source */
 export function getIndicatorState() {
   return { ...indicatorState };
+}
+
+/**
+ * The order form's inputs, kept for the same reason as indicatorState.
+ *
+ * A rebuild used to put the radio back on "market" with the price field hidden.
+ * Someone who had set up a stop-loss, then rotated the phone or switched
+ * language, got a market order from the same Sell button.
+ *
+ * Restored only when the rebuild is for the same stock; picking a different
+ * stock starts from a fresh market order.
+ *
+ * @type {{symbol: string|null, kind: 'market'|'limit'|'stop-loss', quantity: string, price: string}}
+ */
+const orderForm = { symbol: null, kind: 'market', quantity: '', price: '' };
+
+/**
+ * Forget the form's contents, e.g. after the order it held was placed. Also
+ * clears the fields on screen: on the desktop layout the panel stays open
+ * after an order, so it would otherwise keep showing the old values.
+ */
+export function resetOrderForm() {
+  const symbol = orderForm.symbol;
+  Object.assign(orderForm, { symbol: null, kind: 'market', quantity: '', price: '' });
+  const quantity = /** @type {HTMLInputElement|null} */ (document.getElementById('order-quantity'));
+  const price = /** @type {HTMLInputElement|null} */ (document.getElementById('order-price'));
+  if (!quantity || !price) return;
+  // The panel is still showing this stock's (now empty) form.
+  orderForm.symbol = symbol;
+  quantity.value = '';
+  price.value = '';
+  price.hidden = true;
+  const market = /** @type {HTMLInputElement|null} */ (
+    document.querySelector('input[name="orderType"][value="market"]')
+  );
+  if (market) market.checked = true;
+}
+
+/** @returns {typeof orderForm} a copy */
+export function getOrderFormState() {
+  return { ...orderForm };
+}
+
+/**
+ * Show a validation or execution error under the order form, or clear it with
+ * an empty message. Inline rather than in a modal, so focus stays in the field
+ * being corrected.
+ *
+ * @param {string} message
+ * @returns {boolean} false when there is no order form to show it in
+ */
+export function showOrderError(message) {
+  const el = document.getElementById('order-error');
+  if (!el) return false;
+  el.textContent = message;
+  el.hidden = !message;
+  return true;
 }
 
 const INDICATOR_IDS = {
@@ -68,13 +125,31 @@ function priceFieldsFor(symbol) {
   const stock = findStock(symbol);
   const price = stockPrices[symbol];
   const change = changePercent(stock, stockPrices);
-  const { glyph, className } = direction(change);
   return {
-    priceText: `${price.toFixed(2)} ${t('sar')}`,
-    changeText: `${glyph} ${Math.abs(change).toFixed(2)}%`,
-    changeClass: className,
+    priceText: formatPrice(price, t('sar')),
+    changeText: formatChange(change),
+    changeClass: direction(change).className,
     marketOpen: isMarketOpen() || gameState.allow24Trading,
   };
+}
+
+/**
+ * Text alternative for the price chart: the canvas carried only the words
+ * "current price", with neither the number nor the trend it draws.
+ *
+ * @param {string} symbol
+ * @param {string} priceText
+ * @returns {string}
+ */
+function chartLabelFor(symbol, priceText) {
+  const history = priceHistory[symbol] || [];
+  const first = history[0]?.price;
+  const last = history[history.length - 1]?.price;
+  const trend = first > 0 && last > 0 ? formatChange(((last - first) / first) * 100) : '';
+  return t('chartSummary')
+    .replace('{price}', priceText)
+    .replace('{trend}', trend)
+    .replace('{points}', String(history.length));
 }
 
 /**
@@ -104,6 +179,10 @@ export async function patchStockDetails(symbol) {
 
   const warning = document.getElementById('stock-detail-market-warning');
   if (warning) warning.hidden = marketOpen;
+
+  document
+    .getElementById('price-chart')
+    ?.setAttribute('aria-label', chartLabelFor(symbol, priceText));
 
   await drawChart(symbol);
 }
@@ -158,7 +237,11 @@ export async function renderStockDetails(symbol) {
 
         <div class="stock-details-chart">
           <div class="chart-container">
-            <canvas id="price-chart" role="img" aria-label="${t('currentPrice')}"></canvas>
+            <canvas
+              id="price-chart"
+              role="img"
+              aria-label="${chartLabelFor(symbol, priceText)}"
+            ></canvas>
           </div>
           <div class="indicator-controls" role="group" aria-label="${t('indicators')}">
             <label><input type="checkbox" id="ind-candle" /> ${t('candlestickToggle')}</label>
@@ -170,7 +253,7 @@ export async function renderStockDetails(symbol) {
         </div>
 
         <div class="order-form" role="group" aria-labelledby="stock-title">
-          <div class="order-type" role="radiogroup" aria-label="${t('orderKindLimit')}">
+          <div class="order-type" role="radiogroup" aria-label="${t('orderTypeGroup')}">
             <label>
               <input type="radio" name="orderType" value="market" checked />
               <span>${t('market')}</span>
@@ -185,25 +268,28 @@ export async function renderStockDetails(symbol) {
             </label>
           </div>
           <label for="order-quantity" class="sr-only">${t('quantity')}</label>
+          <!-- type="text" rather than "number": a number input may discard
+               Arabic-Indic digits (١٠٠) before the code sees them, and the
+               parser normalises them itself. -->
           <input
-            type="number"
+            type="text"
             id="order-quantity"
             placeholder="${t('quantity')}"
-            min="1"
-            max="1000000"
-            step="1"
             inputmode="numeric"
+            autocomplete="off"
+            aria-describedby="order-error"
           />
           <label for="order-price" class="sr-only">${t('priceForLimitOrders')}</label>
           <input
-            type="number"
+            type="text"
             id="order-price"
             placeholder="${t('priceForLimitOrders')}"
-            min="0.01"
-            step="0.01"
             inputmode="decimal"
+            autocomplete="off"
+            aria-describedby="order-error"
             hidden
           />
+          <p id="order-error" class="order-error" role="alert" hidden></p>
           <div class="order-submit-row">
             <button class="btn btn-buy order-submit-btn" id="order-buy">${t('buy')}</button>
             <button class="btn btn-danger order-submit-btn" id="order-sell">${t('sell')}</button>
@@ -214,13 +300,39 @@ export async function renderStockDetails(symbol) {
   );
 
   const priceInput = /** @type {HTMLInputElement} */ (document.getElementById('order-price'));
-  document.querySelectorAll('input[name="orderType"]').forEach((radio) => {
-    radio.addEventListener('change', (e) => {
-      const val = e.target.value;
-      priceInput.hidden = val === 'market';
-      priceInput.placeholder =
-        val === 'stop-loss' ? t('stopPricePlaceholder') : t('priceForLimitOrders');
+  const quantityInput = /** @type {HTMLInputElement} */ (document.getElementById('order-quantity'));
+
+  if (orderForm.symbol !== symbol) {
+    resetOrderForm();
+    orderForm.symbol = symbol;
+  }
+
+  const applyKind = (kind) => {
+    priceInput.hidden = kind === 'market';
+    priceInput.placeholder =
+      kind === 'stop-loss' ? t('stopPricePlaceholder') : t('priceForLimitOrders');
+  };
+
+  document.querySelectorAll('input[name="orderType"]').forEach((el) => {
+    const radio = /** @type {HTMLInputElement} */ (el);
+    radio.checked = radio.value === orderForm.kind;
+    radio.addEventListener('change', () => {
+      orderForm.kind = /** @type {typeof orderForm.kind} */ (radio.value);
+      applyKind(orderForm.kind);
+      showOrderError('');
     });
+  });
+  applyKind(orderForm.kind);
+  quantityInput.value = orderForm.quantity;
+  priceInput.value = orderForm.price;
+
+  quantityInput.addEventListener('input', () => {
+    orderForm.quantity = quantityInput.value;
+    showOrderError('');
+  });
+  priceInput.addEventListener('input', () => {
+    orderForm.price = priceInput.value;
+    showOrderError('');
   });
 
   document.getElementById('order-buy').addEventListener('click', () => submit('buy'));

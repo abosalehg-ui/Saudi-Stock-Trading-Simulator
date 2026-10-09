@@ -4,6 +4,7 @@ import {
   renderStocks,
   updateStockPrices,
   bindStockListEvents,
+  setStockListFilters,
 } from '../src/ui/render.js';
 import { gameState, stockPrices, session, resetGameState, initPriceState } from '../src/state.js';
 import { stocks } from '../src/data/stocks.js';
@@ -106,5 +107,26 @@ describe('bindStockListEvents (event delegation)', () => {
 
     document.getElementById('stock-list').click();
     expect(onSelectStock).not.toHaveBeenCalled();
+  });
+});
+
+describe('change-based sorts stay sorted as prices move', () => {
+  it('re-orders "top gainers" on a tick without rebuilding the nodes', () => {
+    setStockListFilters({ sort: 'gainers' });
+    try {
+      const listed = () =>
+        Array.from(document.querySelectorAll('.stock-item')).map((n) => n.dataset.symbol);
+      const last = listed()[listed().length - 1];
+      const node = document.querySelector(`.stock-item[data-symbol="${last}"]`);
+      const stock = stocks.find((s) => s.symbol === last);
+
+      stockPrices[last] = stock.basePrice * 2; // now the biggest gainer by far
+      updateStockPrices();
+
+      expect(listed()[0]).toBe(last);
+      expect(document.querySelector(`.stock-item[data-symbol="${last}"]`)).toBe(node);
+    } finally {
+      setStockListFilters({ sort: 'default' });
+    }
   });
 });

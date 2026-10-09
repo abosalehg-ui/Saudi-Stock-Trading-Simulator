@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { safeParseNumber, formatCurrency } from '../src/utils/numbers.js';
+import {
+  safeParseNumber,
+  formatCurrency,
+  normalizeDigits,
+  formatPrice,
+  formatChange,
+} from '../src/utils/numbers.js';
 
 describe('safeParseNumber', () => {
   it('returns null for empty or nullish inputs', () => {
@@ -61,5 +67,40 @@ describe('formatCurrency digit style', () => {
     const ar = formatCurrency(1000, 'ar', 'ريال').replace(/[^\d.,]/g, '');
     const en = formatCurrency(1000, 'en', 'SAR').replace(/[^\d.,]/g, '');
     expect(ar).toBe(en);
+  });
+});
+
+describe('normalizeDigits', () => {
+  it('rewrites Arabic-Indic and Eastern Arabic-Indic digits as ASCII', () => {
+    expect(normalizeDigits('١٢٣')).toBe('123');
+    expect(normalizeDigits('۴۵۶')).toBe('456');
+  });
+
+  it('maps the Arabic decimal separator and drops grouping separators', () => {
+    expect(normalizeDigits('١٢٫٥')).toBe('12.5');
+    expect(normalizeDigits('١٬٠٠٠')).toBe('1000');
+    expect(normalizeDigits(' 1,000 ')).toBe('1000');
+  });
+});
+
+describe('safeParseNumber with Arabic input', () => {
+  it('parses a quantity typed on an Arabic keyboard', () => {
+    expect(safeParseNumber('١٠٠', { min: 1, integer: true })).toBe(100);
+    expect(safeParseNumber('٣٢٫٧٥', { min: 0.01 })).toBe(32.75);
+  });
+
+  it('still rejects whitespace-only input', () => {
+    expect(safeParseNumber('   ')).toBeNull();
+  });
+});
+
+describe('formatPrice / formatChange', () => {
+  it('formats a price with two decimals and its currency label', () => {
+    expect(formatPrice(32.4, 'ريال')).toBe('32.40 ريال');
+  });
+
+  it('formats a change as a direction glyph plus magnitude', () => {
+    expect(formatChange(1.234)).toBe('▲ 1.23%');
+    expect(formatChange(-0.5)).toBe('▼ 0.50%');
   });
 });

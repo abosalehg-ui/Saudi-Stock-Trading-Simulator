@@ -23,7 +23,7 @@ export default defineConfig({
         'src/ui/stats.js',
         'src/ui/tour.js',
       ],
-      // A few points of margin below the current baseline (~94/82/97/97):
+      // A few points of margin below the current baseline (~93/83/93/96):
       // catches a genuine regression (new code landing untested) without being
       // so tight that normal, small wobbles fail CI.
       thresholds: {
